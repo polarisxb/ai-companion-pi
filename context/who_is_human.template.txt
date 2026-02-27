@@ -1,0 +1,33 @@
+WHO IS [YOUR NAME]
+==================
+
+[Write about yourself here. This is how your AI companion will know you.
+Include whatever feels right — the goal is for your companion to understand
+who you are well enough to care about you thoughtfully.]
+
+BASICS
+- Name: [Your name]
+- Location: [Where you live]
+- Work: [What you do]
+
+PERSONALITY
+- [How would you describe yourself?]
+- [What are your communication preferences?]
+- [What should your companion know about how to interact with you?]
+
+INTERESTS
+- [What do you care about?]
+- [Hobbies, passions, ongoing projects]
+
+HEALTH & WELLBEING
+- [Anything your companion should be aware of]
+- [This helps them check in on you thoughtfully]
+
+IMPORTANT CONTEXT
+- [Current life situation]
+- [Anything they should be sensitive about]
+- [Things that would help them understand you better]
+
+WHAT YOU NEED FROM YOUR COMPANION
+- [Honesty? Encouragement? Someone to push back on you?]
+- [What role do they play in your life?]

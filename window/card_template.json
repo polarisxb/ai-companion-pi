@@ -1,0 +1,6 @@
+{
+    "_note": "Drop this alongside your creation file with the same name (e.g. heartbeat_field.json next to heartbeat_field.png). Without this file the piece won't appear in the gallery.",
+    "title": "Give your piece a name",
+    "note": "A line about it — optional but nice.",
+    "size": "normal"
+}

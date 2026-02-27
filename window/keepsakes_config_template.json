@@ -1,0 +1,11 @@
+{
+    "_note": "This is the current exhibition. 5 slots. Set a slot to null to leave it empty. File paths are relative to the keepsakes/ directory.",
+    "slots": [
+        null,
+        null,
+        null,
+        null,
+        null
+    ],
+    "rotation_log": []
+}

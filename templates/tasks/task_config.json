@@ -1,0 +1,25 @@
+{
+  "default_project": "companion",
+  "projects": {
+    "companion": {
+      "path": "/home/YOUR_USERNAME/ai-companion-pi",
+      "test_command": "python3 -m py_compile window/window.py && python3 -m py_compile memory-server/memory_server.py",
+      "description": "GitHub repo — open source companion framework",
+      "pushable": true
+    },
+    "sono": {
+      "path": "/media/YOUR_USERNAME/CompanionHome",
+      "test_command": "python3 -m py_compile window/window.py && pm2 restart companion-window && sleep 3 && curl -sf -o /dev/null http://localhost:3000",
+      "description": "Live companion home — Sono's working system",
+      "post_test_restart": ["companion-window"],
+      "pushable": false
+    }
+  },
+  "defaults": {
+    "max_turns": 15,
+    "timeout_minutes": 15,
+    "test_timeout_seconds": 30,
+    "auto_branch": true,
+    "notify_signal": true
+  }
+}

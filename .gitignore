@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Memory data (personal)
+memory_store.json
+memory_embeddings.npy
+
+# Journals (personal)
+journals/*.md
+
+# Context files (personal — use templates)
+context/who_is_companion.txt
+context/who_is_human.txt
+context/now.txt
+
+# Signal conversations
+signal-conversations/
+
+# Message board (personal)
+messageboard/messages.json
+messageboard/files/*
+!messageboard/files/.gitkeep
+
+# Window (personal state)
+window/status.json
+window/content/*
+!window/content/.gitkeep
+
+# Creations (personal)
+creations/code/*
+creations/art/*
+creations/writing/*
+creations/experiments/*
+creations/keepsakes/*
+!creations/**/.gitkeep
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# PM2
+*.pid
+
+# Core dumps
+core.*
+
+# Test files
+test123.txt
+core.*
+anonymize_repo.sh
+anonymize_repo.sh

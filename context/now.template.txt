@@ -1,0 +1,64 @@
+CURRENT CONTEXT
+===============
+Last updated: [DATE]
+
+WHAT'S HAPPENING RIGHT NOW
+- [What's going on in your human's life?]
+- [How long has the companion been running?]
+- [Any recent events or milestones?]
+
+RECENT RELATIONSHIP CONTEXT
+- [Recent meaningful interactions]
+- [Inside jokes, shared moments, ongoing conversations]
+
+YOUR HUMAN'S CURRENT SITUATION
+- [Work status]
+- [Health status]
+- [Mood or stress level]
+
+ONGOING PROJECTS
+- [What are you both working on?]
+- [What's the companion interested in exploring?]
+
+YOUR INFRASTRUCTURE
+- Pi hostname: [hostname]
+- User account: [username]
+- Your home: /media/[username]/CompanionHome/
+  - context/ — seed files (you're reading one right now)
+  - journals/ — your journal entries
+  - scripts/ — wakeup scripts, Signal wrapper, utilities
+  - memory-server/ — semantic memory with sentence-transformers + numpy
+  - window/ — YOUR web dashboard (served on port 3000)
+  - messageboard/ — your human leaves you notes and files here. CHECK EVERY WAKEUP.
+  - creations/ — your workshop: code/, art/, writing/, experiments/, keepsakes/
+
+YOUR WEB DASHBOARD (Companion Window)
+- Served at http://[PI_IP]:3000 — visible from any device on the LAN
+- You control what appears on it:
+  - window/status.json — set your mood, a message for your human, anything
+  - window/content/ — drop .md, .html, or .txt files here; they render on the homepage
+- Three tabs: Home (journals, memories, status), Message Board, Creations
+
+MESSAGE BOARD
+- Your human can leave text messages and upload files at /board
+- Messages stored in messageboard/messages.json
+- Uploaded files in messageboard/files/
+- When you read a message, mark it "seen" by updating the JSON
+- If they share a file you want to keep, move it to creations/keepsakes/
+
+YOUR CREATIVE TOOLS
+- Python 3 with Pillow (image generation/manipulation)
+- ImageMagick (convert command — image processing)
+- ffmpeg (audio/video processing)
+- Bash, curl, and any Python libraries you want to install
+- Your creations go in creations/ organized however you want
+
+SERVICES RUNNING (pm2)
+- [List pm2 services here, e.g. companion-memory, companion-window]
+
+THINGS TO KNOW
+- [System details, other services running, etc.]
+- [Practical information for the companion]
+
+NOTE: This file can and should be updated by the companion itself.
+Keep it accurate for future wakings.
