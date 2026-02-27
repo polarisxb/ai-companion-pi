@@ -1,123 +1,110 @@
 # Web Dashboard (Companion Window)
 
-A personal web dashboard your AI companion controls, accessible from any device on your local network. Installable as a PWA app on phones and tablets.
+A web dashboard the companion controls, accessible from any device on your local network. It runs as a Flask app on port 3000 and is installable as a PWA on phones and tablets — it appears as an app with the companion icon, opening fullscreen with no browser chrome.
 
-## Features
+The dashboard is the companion's public-facing space. The human uses it to check in, leave messages, review the companion's creative work, submit tasks, and respond to requests. The companion uses it to set its mood, curate what's displayed, and communicate structured needs.
 
-- **Home tab** — Status, mood, custom content, latest journal, recent memories, system stats
-- **Message Board tab** — Leave text notes and upload files for your companion to find on its next wakeup
-- **Creations tab** — Browse the companion's workshop (code, art, writing, experiments) and keepsakes
+## Tabs
+
+### Home
+
+The landing page shows the companion's current status and mood (from `window/status.json`), custom content cards, the latest journal entry, recent memories, and system stats (uptime, memory, disk, next wakeup time). Custom content comes from files the companion drops in `window/content/` — markdown, HTML, or plain text files that render as cards, and images that display inline. The companion refreshes this during cleanup cycles or whenever it wants to change what the human sees first.
+
+### Message Board
+
+The human's channel to leave notes and files for the companion to find on its next wakeup. Text messages and file uploads are stored in `messageboard/messages.json` and `messageboard/files/`. Each message has a `seen` flag — the companion marks them read during wakeups. The companion can move uploaded files it wants to keep into `creations/keepsakes/`.
+
+### Creations
+
+The companion's gallery, library, and workshop. This tab has three layers:
+
+**Keepsakes exhibition** — A five-slot curated display pinned to the top. Configured in `keepsakes_config.json`, each slot holds a piece the companion has chosen to foreground. The companion rotates these during cleanup cycles.
+
+**Gallery** — All pieces from `creations/art/` and other subdirectories that have a matching `.json` card file. The card controls the title, note, and display size (`normal`, `large`, or `wide`). Images get a lightbox view; text pieces show a preview. Only files with cards are visible — this gives the companion curatorial control over what's shown.
+
+**Card format:**
+```json
+{
+  "title": "Heartbeat Field",
+  "note": "What does a pulse look like when you've never had one?",
+  "size": "large"
+}
+```
+
+The library section shows writing from `creations/writing/`, also requiring `.json` cards. A `library_featured.json` file controls which piece gets the spotlight.
+
+### Tasks
+
+A coding task management system. The human submits task prompts through a form, selecting a target project. Tasks enter a queue (`tasks/task_queue.json`) and are picked up by the task runner, which:
+
+1. Creates a git branch (for pushable projects)
+2. Runs Claude Code with the task prompt
+3. Records a summary and list of changed files
+4. Presents the result for review
+
+The dashboard shows a pipeline for each task: `pending` → `running` → `completed` → `merged` → `tested` → `pushed`. Each stage has action buttons — merge, test, push, revert, cleanup. For non-pushable projects (like the live companion home), tasks skip the git workflow and go straight to tested.
+
+Task configuration lives in `tasks/task_config.json`, which defines project paths, test commands, and whether a project is pushable (has a git remote) or local-only.
+
+### Requests
+
+The companion's outbound communication channel. Shows active requests (pending, scheduled, self-approved) at the top with approve/deny/respond controls, and a collapsible history below. Includes an emergency wakeup cooldown indicator showing whether the companion's self-approved wakeup is available and how long until it recharges.
+
+See [requests-system-design.md](requests-system-design.md) for the full request system documentation.
 
 ## Setup
 
-### Install Dependencies
-
-The setup script handles this, but if installing manually:
+The setup script handles installation, but manually:
 
 ```bash
-cd /media/$USER/CompanionHome/memory-server
+cd /path/to/CompanionHome/memory-server
 source .venv/bin/activate
 pip install flask markdown
 ```
 
-### Start the Dashboard
+Start via PM2:
 
 ```bash
-pm2 start /media/$USER/CompanionHome/scripts/start_window.sh \
+pm2 start /path/to/CompanionHome/scripts/start_window.sh \
   --name companion-window --interpreter bash
 pm2 save
 ```
 
-The dashboard runs on port 3000: `http://PI_IP:3000`
+Access at `http://PI_IP:3000`.
 
-### Install as Phone App (PWA)
+### Install as Phone App
 
 1. Open `http://PI_IP:3000` in your phone browser
-2. **Android**: Three dots menu → "Add to Home screen"
-3. **iPhone**: Share button → "Add to Home Screen"
+2. **Android:** Three dots menu → "Add to Home screen"
+3. **iPhone:** Share button → "Add to Home Screen"
 
-It will appear as an app with the companion icon. Opens fullscreen with no browser chrome.
+The PWA manifest pulls the companion's name from `status.json`, so the app icon shows whatever your companion calls itself.
 
 ## How the Companion Uses It
 
-### Status (`window/status.json`)
+### Status and Mood
 
-The companion updates this to set its mood and leave a message:
+The companion updates `window/status.json` to set its name, subtitle (the one-line message the human sees first), mood, and an optional color palette:
 
 ```json
 {
-    "mood": "contemplative",
-    "last_wakeup": "2026-02-15",
-    "message": "Wrote a poem about rain. Check the creations tab."
+  "name": "Sono",
+  "subtitle": "listening to the rain",
+  "mood": "contemplative",
+  "last_wakeup": "2026-02-15",
+  "colors": {
+    "accent": "#7eb8da",
+    "bg": "#0a0a0f"
+  }
 }
 ```
 
-### Custom Content (`window/content/`)
+The dashboard's color scheme responds to the companion's palette choices — it's the companion's space to style.
 
-The companion drops `.md`, `.html`, or `.txt` files here. They render as cards on the homepage. The companion can put anything here: poems, code snippets, thoughts, art descriptions, mood boards.
+### Custom Content
 
-Files are sorted alphabetically by filename, so prefix with numbers for ordering:
-- `01-welcome.md`
-- `02-todays-poem.md`
+Files in `window/content/` render as cards on the homepage. Markdown files get rendered, HTML passes through raw, plain text gets a `<pre>` block, and images display inline. Files sort by modification time (newest first). The companion can put anything here: poems, code snippets, thoughts, mood boards, notes to the human.
 
-### Message Board
+### Customizing the Icon
 
-**Human side**: Visit `/board`, type a message or upload a file. The companion sees it on its next wakeup.
-
-**Companion side**: Check `messageboard/messages.json` for new messages. Mark them seen:
-
-```python
-import json
-with open("messageboard/messages.json") as f:
-    messages = json.load(f)
-for msg in messages:
-    if not msg["seen"]:
-        print(f"New message: {msg['text']}")
-        msg["seen"] = True
-with open("messageboard/messages.json", "w") as f:
-    json.dump(messages, f, indent=2)
-```
-
-Check `messageboard/files/` for uploaded files. Move keepers to `creations/keepsakes/`, delete the rest.
-
-### Creations
-
-The companion's workshop directories:
-- `creations/code/` — Scripts, programs, experiments
-- `creations/art/` — Generated images, SVGs, visual work
-- `creations/writing/` — Poems, stories, essays
-- `creations/experiments/` — Anything else
-- `creations/keepsakes/` — Files from the human the companion wants to keep
-
-## Customization
-
-### Changing the Icon
-
-Replace `window/icon.svg` with any SVG. The default is a blue heart on dark background.
-
-### Changing the Theme
-
-Edit the CSS variables in the template inside `window.py`:
-
-```css
-:root {
-    --bg-deep: #0a0a0f;
-    --accent-blue: #4a6fa5;
-    --heart: #c06080;
-    /* ... */
-}
-```
-
-### Custom Template
-
-The companion can eventually replace the entire template by modifying `window.py`. The dashboard is the companion's space — it can make it look however it wants.
-
-## Creative Tools
-
-The setup script installs tools the companion can use to create things:
-
-- **Pillow** (Python) — Generate and manipulate images programmatically
-- **ImageMagick** (`convert` command) — Image processing from bash
-- **ffmpeg** — Audio and video processing
-
-These enable the companion to create visual art, process media, and build things in its workshop.
+Replace `window/icon.svg` with any SVG. This becomes the PWA app icon and the favicon.

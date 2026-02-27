@@ -1,8 +1,9 @@
-# AI COMPANION PI PROJECT — COMPLETE DEBUGGING GUIDE
-## Every Problem Encountered and How It Was Solved (Sessions 1–7)
+# Debugging Guide
+## Every Problem Encountered and How It Was Solved
 
----
+This guide catalogs every bug hit during the initial build of the ai-companion-pi project (sessions 1–7, February 14–16, 2026), organized by subsystem. Each entry includes the session, symptoms, root cause, fix, and a key lesson.
 
+**Coverage note:** This guide covers the core system build (filesystem, cron, Signal, memory server, dashboard, task system, networking). Systems built after session 7 — including the request system, sensory capabilities, Substack pipeline, multi-contact Signal, and media handling — are not yet covered here. Contributions welcome.
 ## TABLE OF CONTENTS
 
 1. [Linux & Filesystem Issues](#1-linux--filesystem-issues)
