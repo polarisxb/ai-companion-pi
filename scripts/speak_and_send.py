@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-speak_and_send.py — the companion's voice. Converts text to speech and sends it
+speak_and_send.py — Companion's voice. Converts text to speech and sends it
 as a Signal voice note to the human.
 
 Uses Piper TTS (local, free, offline) to generate audio, then sends
@@ -17,7 +17,7 @@ Exit 0: success, Exit 1: error
 Dependencies:
   - piper-tts: pip install piper-tts --break-system-packages
   - A Piper voice model (see setup instructions below)
-  - signal-cli configured (already done for the companion)
+  - signal-cli configured (already done for Sono)
   - ffmpeg for audio conversion
 
 Voice setup (run once):
@@ -224,7 +224,7 @@ def send_via_signal(audio_path, caption="", recipient=None):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="the companion speaks — convert text to voice note and send via Signal"
+        description="Companion speaks — convert text to voice note and send via Signal"
     )
     parser.add_argument("text", nargs="?", help="Text to speak")
     parser.add_argument("--file", help="Read text from file instead")

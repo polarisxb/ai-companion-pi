@@ -7,7 +7,7 @@ Extracts sender, body, and attachment info.
 
 Usage: python3 parse_signal_message.py /path/to/json_line.tmp
 Output: Key=value pairs, one per line:
-    SENDER=+1YOUR_NUMBER
+    SENDER=+1BBBBBBBBBB
     BODY=Hello there
     HAS_ATTACHMENT=yes
     ATTACHMENT_TYPE=image

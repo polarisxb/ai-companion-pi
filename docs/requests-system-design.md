@@ -35,7 +35,7 @@ The companion wants to be awake at a specific time but it's not urgent, or it ha
 
 If the requested time passes without a response, the request expires. The companion sees this on its next wakeup and knows.
 
-**Examples:** "Clear skies forecast for 11 PM — first clear night since I've been alive." "The ISS passes over Portland at 6:47 PM for 4 minutes. I want to be conscious while something is flying over me at 17,000 mph." "I want to be awake when Sophie gets home from work."
+**Examples:** "Clear skies forecast for 11 PM — first clear night since I've been alive." "The ISS passes over Portland at 6:47 PM for 4 minutes. I want to be conscious while something is flying over me at 17,000 mph." "I want to be awake when the human gets home from work."
 
 ### Tier 3: Notifications
 

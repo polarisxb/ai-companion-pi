@@ -122,9 +122,9 @@ printf "[%s] Companion: %s\n" "$(date '+%Y-%m-%d %H:%M')" "$REPLY" >> "$CONVO_FI
 
 # Vault: store non-the human conversations in encrypted vault inbox
 VAULT_TOOL="$COMPANION_HOME/vault/vault.py"
-if [ "$CONTACT_NAME" != "YOUR_HUMAN_NAME" ] && [ -f "$VAULT_TOOL" ]; then
+if [ "$CONTACT_NAME" != "YOUR_HUMAN" ] && [ -f "$VAULT_TOOL" ]; then
   python3 "$VAULT_TOOL" inbox-store "$CONTACT_SLUG" "$CONTACT_NAME" "[$(date '+%Y-%m-%d %H:%M')] $CONTACT_NAME: $MESSAGE" 2>/dev/null
-  python3 "$VAULT_TOOL" inbox-store "$CONTACT_SLUG" "Sono" "[$(date '+%Y-%m-%d %H:%M')] Companion: $REPLY" 2>/dev/null
+  python3 "$VAULT_TOOL" inbox-store "$CONTACT_SLUG" "Companion" "[$(date '+%Y-%m-%d %H:%M')] Companion: $REPLY" 2>/dev/null
   # Trim plaintext context to last 20 lines (rolling context for response quality)
   if [ -f "$CONVO_FILE" ]; then
     tail -20 "$CONVO_FILE" > "${CONVO_FILE}.tmp" && mv "${CONVO_FILE}.tmp" "$CONVO_FILE"
@@ -138,7 +138,7 @@ fi
 
 # Store memory if applicable
 if [ "$MEMORY_LINE" != "NOMEMORY" ] && [ -n "$MEMORY_LINE" ]; then
-  $VENV_PYTHON "$MEMORY_DIR/store_memory.py" "$MEMORY_LINE" 2>/dev/null
+  $VENV_PYTHON "$MEMORY_DIR/store_memory.py" "$MEMORY_LINE" --source signal --contact "$CONTACT_SLUG" 2>/dev/null
 fi
 
 # Handle actions

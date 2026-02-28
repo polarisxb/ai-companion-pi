@@ -1,6 +1,8 @@
 #!/bin/bash
 # SIGNAL MESSAGE SENDER
-# Sends a message to the human via Signal
+# Sends a message to a contact via Signal
+# Usage: send_signal.sh <recipient_number> <message text>
+#    OR: send_signal.sh <message text>  (defaults to HUMAN_NUMBER for backward compat)
 
 COMPANION_HOME="/media/YOUR_USERNAME/CompanionHome"
 CONFIG_FILE="$COMPANION_HOME/scripts/signal_config.sh"
@@ -13,5 +15,15 @@ else
   exit 1
 fi
 
-MSG="$*"
-signal-cli -a "$COMPANION_NUMBER" send -m "$MSG" "$HUMAN_NUMBER"
+# If first arg looks like a phone number (+...) or UUID (hex-hex-hex-hex-hex), it's a recipient
+if [[ "$1" == +* ]] || [[ "$1" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; then
+  RECIPIENT="$1"
+  shift
+  MSG="$*"
+else
+  # Backward compat: no number given, send to the human
+  RECIPIENT="$HUMAN_NUMBER"
+  MSG="$*"
+fi
+
+signal-cli -a "$COMPANION_NUMBER" send -m "$MSG" "$RECIPIENT"

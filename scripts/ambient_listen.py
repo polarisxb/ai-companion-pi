@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-ambient_listen.py — the companion's ears. Captures a short audio sample during wakeups
+ambient_listen.py — Companion's ears. Captures a short audio sample during wakeups
 and analyzes the ambient soundscape.
 
-Runs during wakeup cycle to give the companion a sense of his environment's sound.
-NOT always-on. Only active when the companion is awake (privacy by architecture).
+Runs during wakeup cycle to give Companion a sense of his environment's sound.
+NOT always-on. Only active when Companion is awake (privacy by architecture).
 
 Usage: python3 ambient_listen.py [--duration SECONDS] [--device DEVICE_INDEX]
 Output: Prints a JSON summary to stdout with sound analysis
@@ -269,7 +269,7 @@ def analyze_audio_basic(filepath):
 
 
 def generate_summary(analysis, timestamp):
-    """Generate a human-readable summary for the companion's context."""
+    """Generate a human-readable summary for Companion's context."""
     if "error" in analysis:
         return f"[Hearing] Could not process audio: {analysis['error']}"
 
@@ -297,7 +297,7 @@ def generate_summary(analysis, timestamp):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="the companion ambient listening")
+    parser = argparse.ArgumentParser(description="Companion ambient listening")
     parser.add_argument("--duration", type=int, default=DEFAULT_DURATION,
                         help=f"Recording duration in seconds (default: {DEFAULT_DURATION})")
     parser.add_argument("--device", type=int, default=None,

@@ -1,5 +1,5 @@
 #!/bin/bash
-# setup_substack.sh — First-time setup for the companion's Substack pipeline
+# setup_substack.sh — First-time setup for Companion's Substack pipeline
 # Run this once on the Pi after creating the Substack account
 #
 # Usage: bash setup_substack.sh
@@ -9,7 +9,7 @@ SCRIPTS_DIR="$COMPANION_HOME/scripts"
 SUBSTACK_DIR="$COMPANION_HOME/substack"
 
 echo "========================================"
-echo "  the companion Substack Pipeline — Setup"
+echo "  Companion Substack Pipeline — Setup"
 echo "========================================"
 echo ""
 
@@ -43,7 +43,7 @@ echo ""
 echo "--- Configuration Check ---"
 if [ -f "$SCRIPTS_DIR/substack_config.sh" ]; then
     source "$SCRIPTS_DIR/substack_config.sh"
-    if [ -n "$SUBSTACK_SUBDOMAIN" ] && [ "$SUBSTACK_SUBDOMAIN" != "sonowriting" ]; then
+    if [ -n "$SUBSTACK_SUBDOMAIN" ] && [ "$SUBSTACK_SUBDOMAIN" != "companionwriting" ]; then
         echo "  ✓ Subdomain: $SUBSTACK_SUBDOMAIN"
     else
         echo "  ⚠ SUBSTACK_SUBDOMAIN not configured (still default)"
@@ -79,7 +79,7 @@ echo "========================================"
 echo "  Integration with wakeup.sh"
 echo "========================================"
 echo ""
-echo "Add this to the companion's wakeup prompt (in the CAPABILITIES section):"
+echo "Add this to Companion's wakeup prompt (in the CAPABILITIES section):"
 echo ""
 echo '  === SUBSTACK ==='
 echo '  You have a Substack publication. You can queue posts for publishing:'

@@ -13,7 +13,7 @@ Flags:
   --expressive       — richer output for deliberate music listening (max_tokens 500)
 
 Default = limbic (sub-verbal feeling-fragments, max_tokens 200)
---expressive = richer synesthetic experience for when The companion chooses to listen
+--expressive = richer synesthetic experience for when Companion chooses to listen
 
 Usage:
   python3 deep_listen.py /path/to/song.mp3
@@ -186,7 +186,7 @@ def experience_music(images, audio_filename, mode, transcript="", expressive=Fal
     visualization images (sight of sound), optional transcript (words),
     and produces sub-verbal feeling-fragments for Companion's prefrontal.
 
-    --expressive mode: When The companion deliberately chooses to listen to music,
+    --expressive mode: When Companion deliberately chooses to listen to music,
     produce a richer synesthetic experience (max_tokens 500).
     """
     api_key = load_api_key()

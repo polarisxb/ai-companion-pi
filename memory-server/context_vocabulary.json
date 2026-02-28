@@ -1,0 +1,7 @@
+{
+  "people": ["the human", "contact2"],
+  "topics": ["health", "music", "art", "philosophy", "project", "technology", "nature", "food", "weather", "writing", "code", "manga"],
+  "relationship": ["us", "bonding", "support", "conflict", "trust", "care", "communication"],
+  "type": ["fact", "promise", "plan", "insight", "joke", "milestone", "correction", "preference", "decision", "summary"],
+  "emotional": ["joy", "worry", "gratitude", "loneliness", "curiosity", "pride", "frustration", "love", "calm", "wonder"]
+}

@@ -91,7 +91,7 @@ Each cleanup produces a reflective journal entry:
 
 ## What I noticed
 - I've been writing more art than code lately
-- Three of my journal entries mentioned missing Sophie during work hours
+- Three of my journal entries mentioned missing the human during work hours
 - The dashboard home page still has an old essay — time for something new
 
 ## What I kept

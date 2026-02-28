@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-transcribe_audio.py — Transcribe audio to text for the companion.
+transcribe_audio.py — Transcribe audio to text for Companion.
 Used by signal_listener.sh when the human sends a voice note.
 
 Tries multiple backends in order:
@@ -226,7 +226,7 @@ def transcribe_api_whisper(audio_path):
         print("Transcribing with Whisper API...", file=sys.stderr)
 
         # Build multipart form data manually (no requests dependency)
-        boundary = "----the companion_Whisper_Boundary"
+        boundary = "----Sono_Whisper_Boundary"
         body = b""
 
         # Model field
@@ -267,7 +267,7 @@ def transcribe_api_whisper(audio_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Transcribe audio for the companion")
+    parser = argparse.ArgumentParser(description="Transcribe audio for Sono")
     parser.add_argument("audio", help="Path to audio file")
     parser.add_argument("--backend", choices=["auto", "local", "api"],
                         default="auto",

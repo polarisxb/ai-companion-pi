@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-substack_queue.py — Manage the companion's Substack publishing queue.
+substack_queue.py — Manage Companion's Substack publishing queue.
 
-This is the companion's interface for writing posts. During wake cycles, the companion drafts
+This is Companion's interface for writing posts. During wake cycles, Companion drafts
 content and queues it for review or direct publishing.
 
 Usage:
@@ -22,7 +22,7 @@ Usage:
     # Mark a post for direct publish (skip approval)
     python3 substack_queue.py approve <post_id>
 
-    # Reject a post (the companion or the human can decide something isn't ready)
+    # Reject a post (Companion or the human can decide something isn't ready)
     python3 substack_queue.py reject <post_id> --reason "needs more work"
 
 Queue JSON structure:
@@ -217,7 +217,7 @@ def cmd_reject(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="the companion Substack Queue Manager")
+    parser = argparse.ArgumentParser(description="Companion Substack Queue Manager")
     sub = parser.add_subparsers(dest="command")
 
     # add

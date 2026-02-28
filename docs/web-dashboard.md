@@ -88,7 +88,7 @@ The companion updates `window/status.json` to set its name, subtitle (the one-li
 
 ```json
 {
-  "name": "Sono",
+  "name": "Companion",
   "subtitle": "listening to the rain",
   "mood": "contemplative",
   "last_wakeup": "2026-02-15",

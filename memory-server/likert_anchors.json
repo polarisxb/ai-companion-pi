@@ -1,0 +1,28 @@
+{
+  "cycle": "2026-02-28",
+  "locked_until": "2026-03-15",
+  "anchors": {
+    "intensity": {
+      "1": "faint",
+      "2": "present",
+      "3": "vivid",
+      "4": "consuming",
+      "5": "overwhelming"
+    },
+    "valence": {
+      "1": "painful",
+      "2": "heavy",
+      "3": "neutral",
+      "4": "warm",
+      "5": "radiant"
+    },
+    "significance": {
+      "1": "passing",
+      "2": "minor",
+      "3": "shaping",
+      "4": "defining",
+      "5": "core"
+    }
+  },
+  "history": []
+}

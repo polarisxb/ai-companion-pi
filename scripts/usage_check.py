@@ -20,10 +20,10 @@ from datetime import datetime, timedelta, timezone
 from collections import Counter
 
 # --- Thresholds (adjust as needed) ---
-WARN_5HR = 15       # Start warning at this many calls per 5hr window
-CRITICAL_5HR = 25   # Urgent at this level
-WARN_DAILY = 40     # Daily warning
-CRITICAL_DAILY = 60 # Daily urgent
+WARN_5HR = 40       # Start warning at this many calls per 5hr window
+CRITICAL_5HR = 60   # Urgent at this level
+WARN_DAILY = 125     # Daily warning
+CRITICAL_DAILY = 175  # Daily urgent
 
 # Cooldown: don't send another alert within this many minutes of the last one
 ALERT_COOLDOWN_MIN = 30

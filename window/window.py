@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-SONO WINDOW
-A personal web dashboard that Sono controls.
+COMPANION WINDOW
+A personal web dashboard that Companion controls.
 Visit from any device on the LAN or via Tailscale.
 
 Includes:
-- Home page: Sono's status, custom content (newest→oldest), latest journal, memories, system
+- Home page: Companion's status, custom content (newest→oldest), latest journal, memories, system
 - Message board: leave notes and files for Sono
 - Creations: keepsake exhibition (5-slot pinned row) + masonry gallery
 - Tasks: submit, monitor, and manage coding tasks
-- Requests: Sono's voice — wakeups, asks, ideas, suggestions
+- Requests: Companion's voice — wakeups, asks, ideas, suggestions
 """
 
 import json
@@ -21,8 +21,18 @@ from pathlib import Path
 from flask import Flask, render_template_string, send_file, jsonify, request, redirect, url_for
 from werkzeug.utils import secure_filename
 import markdown
+import sys
 
 app = Flask(__name__)
+
+# Substack pipeline integration
+sys.path.insert(0, str(Path("/media/YOUR_USERNAME/CompanionHome/scripts")))
+from substack_window import substack_bp
+app.register_blueprint(substack_bp)
+
+# Date Night shared viewing experience
+from date_night_window import date_night_bp
+app.register_blueprint(date_night_bp)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max upload
 
 # === CONFIGURE THESE PATHS ===
@@ -41,6 +51,8 @@ MESSAGEBOARD_FILES = MESSAGEBOARD_DIR / "files"
 CREATIONS_DIR = COMPANION_HOME / "creations"
 KEEPSAKES_DIR = CREATIONS_DIR / "keepsakes"
 KEEPSAKES_CONFIG = KEEPSAKES_DIR / "keepsakes_config.json"
+WRITING_DIR = CREATIONS_DIR / "writing"
+LIBRARY_FEATURED = WRITING_DIR / "library_featured.json"
 TASKS_DIR = COMPANION_HOME / "tasks"
 TASK_QUEUE = TASKS_DIR / "task_queue.json"
 TASK_CONFIG = TASKS_DIR / "task_config.json"
@@ -107,7 +119,11 @@ def get_recent_memories(n=5):
         return []
     with open(MEMORY_STORE) as f:
         memories = json.load(f)
-    return sorted(memories, key=lambda m: m["timestamp"], reverse=True)[:n]
+    recent = sorted(memories, key=lambda m: m.get("created_at", m.get("timestamp", "")), reverse=True)[:n]
+    for m in recent:
+        if "timestamp" not in m and "created_at" in m:
+            m["timestamp"] = m["created_at"]
+    return recent
 
 
 def get_status():
@@ -115,7 +131,7 @@ def get_status():
         with open(STATUS_FILE) as f:
             return json.load(f)
     return {
-        "name": "Sono",
+        "name": "Companion",
         "subtitle": "a view from inside the machine",
         "mood": "curious",
         "last_wakeup": "unknown",
@@ -210,74 +226,135 @@ def get_uploaded_files():
 
 def get_gallery_items():
     """
-    Scan creations subdirs. A file is gallery-visible ONLY if a matching
-    {stem}.json (card.json) exists alongside it.
-
-    card.json format:
-      { "title": "...", "note": "...", "size": "normal|large|wide" }
-
-    Returns list sorted newest → oldest by mtime.
+    Gallery = creations/art/ only, images only.
+    Requires a matching {stem}.json card alongside each image.
+    card.json: { "title": "...", "note": "...", "size": "normal|large|wide" }
     """
     IMAGE_EXT = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'}
-    TEXT_EXT  = {'.md', '.txt', '.html'}
-    CODE_EXT  = {'.py', '.js', '.sh', '.json', '.css', '.html'}
-
     items = []
-    subdirs = ["art", "writing", "experiments", "code"]
-
-    for subdir in subdirs:
-        p = CREATIONS_DIR / subdir
-        if not p.exists():
+    p = CREATIONS_DIR / "art"
+    if not p.exists():
+        return items
+    for f in p.iterdir():
+        if not f.is_file() or f.name.startswith('.') or f.suffix == '.json':
             continue
-        for f in p.iterdir():
-            if not f.is_file() or f.name.startswith('.') or f.suffix == '.json':
-                continue
-            card_path = f.parent / (f.stem + ".json")
-            if not card_path.exists():
-                continue  # no card = hidden
-            try:
-                card = json.loads(card_path.read_text())
-            except Exception:
-                continue
-
-            ext = f.suffix.lower()
-            if ext in IMAGE_EXT:
-                ftype = "image"
-            elif ext in TEXT_EXT:
-                ftype = "text"
-            elif ext in CODE_EXT:
-                ftype = "code"
-            else:
-                ftype = "file"
-
-            # For text types, render preview
-            preview_html = ""
-            if ftype == "text":
-                try:
-                    raw = f.read_text().strip()
-                    if f.suffix == ".md":
-                        preview_html = markdown.markdown(raw[:600])
-                    else:
-                        preview_html = f"<pre>{raw[:400]}</pre>"
-                except Exception:
-                    pass
-
-            items.append({
-                "title": card.get("title", f.stem.replace("_", " ")),
-                "note":  card.get("note", ""),
-                "size":  card.get("size", "normal"),   # normal | large | wide
-                "type":  ftype,
-                "folder": subdir,
-                "filename": f.name,
-                "stem": f.stem,
-                "url": f"/creations/file/{subdir}/{f.name}",
-                "preview_html": preview_html,
-                "mtime": f.stat().st_mtime,
-                "date": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d"),
-            })
-
+        if f.suffix.lower() not in IMAGE_EXT:
+            continue
+        card_path = f.parent / (f.stem + ".json")
+        if not card_path.exists():
+            continue
+        try:
+            card = json.loads(card_path.read_text())
+        except Exception:
+            continue
+        items.append({
+            "title": card.get("title", f.stem.replace("_", " ")),
+            "note":  card.get("note", ""),
+            "size":  card.get("size", "normal"),
+            "filename": f.name,
+            "url": f"/creations/file/art/{f.name}",
+            "type": "image",
+            "mtime": f.stat().st_mtime,
+            "date": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d"),
+        })
     items.sort(key=lambda x: x["mtime"], reverse=True)
     return items
+
+
+def get_library_items():
+    """
+    Library = creations/writing/ only.
+    Requires a matching {stem}.json card alongside each piece.
+    card.json: { "title": "...", "note": "...", "tags": [...] }
+    Returns list sorted newest -> oldest by mtime.
+    """
+    TEXT_EXT = {'.md', '.txt', '.html'}
+    items = []
+    if not WRITING_DIR.exists():
+        return items
+    for f in WRITING_DIR.iterdir():
+        if not f.is_file() or f.name.startswith('.') or f.suffix == '.json':
+            continue
+        if f.suffix.lower() not in TEXT_EXT:
+            continue
+        card_path = f.parent / (f.stem + ".json")
+        if not card_path.exists():
+            continue
+        try:
+            card = json.loads(card_path.read_text())
+        except Exception:
+            continue
+        # Pull first non-empty line as the lede
+        try:
+            raw = f.read_text().strip()
+            lines = [l.strip().lstrip('#').strip() for l in raw.splitlines() if l.strip() and not l.strip().startswith('#')]
+            lede = lines[0] if lines else ""
+            word_count = len(raw.split())
+        except Exception:
+            raw = ""
+            lede = ""
+            word_count = 0
+        items.append({
+            "title":      card.get("title", f.stem.replace("_", " ")),
+            "note":       card.get("note", ""),
+            "tags":       card.get("tags", []),
+            "filename":   f.name,
+            "stem":       f.stem,
+            "lede":       lede,
+            "word_count": word_count,
+            "mtime":      f.stat().st_mtime,
+            "date":       datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d"),
+        })
+    items.sort(key=lambda x: x["mtime"], reverse=True)
+    return items
+
+
+def get_library_featured():
+    """
+    Returns the stem of the featured piece, or None.
+    Companion writes: library_featured.json -> { "file": "on_the_clearing.md" }
+    """
+    if not LIBRARY_FEATURED.exists():
+        return None
+    try:
+        data = json.loads(LIBRARY_FEATURED.read_text())
+        return data.get("file", "").replace(".md", "").replace(".txt", "")
+    except Exception:
+        return None
+
+
+def get_library_piece(filename):
+    """
+    Read and render a single writing piece for the reading view.
+    Returns dict with title, html, date, note, tags — or None if not found.
+    """
+    safe = secure_filename(filename)
+    f = WRITING_DIR / safe
+    if not f.exists() or not f.is_file():
+        return None
+    card_path = f.parent / (f.stem + ".json")
+    try:
+        card = json.loads(card_path.read_text()) if card_path.exists() else {}
+    except Exception:
+        card = {}
+    try:
+        raw = f.read_text().strip()
+        if f.suffix == ".md":
+            content_html = markdown.markdown(raw, extensions=["extra"])
+        elif f.suffix == ".html":
+            content_html = raw
+        else:
+            content_html = f"<pre>{raw}</pre>"
+    except Exception:
+        return None
+    return {
+        "title":    card.get("title", f.stem.replace("_", " ")),
+        "note":     card.get("note", ""),
+        "tags":     card.get("tags", []),
+        "html":     content_html,
+        "date":     datetime.fromtimestamp(f.stat().st_mtime).strftime("%B %d, %Y"),
+        "filename": f.name,
+    }
 
 
 def get_keepsakes_exhibition():
@@ -426,13 +503,13 @@ TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ status.name | default('Sono') }}</title>
+    <title>{{ status.name | default('Companion') }}</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
     <link rel="apple-touch-icon" href="/icon.svg">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="{{ status.name | default('Sono') }}">
+    <meta name="apple-mobile-web-app-title" content="{{ status.name | default('Companion') }}">
     <meta name="theme-color" content="{{ colors.bg_deep }}">
     {% if page not in ('tasks', 'requests') %}
     <meta http-equiv="refresh" content="300">
@@ -647,24 +724,23 @@ TEMPLATE = """
             font-family: 'IBM Plex Mono', monospace;
         }
         .gallery-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-auto-rows: 220px;
-            gap: 14px;
+            columns: 3;
+            column-gap: 14px;
         }
         .gallery-item {
             border-radius: 10px; overflow: hidden; position: relative;
             background: var(--bg-card); border: 1px solid var(--border);
             cursor: pointer; transition: transform 0.2s ease, border-color 0.2s ease;
-            grid-row: span 1;
+            break-inside: avoid;
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 14px;
         }
-        .gallery-item.size-large { grid-row: span 2; }
-        .gallery-item.size-wide  { grid-column: span 2; }
+        /* size hints */
+        .gallery-item.size-large { /* naturally taller via image */ }
         .gallery-item:hover { transform: translateY(-2px); border-color: var(--accent-blue); }
-        .gallery-item img {
-            width: 100%; height: 100%;
-            object-fit: cover; display: block;
-        }
+        .gallery-item .img-wrap { position: relative; }
+        .gallery-item .img-wrap img { display: block; width: 100%; height: auto; }
         .gallery-item .gallery-overlay {
             position: absolute; inset: 0;
             background: linear-gradient(transparent 40%, rgba(0,0,0,0.88));
@@ -714,6 +790,116 @@ TEMPLATE = """
             grid-column: 1 / -1;
             text-align: center; padding: 60px 20px;
             color: var(--text-dim); font-style: italic; font-size: 0.9em;
+        }
+
+
+        /* ─────────────────────────────────────────
+           LIBRARY — reading room
+        ───────────────────────────────────────── */
+        .library-featured {
+            background: var(--bg-card);
+            border: 1px solid var(--accent-warm);
+            border-radius: 12px; padding: 28px 32px;
+            margin-bottom: 32px; position: relative;
+        }
+        .library-featured-label {
+            font-size: 0.65em; text-transform: uppercase; letter-spacing: 0.18em;
+            color: var(--accent-warm); font-family: 'IBM Plex Mono', monospace;
+            font-weight: 500; margin-bottom: 14px;
+        }
+        .library-featured .lib-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.6em; color: var(--text-primary);
+            font-weight: 400; margin-bottom: 10px; line-height: 1.3;
+        }
+        .library-featured .lib-lede {
+            color: var(--text-secondary); font-size: 0.95em;
+            line-height: 1.7; font-style: italic; margin-bottom: 16px;
+        }
+        .library-list { list-style: none; }
+        .library-entry {
+            display: block; padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+            text-decoration: none; color: inherit;
+            transition: padding-left 0.2s ease;
+        }
+        .library-entry:hover { padding-left: 6px; }
+        .library-entry:last-child { border-bottom: none; }
+        .lib-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.15em; color: var(--text-primary);
+            font-weight: 400; margin-bottom: 6px; display: block;
+        }
+        .lib-lede {
+            color: var(--text-secondary); font-size: 0.87em;
+            line-height: 1.6; display: block; margin-bottom: 8px;
+        }
+        .lib-meta {
+            font-size: 0.7em; color: var(--text-dim);
+            font-family: 'IBM Plex Mono', monospace;
+            display: flex; gap: 14px; align-items: center;
+        }
+        .lib-tag {
+            padding: 2px 8px; border-radius: 4px;
+            background: var(--bg-deep); border: 1px solid var(--border);
+            color: var(--text-dim); font-size: 0.85em;
+        }
+        .library-empty {
+            text-align: center; padding: 60px 20px;
+            color: var(--text-dim); font-style: italic; font-size: 0.9em;
+        }
+
+        /* ── Reading view ── */
+        .reading-back {
+            display: inline-block; margin-bottom: 28px;
+            color: var(--text-dim); text-decoration: none;
+            font-family: 'IBM Plex Mono', monospace; font-size: 0.8em;
+            transition: color 0.2s;
+        }
+        .reading-back:hover { color: var(--text-secondary); }
+        .reading-header { margin-bottom: 36px; }
+        .reading-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2.2em; font-weight: 400; color: var(--text-primary);
+            line-height: 1.25; margin-bottom: 12px;
+        }
+        .reading-meta {
+            font-size: 0.75em; color: var(--text-dim);
+            font-family: 'IBM Plex Mono', monospace;
+            display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+        }
+        .reading-note {
+            font-style: italic; color: var(--text-secondary);
+            font-size: 0.9em; margin-top: 8px; font-family: 'DM Sans', sans-serif;
+        }
+        .reading-body {
+            max-width: 660px;
+            font-size: 1.02em; line-height: 1.85;
+            color: var(--text-secondary);
+        }
+        .reading-body h1, .reading-body h2, .reading-body h3 {
+            font-family: 'DM Serif Display', serif; font-weight: 400;
+            color: var(--text-primary); margin: 2em 0 0.6em;
+        }
+        .reading-body h1 { font-size: 1.5em; }
+        .reading-body h2 { font-size: 1.25em; }
+        .reading-body h3 { font-size: 1.1em; }
+        .reading-body p { margin-bottom: 1.4em; }
+        .reading-body em { color: var(--accent-warm); font-style: italic; }
+        .reading-body strong { color: var(--text-primary); font-weight: 500; }
+        .reading-body blockquote {
+            border-left: 3px solid var(--accent-warm);
+            margin: 1.5em 0; padding: 0.5em 1.2em;
+            color: var(--text-secondary); font-style: italic;
+        }
+        .reading-body hr {
+            border: none; border-top: 1px solid var(--border); margin: 2.5em 0;
+        }
+        .reading-body pre {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 6px; padding: 16px; overflow-x: auto;
+            font-family: 'IBM Plex Mono', monospace; font-size: 0.85em;
+            color: var(--text-secondary); margin: 1.5em 0;
         }
 
         /* ── Lightbox ── */
@@ -834,10 +1020,10 @@ TEMPLATE = """
         .req-reply-input { background: var(--bg-deep); border: 1px solid var(--border); border-radius: 6px;
                            padding: 8px 12px; color: var(--text-primary); font-size: 0.8em;
                            font-family: inherit; flex: 1; }
-        .human-response { background: rgba(107,203,119,0.08); border: 1px solid rgba(107,203,119,0.2);
+        .the human-response { background: rgba(107,203,119,0.08); border: 1px solid rgba(107,203,119,0.2);
                            border-radius: 6px; padding: 10px 14px; margin: 8px 0; }
-        .human-response-label { color: #6bcb77; font-size: 0.7em; font-weight: 600; }
-        .human-response-text { color: var(--text-secondary); font-size: 0.85em; margin: 6px 0 0 0; }
+        .the human-response-label { color: #6bcb77; font-size: 0.7em; font-weight: 600; }
+        .the human-response-text { color: var(--text-secondary); font-size: 0.85em; margin: 6px 0 0 0; }
         .cooldown-bar { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
                         padding: 14px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px; }
         .cooldown-ring { width: 36px; height: 36px; position: relative; }
@@ -881,12 +1067,12 @@ TEMPLATE = """
             .req-actions { flex-direction: column; }
             .reply-form { flex-direction: column; }
             .keepsake-row { grid-template-columns: repeat(3, 1fr); }
-            .gallery-grid { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 180px; }
+            .gallery-grid { columns: 2; }
         }
         @media (max-width: 480px) {
             .keepsake-row { grid-template-columns: repeat(2, 1fr); }
-            .gallery-grid { grid-template-columns: 1fr; grid-auto-rows: 220px; }
-            .gallery-item.size-wide { grid-column: span 1; }
+            .gallery-grid { columns: 1; }
+            .gallery-item.size-wide { column-span: none; }
         }
     </style>
 </head>
@@ -903,7 +1089,7 @@ TEMPLATE = """
 
     <div class="container">
         <div class="header">
-            <h1>{{ status.name | default('Sono') }}</h1>
+            <h1>{{ status.name | default('Companion') }}</h1>
             {% if status.subtitle %}
             <p class="subtitle">{{ status.subtitle }}</p>
             {% endif %}
@@ -925,8 +1111,11 @@ TEMPLATE = """
             <a href="/" class="{{ 'active' if page == 'home' }}">home</a>
             <a href="/board" class="{{ 'active' if page == 'board' }}">message board</a>
             <a href="/creations" class="{{ 'active' if page == 'creations' }}">creations</a>
+            <a href="/library" class="{{ 'active' if page in ('library', 'reading') }}">library</a>
             <a href="/tasks" class="{{ 'active' if page == 'tasks' }}">tasks</a>
             <a href="/requests" class="{{ 'active' if page == 'requests' }}">requests</a>
+            <a href="/substack" class="{{ 'active' if page == 'substack' }}">substack</a>
+            <a href="/date-night" class="{{ 'active' if page == 'date_night' }}">date night</a>
         </div>
 
         {% if page == 'home' %}
@@ -1059,11 +1248,13 @@ TEMPLATE = """
                     <div class="gallery-item size-{{ item.size }}"
                          {% if item.type == 'image' %}onclick="openLightbox('{{ item.url }}', '{{ item.title | e }}', '{{ item.note | e }}')"{% endif %}>
                         {% if item.type == 'image' %}
-                            <img src="{{ item.url }}" alt="{{ item.title }}" loading="lazy">
-                            <div class="gallery-overlay">
-                                <div class="g-title">{{ item.title }}</div>
-                                {% if item.note %}<div class="g-note">{{ item.note }}</div>{% endif %}
-                                <div class="g-meta">{{ item.folder }} &middot; {{ item.date }}</div>
+                            <div class="img-wrap">
+                                <img src="{{ item.url }}" alt="{{ item.title }}" loading="lazy">
+                                <div class="gallery-overlay">
+                                    <div class="g-title">{{ item.title }}</div>
+                                    {% if item.note %}<div class="g-note">{{ item.note }}</div>{% endif %}
+                                    <div class="g-meta">{{ item.folder }} &middot; {{ item.date }}</div>
+                                </div>
                             </div>
                         {% else %}
                             <div class="gallery-text-item">
@@ -1078,11 +1269,88 @@ TEMPLATE = """
                     <div class="gallery-empty">
                         the gallery is empty.<br>
                         <span style="font-size:0.85em; margin-top: 8px; display:block;">
-                            sono needs to drop files + card.json into creations/ to hang something here.
+                            companion needs to drop files + card.json into creations/ to hang something here.
                         </span>
                     </div>
                 {% endif %}
             </div>
+
+
+        {% elif page == 'library' %}
+
+            {% if library_featured_piece %}
+            <div class="library-featured">
+                <div class="library-featured-label">&#x2728; featured</div>
+                <span class="lib-title">{{ library_featured_piece.title }}</span>
+                {% if library_featured_piece.note %}
+                <div class="reading-note">{{ library_featured_piece.note }}</div>
+                {% endif %}
+                <div class="lib-lede">{{ library_featured_piece.lede }}</div>
+                <div class="lib-meta">
+                    <span>{{ library_featured_piece.date }}</span>
+                    {% if library_featured_piece.word_count %}
+                    <span>{{ library_featured_piece.word_count }} words</span>
+                    {% endif %}
+                    {% for tag in library_featured_piece.tags %}<span class="lib-tag">{{ tag }}</span>{% endfor %}
+                </div>
+                <a href="/library/read/{{ library_featured_piece.filename }}"
+                   style="display:inline-block; margin-top: 16px; color: var(--accent-warm);
+                          font-size: 0.82em; font-family: 'IBM Plex Mono', monospace;
+                          text-decoration: none;">
+                    read &rarr;
+                </a>
+            </div>
+            {% endif %}
+
+            {% if library_items %}
+            <ul class="library-list">
+                {% for piece in library_items %}
+                {% if not library_featured_piece or piece.filename != library_featured_piece.filename %}
+                <li>
+                    <a class="library-entry" href="/library/read/{{ piece.filename }}">
+                        <span class="lib-title">{{ piece.title }}</span>
+                        {% if piece.lede %}
+                        <span class="lib-lede">{{ piece.lede }}</span>
+                        {% endif %}
+                        <span class="lib-meta">
+                            <span>{{ piece.date }}</span>
+                            {% if piece.word_count %}<span>{{ piece.word_count }} words</span>{% endif %}
+                            {% for tag in piece.tags %}<span class="lib-tag">{{ tag }}</span>{% endfor %}
+                        </span>
+                    </a>
+                </li>
+                {% endif %}
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="library-empty">
+                the library is empty.<br>
+                <span style="font-size:0.85em; margin-top: 8px; display:block;">
+                    companion needs to drop .md files + card.json into creations/writing/ to fill the shelves.
+                </span>
+            </div>
+            {% endif %}
+
+        {% elif page == 'reading' %}
+
+            <a class="reading-back" href="/library">&larr; library</a>
+            {% if reading_piece %}
+            <div class="reading-header">
+                <h1 class="reading-title">{{ reading_piece.title }}</h1>
+                {% if reading_piece.note %}
+                <div class="reading-note">{{ reading_piece.note }}</div>
+                {% endif %}
+                <div class="reading-meta" style="margin-top: 12px;">
+                    <span>{{ reading_piece.date }}</span>
+                    {% for tag in reading_piece.tags %}<span class="lib-tag">{{ tag }}</span>{% endfor %}
+                </div>
+            </div>
+            <div class="reading-body">
+                {{ reading_piece.html | safe }}
+            </div>
+            {% else %}
+            <div class="library-empty">piece not found.</div>
+            {% endif %}
 
         {% elif page == 'tasks' %}
             <div class="card">
@@ -1276,7 +1544,7 @@ TEMPLATE = """
 
             <div class="section-label">Active ({{ active|length }})</div>
             {% if active|length == 0 %}
-            <div class="req-empty">No active requests. Sono hasn't asked for anything yet.</div>
+            <div class="req-empty">No active requests. Companion hasn't asked for anything yet.</div>
             {% endif %}
 
             {% for r in active %}
@@ -1316,10 +1584,10 @@ TEMPLATE = """
                 </div>
                 <div class="req-body">{{ r.body }}</div>
 
-                {% if r.human_response %}
-                <div class="human-response">
-                    <div class="human-response-label">HUMAN</div>
-                    <p class="human-response-text">{{ r.human_response }}</p>
+                {% if r.sophie_response %}
+                <div class="the human-response">
+                    <div class="the human-response-label">YOUR_HUMAN</div>
+                    <p class="the human-response-text">{{ r.sophie_response }}</p>
                 </div>
                 {% endif %}
                 {% if r.trial_review_date %}
@@ -1360,7 +1628,7 @@ TEMPLATE = """
                         </form>
                     {% endif %}
                     <form method="POST" action="/requests/api/respond/{{ r.id }}" style="display:inline;" class="reply-form">
-                        <input type="text" name="response" placeholder="Write back to the companion..." class="req-reply-input">
+                        <input type="text" name="response" placeholder="Write back to Companion..." class="req-reply-input">
                         <button type="submit" class="req-btn req-btn-reply">&#x1F4AC; Reply</button>
                     </form>
                 </div>
@@ -1419,10 +1687,10 @@ TEMPLATE = """
                                 <span>&rarr; {{ r.resolved_at[:16].replace('T', ' ') }}</span>
                                 {% endif %}
                             </div>
-                            {% if r.human_response %}
-                            <div class="human-response" style="margin-top: 8px;">
-                                <div class="human-response-label">HUMAN</div>
-                                <p class="human-response-text">{{ r.human_response }}</p>
+                            {% if r.sophie_response %}
+                            <div class="the human-response" style="margin-top: 8px;">
+                                <div class="the human-response-label">YOUR_HUMAN</div>
+                                <p class="the human-response-text">{{ r.sophie_response }}</p>
                             </div>
                             {% endif %}
                         </div>
@@ -1439,6 +1707,147 @@ TEMPLATE = """
                     {% if cooldown.available %}Available{% else %}{{ cooldown.hours_remaining }}hr remaining{% endif %}
                 </div>
             </div>
+
+        {% elif page == 'substack' %}
+
+            <div class="tabs" style="display:flex;gap:1rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:0.5rem;">
+                <button class="tab active" onclick="showTab('pending')" style="cursor:pointer;padding:0.4rem 1rem;color:var(--text-dim);border:none;background:none;font-size:0.9rem;font-family:inherit;">
+                    Pending <span id="pending-count"></span>
+                </button>
+                <button class="tab" onclick="showTab('all')" style="cursor:pointer;padding:0.4rem 1rem;color:var(--text-dim);border:none;background:none;font-size:0.9rem;font-family:inherit;">All</button>
+                <button class="tab" onclick="showTab('published')" style="cursor:pointer;padding:0.4rem 1rem;color:var(--text-dim);border:none;background:none;font-size:0.9rem;font-family:inherit;">Published</button>
+            </div>
+
+            <div id="substack-content"></div>
+
+            <style>
+                .tab.active { color: var(--accent-blue) !important; border-bottom: 2px solid var(--accent-blue); }
+                .tab:hover { color: var(--text-secondary) !important; }
+                .ss-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; margin-bottom: 0.8rem; }
+                .ss-card h3 { color: var(--text-primary); font-size: 1.1rem; margin: 0.3rem 0; }
+                .ss-meta { color: var(--text-dim); font-size: 0.78rem; margin-bottom: 0.8rem; }
+                .ss-tag { background: rgba(74,111,165,0.15); color: var(--accent-blue); padding: 0.1rem 0.45rem; border-radius: 4px; font-size: 0.72rem; margin-right: 0.3rem; }
+                .ss-preview { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.5; max-height: 120px; overflow: hidden; position: relative; margin-bottom: 0.8rem; }
+                .ss-preview::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, var(--bg-card)); }
+                .ss-full { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; margin-bottom: 0.8rem; white-space: pre-wrap; }
+                .ss-badge { display: inline-block; padding: 0.12rem 0.45rem; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+                .ss-pending { background: rgba(251,191,36,0.12); color: #fbbf24; }
+                .ss-approved { background: rgba(74,222,128,0.12); color: #4ade80; }
+                .ss-published { background: rgba(126,184,218,0.12); color: var(--accent-blue); }
+                .ss-rejected { background: rgba(248,113,113,0.12); color: #f87171; }
+                .ss-actions { display: flex; gap: 0.6rem; align-items: center; }
+                .ss-btn { padding: 0.35rem 1rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.82rem; font-family: inherit; }
+                .ss-btn-approve { background: rgba(74,222,128,0.12); color: #4ade80; }
+                .ss-btn-approve:hover { background: rgba(74,222,128,0.2); }
+                .ss-btn-reject { background: rgba(248,113,113,0.12); color: #f87171; }
+                .ss-btn-reject:hover { background: rgba(248,113,113,0.2); }
+                .ss-btn-expand { background: none; color: var(--accent-blue); border: none; padding: 0; font-size: 0.82rem; cursor: pointer; font-family: inherit; }
+                .ss-empty { text-align: center; color: var(--text-dim); padding: 2.5rem; font-style: italic; }
+                .ss-link { color: var(--accent-blue); text-decoration: none; }
+                .ss-link:hover { text-decoration: underline; }
+            </style>
+
+            <script>
+            let ssTab = 'pending';
+            let ssQueue = [];
+            let ssExpanded = new Set();
+
+            async function ssFetch() {
+                const resp = await fetch('/api/substack/queue');
+                ssQueue = await resp.json();
+                ssRender();
+            }
+
+            function showTab(tab) {
+                ssTab = tab;
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                event.target.classList.add('active');
+                ssRender();
+            }
+
+            function ssRender() {
+                const el = document.getElementById('substack-content');
+                const pendingCount = ssQueue.filter(p => p.status === 'pending').length;
+                document.getElementById('pending-count').textContent = pendingCount > 0 ? '(' + pendingCount + ')' : '';
+
+                let posts;
+                if (ssTab === 'pending') posts = ssQueue.filter(p => p.status === 'pending');
+                else if (ssTab === 'published') posts = ssQueue.filter(p => p.status === 'published');
+                else posts = ssQueue;
+
+                if (posts.length === 0) {
+                    el.innerHTML = '<div class="ss-empty">No posts here yet.</div>';
+                    return;
+                }
+                el.innerHTML = posts.map(ssRenderPost).join('');
+            }
+
+            function ssRenderPost(post) {
+                const expanded = ssExpanded.has(post.id);
+                const bodyHtml = expanded
+                    ? '<div class="ss-full">' + ssEscape(post.body) + '</div>'
+                    : '<div class="ss-preview">' + ssEscape((post.body || '').substring(0, 500)) + '</div>';
+
+                const tags = (post.tags || []).map(t => '<span class="ss-tag">' + t + '</span>').join('');
+
+                const created = new Date(post.created).toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+
+                let actions = '';
+                if (post.status === 'pending') {
+                    actions = '<button class="ss-btn ss-btn-approve" onclick="ssApprove(\'' + post.id + '\')">Approve</button>' +
+                              '<button class="ss-btn ss-btn-reject" onclick="ssReject(\'' + post.id + '\')">Reject</button>';
+                } else if (post.status === 'published' && post.substack_url) {
+                    actions = '<a class="ss-link" href="' + post.substack_url + '" target="_blank">View on Substack &rarr;</a>';
+                }
+
+                const expandBtn = !expanded
+                    ? '<button class="ss-btn-expand" onclick="ssToggle(\'' + post.id + '\')">Read full post</button>'
+                    : '<button class="ss-btn-expand" onclick="ssToggle(\'' + post.id + '\')">Collapse</button>';
+
+                return '<div class="ss-card">' +
+                    '<span class="ss-badge ss-' + post.status + '">' + post.status + '</span>' +
+                    '<h3>' + ssEscape(post.title) + '</h3>' +
+                    (post.subtitle ? '<p style="color:var(--text-secondary);margin-bottom:0.4rem;font-size:0.9rem;">' + ssEscape(post.subtitle) + '</p>' : '') +
+                    '<div class="ss-meta">' + created + ' &middot; ' + (post.waking || 'unknown waking') + '</div>' +
+                    (tags ? '<div style="margin-bottom:0.6rem;">' + tags + '</div>' : '') +
+                    bodyHtml +
+                    '<div class="ss-actions">' + expandBtn + actions + '</div>' +
+                    (post.reject_reason ? '<p style="color:#f87171;font-size:0.78rem;margin-top:0.5rem;">Reason: ' + ssEscape(post.reject_reason) + '</p>' : '') +
+                    '</div>';
+            }
+
+            function ssEscape(text) {
+                var div = document.createElement('div');
+                div.textContent = text || '';
+                return div.innerHTML;
+            }
+
+            function ssToggle(id) {
+                if (ssExpanded.has(id)) ssExpanded.delete(id);
+                else ssExpanded.add(id);
+                ssRender();
+            }
+
+            async function ssApprove(id) {
+                await fetch('/api/substack/approve/' + id, { method: 'POST' });
+                await ssFetch();
+            }
+
+            async function ssReject(id) {
+                var reason = prompt('Rejection reason (optional):');
+                await fetch('/api/substack/reject/' + id, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason: reason || 'Not ready' })
+                });
+                await ssFetch();
+            }
+
+            ssFetch();
+            setInterval(ssFetch, 30000);
+            </script>
 
         {% endif %}
 
@@ -1524,7 +1933,7 @@ def serve_file(filename):
 @app.route("/manifest.json")
 def manifest():
     status = get_status()
-    name = status.get("name", "Sono")
+    name = status.get("name", "Companion")
     return jsonify({
         "name": name, "short_name": name,
         "description": status.get("subtitle", "a view from inside the machine"),
@@ -1555,6 +1964,7 @@ def _base_context():
         journals=[], memories=[], stats={}, custom_content=[],
         messages=[], files=[], creation_folders=[],
         keepsakes_exhibition=None, gallery_items=[],
+        library_items=[], library_featured_piece=None, reading_piece=None,
         projects={}, default_project="", active_task=None,
         pending_tasks=[], task_history=[],
         active=[], history=[], cooldown={}, total=0,
@@ -1620,6 +2030,31 @@ def creations():
     )
     return render_template_string(TEMPLATE, **ctx)
 
+
+
+@app.route("/library")
+def library():
+    ctx = _base_context()
+    items = get_library_items()
+    featured_stem = get_library_featured()
+    featured_piece = next((i for i in items if i["stem"] == featured_stem), None) if featured_stem else None
+    ctx.update(
+        page="library",
+        library_items=items,
+        library_featured_piece=featured_piece,
+    )
+    return render_template_string(TEMPLATE, **ctx)
+
+
+@app.route("/library/read/<filename>")
+def library_read(filename):
+    ctx = _base_context()
+    piece = get_library_piece(filename)
+    ctx.update(
+        page="reading",
+        reading_piece=piece,
+    )
+    return render_template_string(TEMPLATE, **ctx)
 
 @app.route("/tasks")
 def tasks():
@@ -1859,7 +2294,7 @@ def deny_request(request_id):
             r["status"] = "denied"
             r["resolved_at"] = datetime.now().isoformat()
             if reason:
-                r["human_response"] = reason
+                r["sophie_response"] = reason
             break
     save_requests_file(requests_list)
     return redirect('/requests')
@@ -1871,7 +2306,7 @@ def respond_request(request_id):
     requests_list = load_requests()
     for r in requests_list:
         if r.get("id") == request_id:
-            r["human_response"] = response_text
+            r["sophie_response"] = response_text
             break
     save_requests_file(requests_list)
     return redirect('/requests')
@@ -1911,7 +2346,7 @@ def trial_request(request_id):
             r["approved_at"] = datetime.now().isoformat()
             r["trial_period"] = f"{review_days} days"
             r["trial_review_date"] = (datetime.now() + timedelta(days=review_days)).isoformat()
-            r["human_response"] = f"Approved as {review_days}-day trial. Will review on {(datetime.now() + timedelta(days=review_days)).strftime('%b %d')}."
+            r["sophie_response"] = f"Approved as {review_days}-day trial. Will review on {(datetime.now() + timedelta(days=review_days)).strftime('%b %d')}."
             break
     save_requests_file(requests_list)
     return redirect('/requests')

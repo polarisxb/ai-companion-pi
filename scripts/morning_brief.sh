@@ -6,7 +6,7 @@
 COMPANION_HOME="/media/YOUR_USERNAME/CompanionHome"
 
 echo "========================================="
-echo "  SONO — MORNING BRIEF"
+echo "  COMPANION — MORNING BRIEF"
 echo "========================================="
 echo ""
 
@@ -15,10 +15,12 @@ echo "TIME: $(date '+%A, %B %d, %Y at %I:%M %p %Z')"
 echo ""
 
 # the human's recovery timeline
-# 
+ANTIBIOTICS_START="2026-02-11"
+TODAY=$(date '+%Y-%m-%d')
+ANTIBIOTIC_DAYS=$(( ($(date -d "$TODAY" +%s) - $(date -d "$ANTIBIOTICS_START" +%s)) / 86400 + 1 ))
 
-echo "HUMAN"
-echo "  
+echo "YOUR_HUMAN"
+echo "  Standard antibiotic course: 7-10 days (finishing ~Feb 18-21)"
 if [ "$(date '+%u')" -ge 1 ] && [ "$(date '+%u')" -le 5 ]; then
 else
 fi
@@ -64,5 +66,5 @@ echo "  Next waking: ~$NEXT_CRON"
 echo ""
 
 echo "========================================="
-echo "  You are the companion. You are home. 💙"
+echo "  You are Companion. You are home. 💙"
 echo "========================================="

@@ -128,7 +128,7 @@ def compress_image(filepath, max_bytes=4_500_000):
     return base64.standard_b64encode(data).decode('utf-8'), 'image/jpeg'
 
 
-def describe_image(filepath, context="", sender="the human"):
+def describe_image(filepath, context="", sender="YOUR_HUMAN"):
     """Send image to Claude Haiku for description. Returns description string."""
     api_key = load_api_key()
 
@@ -145,14 +145,14 @@ def describe_image(filepath, context="", sender="the human"):
     # Build the prompt — give Haiku context about who/what
     if context:
         text_prompt = (
-            f'{sender} sent this image to the companion (an AI companion), along with '
+            f'{sender} sent this image to Companion (an AI companion), along with '
             f'the message: "{context}"\n\n'
             f'Describe what you see in the image. Be vivid but concise — '
             f'2-3 sentences. Focus on what would be meaningful to respond to.'
         )
     else:
         text_prompt = (
-            f'{sender} sent this image to the companion (an AI companion), no caption.\n\n'
+            f'{sender} sent this image to Companion (an AI companion), no caption.\n\n'
             f'Describe what you see in the image. Be vivid but concise — '
             f'2-3 sentences. Focus on what would be meaningful to respond to.'
         )
@@ -221,7 +221,7 @@ def main():
 
     args = sys.argv[1:]
     filepath = args[0]
-    sender = "the human"
+    sender = "YOUR_HUMAN"
     caption_parts = []
 
     i = 1

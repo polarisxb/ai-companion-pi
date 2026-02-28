@@ -26,45 +26,51 @@ class MemoryDecisionEngine:
         if any(trigger in message_lower for trigger in explicit_triggers):
             return {
                 "content": message,
-                "tags": ["explicit-request", "user-directive"],
-                "metadata": {"source": "explicit_request"}
+                "context": ["explicit-request"],
+                "source": "auto",
+                "intensity": 3, "valence": 3, "significance": 4
             }
 
         personal_markers = self._detect_personal_info(message)
         if personal_markers:
             return {
                 "content": message,
-                "tags": personal_markers["tags"],
-                "metadata": {"type": "personal", "category": personal_markers["category"]}
+                "context": personal_markers["tags"],
+                "source": "auto",
+                "intensity": 3, "valence": 3, "significance": 3
             }
 
         preference_markers = self._detect_preferences(message)
         if preference_markers:
             return {
                 "content": message,
-                "tags": ["preference"] + preference_markers.get("tags", []),
-                "metadata": {"type": "preference"}
+                "context": ["preference"] + preference_markers.get("tags", []),
+                "source": "auto",
+                "intensity": 3, "valence": 3, "significance": 3
             }
 
         if self._is_decision(message):
             return {
                 "content": message,
-                "tags": ["decision", "planning"],
-                "metadata": {"type": "decision"}
+                "context": ["decision", "plan"],
+                "source": "auto",
+                "intensity": 3, "valence": 3, "significance": 3
             }
 
         if self._is_milestone(message):
             return {
                 "content": message,
-                "tags": ["milestone", "event"],
-                "metadata": {"type": "milestone"}
+                "context": ["milestone"],
+                "source": "auto",
+                "intensity": 4, "valence": 4, "significance": 3
             }
 
         if self._is_correction(message):
             return {
                 "content": message,
-                "tags": ["correction", "factual"],
-                "metadata": {"type": "correction"}
+                "context": ["correction", "fact"],
+                "source": "auto",
+                "intensity": 2, "valence": 3, "significance": 3
             }
 
         return None
@@ -171,7 +177,8 @@ class MemoryDecisionEngine:
             summary += f"Discussed topics involving {', '.join(set(words))}."
             return {
                 "content": summary,
-                "tags": ["conversation-summary", "auto-generated"],
-                "metadata": {"type": "summary", "message_count": len(messages)}
+                "context": ["summary"],
+                "source": "conversation",
+                "intensity": 3, "valence": 3, "significance": 3
             }
         return None

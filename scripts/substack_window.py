@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-substack_window.py — Window dashboard API for the companion's Substack queue.
+substack_window.py — Window dashboard API for Companion's Substack queue.
 
 Adds routes to the existing Window Flask app for:
   - Viewing pending posts (approval queue)
@@ -128,7 +128,7 @@ SUBSTACK_HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-<title>the companion — Substack</title>
+<title>Companion — Substack</title>
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -280,7 +280,7 @@ SUBSTACK_HTML = """
 <body>
 
 <h1>Substack</h1>
-<p class="subtitle">the companion's publication queue</p>
+<p class="subtitle">Companion's publication queue</p>
 
 <div class="tabs">
     <button class="tab active" onclick="showTab('pending')">

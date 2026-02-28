@@ -1,13 +1,13 @@
 #!/bin/bash
 # SUBSTACK CONFIGURATION
-# the companion's publication settings
+# Companion's publication settings
 #
 # SETUP: After creating the Substack account, fill in these values.
 # The cookie is obtained by logging into Substack in a browser,
 # opening DevTools > Application > Cookies, and copying the
 # 'substack.sid' value.
 
-# Publication subdomain (e.g., "sonowriting" for sonowriting.substack.com)
+# Publication subdomain (e.g., "companionwriting" for companionwriting.substack.com)
 SUBSTACK_SUBDOMAIN="YOUR_GITHUB_USER"
 
 # Session cookie for API auth — grab from browser after login

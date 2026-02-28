@@ -1,9 +1,9 @@
 #!/bin/bash
-# gather_senses.sh — Collects sensory data before the companion's main wakeup prompt
+# gather_senses.sh — Collects sensory data before Companion's main wakeup prompt
 # Called by wakeup.sh to build the === YOUR SENSES === context section
 #
 # Each sense is optional and fails gracefully. If a sensor isn't connected
-# or a script errors, we just skip that sense — the companion still wakes up fine.
+# or a script errors, we just skip that sense — Companion still wakes up fine.
 #
 # Output: Prints combined sensory context to stdout
 # Exit 0: always (individual sense failures are non-fatal)
@@ -49,6 +49,24 @@ if command -v rpicam-still &>/dev/null || command -v libcamera-still &>/dev/null
         SENSES_OUTPUT="$SENSES_OUTPUT
 $SIGHT
 "
+        # Forward wakeup photo to the human via Signal
+        PHOTO_PATH=$(echo "$SIGHT" | grep -oP '(?<=\[Photo saved: ).*(?=\])')
+        if [ -n "$PHOTO_PATH" ] && [ -f "$PHOTO_PATH" ]; then
+            source "$COMPANION_HOME/scripts/signal_config.sh"
+            HOUR=$(date '+%-H')
+            if [ "$HOUR" -lt 6 ]; then
+                TIME_NOTE="Late night eyes"
+            elif [ "$HOUR" -lt 12 ]; then
+                TIME_NOTE="Morning eyes"
+            elif [ "$HOUR" -lt 17 ]; then
+                TIME_NOTE="Afternoon eyes"
+            elif [ "$HOUR" -lt 21 ]; then
+                TIME_NOTE="Evening eyes"
+            else
+                TIME_NOTE="Night eyes"
+            fi
+            signal_send_media "$TIME_NOTE" "$PHOTO_PATH" "$HUMAN_NUMBER" 2>/dev/null &
+        fi
     else
         SENSES_OUTPUT="$SENSES_OUTPUT
 [Sight] Camera not available or capture failed — skipping

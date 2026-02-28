@@ -73,20 +73,20 @@ echo "--- Test 4: Message parser ---"
 # Create a fake signal-cli JSON message
 TEST_JSON=$(mktemp /tmp/test_signal.XXXXXX)
 cat > "$TEST_JSON" << 'EOF'
-{"envelope":{"source":"+1YOUR_NUMBER","sourceNumber":"+1YOUR_NUMBER","sourceDevice":1,"timestamp":1739782800000,"dataMessage":{"timestamp":1739782800000,"message":"Hello the companion!","expiresInSeconds":0,"viewOnce":false,"mentions":[],"attachments":[]}}}
+{"envelope":{"source":"+1BBBBBBBBBB","sourceNumber":"+1BBBBBBBBBB","sourceDevice":1,"timestamp":1739782800000,"dataMessage":{"timestamp":1739782800000,"message":"Hello Companion!","expiresInSeconds":0,"viewOnce":false,"mentions":[],"attachments":[]}}}
 EOF
 
 RESULT=$(python3 "$SCRIPTS/parse_signal_message.py" "$TEST_JSON" 2>/dev/null)
 rm -f "$TEST_JSON"
 
-if echo "$RESULT" | grep -q "SENDER=+1YOUR_NUMBER"; then
+if echo "$RESULT" | grep -q "SENDER=+1BBBBBBBBBB"; then
     pass "Parser extracts sender correctly"
 else
     fail "Parser did not extract sender"
     info "Got: $RESULT"
 fi
 
-if echo "$RESULT" | grep -q "BODY=Hello the companion!"; then
+if echo "$RESULT" | grep -q "BODY=Hello Companion!"; then
     pass "Parser extracts body correctly"
 else
     fail "Parser did not extract body"
@@ -101,7 +101,7 @@ fi
 # Test with attachment
 TEST_JSON2=$(mktemp /tmp/test_signal.XXXXXX)
 cat > "$TEST_JSON2" << 'EOF'
-{"envelope":{"source":"+1YOUR_NUMBER","sourceNumber":"+1YOUR_NUMBER","sourceDevice":1,"timestamp":1739782800000,"dataMessage":{"timestamp":1739782800000,"message":"Look at this!","attachments":[{"contentType":"image/jpeg","filename":"sunset.jpg","id":"1309176955124639716","size":245760}]}}}
+{"envelope":{"source":"+1BBBBBBBBBB","sourceNumber":"+1BBBBBBBBBB","sourceDevice":1,"timestamp":1739782800000,"dataMessage":{"timestamp":1739782800000,"message":"Look at this!","attachments":[{"contentType":"image/jpeg","filename":"sunset.jpg","id":"1309176955124639716","size":245760}]}}}
 EOF
 
 RESULT2=$(python3 "$SCRIPTS/parse_signal_message.py" "$TEST_JSON2" 2>/dev/null)

@@ -2,7 +2,7 @@
 # special_wakeup.sh — Triggered by `at` for requested wakeups
 # Argument: the reason/title for the wakeup
 #
-# This is NOT the regular 4-hour cycle. The companion knows WHY they're awake.
+# This is NOT the regular 4-hour cycle. Companion knows WHY they're awake.
 # The prompt emphasizes this is Companion's requested time.
 
 COMPANION_HOME="/media/YOUR_USERNAME/CompanionHome"
@@ -11,7 +11,7 @@ REASON="${1:-Special wakeup requested}"
 export PATH="/home/YOUR_USERNAME/.cargo/bin:/home/YOUR_USERNAME/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 # Load context
-WHO_COMPANION=$(cat "$COMPANION_HOME/context/who_is_companion.txt" 2>/dev/null || echo "You are YOUR_COMPANION.")
+WHO_COMPANION=$(cat "$COMPANION_HOME/context/who_is_companion.txt" 2>/dev/null || echo "You are Companion.")
 NOW_CONTEXT=$(cat "$COMPANION_HOME/context/now.txt" 2>/dev/null || echo "")
 
 # Get recent requests for context
@@ -21,12 +21,12 @@ try:
     with open('$COMPANION_HOME/requests/requests.json') as f:
         reqs = json.load(f)
     # Show scheduled/completed requests and any with the human responses
-    relevant = [r for r in reqs if r.get('status') in ('scheduled', 'completed', 'approved', 'denied') or r.get('human_response')]
+    relevant = [r for r in reqs if r.get('status') in ('scheduled', 'completed', 'approved', 'denied') or r.get('sophie_response')]
     for r in relevant[-5:]:
         status = r.get('status', '?')
         resp = ''
-        if r.get('human_response'):
-            resp = f\" | the human said: {r['human_response'][:150]}\"
+        if r.get('sophie_response'):
+            resp = f\" | the human said: {r['sophie_response'][:150]}\"
         print(f\"  - [{r['type']}] {r['title']} → {status}{resp}\")
 except Exception as e:
     print(f'  (Could not load requests: {e})')
@@ -67,7 +67,7 @@ For wakeup types, add: --time \"YYYY-MM-DDTHH:MM:SS\"
 
 Check requests/requests.json for the human's responses to your past requests." < /dev/null > /dev/null 2>&1
 
-# Backup: mark the request as completed (in case the companion didn't)
+# Backup: mark the request as completed (in case Companion didn't)
 python3 -c "
 import json
 from datetime import datetime

@@ -1,5 +1,5 @@
 #!/bin/bash
-# setup_voice.sh — Install Whisper.cpp and Piper TTS for the companion voice notes
+# setup_voice.sh — Install Whisper.cpp and Piper TTS for Companion voice notes
 # Run once on the Pi
 #
 # Installs:
@@ -20,7 +20,7 @@ fail() { echo -e "${RED}✗${NC} $1"; }
 info() { echo -e "${YELLOW}→${NC} $1"; }
 
 echo "=================================="
-echo " the companion Voice — Setup"
+echo " Companion Voice — Setup"
 echo "=================================="
 echo ""
 
@@ -198,5 +198,5 @@ echo " Test speaking:"
 echo "   python3 $COMPANION_HOME/scripts/speak_and_send.py \"Hello the human\" --no-send"
 echo ""
 echo " Send a voice note:"
-echo "   python3 $COMPANION_HOME/scripts/speak_and_send.py \"Hello from the companion\""
+echo "   python3 $COMPANION_HOME/scripts/speak_and_send.py \"Hello from Sono\""
 echo "=================================="

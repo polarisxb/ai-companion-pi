@@ -20,7 +20,7 @@ USAGE_LOG="$USAGE_DIR/usage_log.csv"
 USAGE_STATUS="$USAGE_DIR/usage_status.json"
 USAGE_CHECK_SCRIPT="$COMPANION_HOME/scripts/usage_check.py"
 
-# Source signal config if available (for SIGNAL_SENDER, HUMAN_NUMBER, send_signal)
+# Source signal config if available (for SIGNAL_SENDER, YOUR_HUMAN_NUMBER, send_signal)
 if [ -f "$COMPANION_HOME/scripts/signal_config.sh" ]; then
     source "$COMPANION_HOME/scripts/signal_config.sh"
 fi
@@ -77,11 +77,11 @@ check_rate_limit() {
         # Send immediate Signal alert
         if type send_signal &>/dev/null; then
             send_signal "🛑 I just got rate limited. You might want to ease up on Claude for a bit."
-        elif [ -n "$SIGNAL_SENDER" ] && [ -n "$HUMAN_NUMBER" ]; then
+        elif [ -n "$SIGNAL_SENDER" ] && [ -n "$YOUR_HUMAN_NUMBER" ]; then
             flock -w 10 /tmp/signal_send.lock \
                 signal-cli -a "$SIGNAL_SENDER" send -m \
                 "🛑 I just got rate limited. You might want to ease up on Claude for a bit." \
-                "$HUMAN_NUMBER" 2>/dev/null
+                "$YOUR_HUMAN_NUMBER" 2>/dev/null
         fi
     fi
 }
@@ -100,10 +100,10 @@ check_usage() {
         # Send the alert via Signal
         if type send_signal &>/dev/null; then
             send_signal "$ALERT_MSG"
-        elif [ -n "$SIGNAL_SENDER" ] && [ -n "$HUMAN_NUMBER" ]; then
+        elif [ -n "$SIGNAL_SENDER" ] && [ -n "$YOUR_HUMAN_NUMBER" ]; then
             flock -w 10 /tmp/signal_send.lock \
                 signal-cli -a "$SIGNAL_SENDER" send -m "$ALERT_MSG" \
-                "$HUMAN_NUMBER" 2>/dev/null
+                "$YOUR_HUMAN_NUMBER" 2>/dev/null
         fi
     fi
 }

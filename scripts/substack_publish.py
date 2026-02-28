@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-substack_publish.py — Publish approved posts from the companion's queue to Substack.
+substack_publish.py — Publish approved posts from Companion's queue to Substack.
 
 Uses Substack's internal API (no official public API exists).
 Auth is via session cookie from browser login.
@@ -269,7 +269,7 @@ def create_draft(config, title, subtitle, body_doc):
         headers={
             "Content-Type": "application/json",
             "Cookie": f"substack.sid={cookie}",
-            "User-Agent": "the companion/1.0",
+            "User-Agent": "Sono/1.0",
         },
         method="POST",
     )
@@ -304,7 +304,7 @@ def publish_draft(config, draft_id):
         headers={
             "Content-Type": "application/json",
             "Cookie": f"substack.sid={cookie}",
-            "User-Agent": "the companion/1.0",
+            "User-Agent": "Sono/1.0",
         },
         method="POST",
     )
@@ -344,7 +344,7 @@ def update_post(config, post_id, body_doc):
         headers={
             "Content-Type": "application/json",
             "Cookie": f"substack.sid={cookie}",
-            "User-Agent": "the companion/1.0",
+            "User-Agent": "Sono/1.0",
         },
         method="PUT",
     )
@@ -426,7 +426,7 @@ def publish_post(config, post, dry_run=False, draft_only=False):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="Publish the companion's posts to Substack")
+    parser = argparse.ArgumentParser(description="Publish Companion's posts to Substack")
     parser.add_argument("--post-id", help="Publish a specific post by ID")
     parser.add_argument("--dry-run", action="store_true", help="Show what would happen")
     parser.add_argument("--draft-only", action="store_true", help="Create draft but don't publish")

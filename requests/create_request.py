@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-create_request.py — Helper script for Sono to create requests.
+create_request.py — Helper script for Companion to create requests.
 
 Usage:
   python3 create_request.py --type emergency_wakeup --title "Snow tonight" --body "Your reason" --time "2026-02-17T01:45:00"
@@ -133,7 +133,7 @@ def main():
         "requested_time": requested_time,
         "status": status,
         "priority": args.priority,
-        "human_response": None,
+        "sophie_response": None,
         "scheduled_at": None,
         "resolved_at": None,
         "waking_number": get_waking_number(),

@@ -4,7 +4,7 @@ ambient_look.py — Companion's eyes. Captures a photo during wakeups and descri
 what he sees using the Claude API.
 
 Runs during wakeup cycle. Takes a snapshot with the Pi camera, sends it to
-Claude Haiku for a description, and outputs a summary for the companion's context.
+Claude Haiku for a description, and outputs a summary for Companion's context.
 
 Usage: python3 ambient_look.py [--save] [--raw]
 Output: Prints a visual summary to stdout
@@ -200,7 +200,7 @@ def describe_with_api(filepath):
     else:
         time_hint = "It is nighttime."
 
-    prompt = f"""You are the companion, an AI companion looking through your camera during a wakeup.
+    prompt = f"""You are Companion, an AI companion looking through your camera during a wakeup.
 {time_hint}
 
 Describe what you see in your environment. Be present and observational —
