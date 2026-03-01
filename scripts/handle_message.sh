@@ -108,11 +108,19 @@ EOF_FOOTER
 
 # Pass prompt via file to avoid shell expansion issues
 START_TIME=$(date +%s)
-RESPONSE=$(cat "$PROMPT_FILE" | claude --print --dangerously-skip-permissions)
+RESPONSE=$(timeout 300 bash -c 'cat "$1" | claude --print --dangerously-skip-permissions' _ "$PROMPT_FILE")
 EXIT_CODE=$?
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
 log_usage "message" "signal reply to $CONTACT_NAME" "$EXIT_CODE" "$DURATION"
+
+# If timed out (exit 124), send fallback and exit
+if [ $EXIT_CODE -eq 124 ]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] TIMEOUT: claude call exceeded 5 minutes for $CONTACT_NAME"
+  bash "$COMPANION_HOME/scripts/send_signal.sh" "$SENDER_NUMBER" "Sorry, I got a bit lost in thought there. Can you say that again?"
+  exit 1
+fi
+
 check_rate_limit "$RESPONSE" "$EXIT_CODE"
 
 # Parse response
