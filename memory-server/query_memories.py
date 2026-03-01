@@ -9,20 +9,11 @@ Usage:
   python query_memories.py get <memory_id>                # Get a specific memory
 """
 import sys
-import json
-from pathlib import Path
-from sentence_transformers import SentenceTransformer
-import numpy as np
-
-STORAGE_PATH = Path("/media/YOUR_USERNAME/CompanionHome/memory-server/memory_store.json")
-EMBEDDINGS_PATH = Path("/media/YOUR_USERNAME/CompanionHome/memory-server/memory_embeddings.npy")
+from semantic_memory import SemanticMemoryStore, STORAGE_PATH
 
 
-def load_memories():
-    if not STORAGE_PATH.exists():
-        return []
-    with open(STORAGE_PATH) as f:
-        return json.load(f)
+def _store():
+    return SemanticMemoryStore(STORAGE_PATH)
 
 
 def format_memory(m, score=None):
@@ -62,55 +53,23 @@ def format_memory(m, score=None):
 
 
 def get_recent(limit=10):
-    memories = load_memories()
-    active = [m for m in memories if m.get("status", "active") == "active"]
-    sort_key = lambda m: m.get("created_at", m.get("timestamp", ""))
-    return sorted(active, key=sort_key, reverse=True)[:limit]
+    return _store().get_recent_memories(limit)
 
 
 def search(query, limit=5):
-    if not STORAGE_PATH.exists() or not EMBEDDINGS_PATH.exists():
-        return []
-    memories = load_memories()
-    if not memories:
-        return []
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    embeddings = np.load(EMBEDDINGS_PATH)
-    query_emb = model.encode([query], show_progress_bar=False)
-    sims = np.dot(embeddings, query_emb.T).flatten()
-    norms = np.linalg.norm(embeddings, axis=1) * np.linalg.norm(query_emb)
-    sims = sims / (norms + 1e-10)
-
-    results = []
-    for i in range(len(sims)):
-        if sims[i] > 0.3 and memories[i].get("status", "active") == "active":
-            results.append((memories[i], float(sims[i])))
-    results.sort(key=lambda x: x[1], reverse=True)
-    return results[:limit]
+    return _store().semantic_search(query, limit)
 
 
 def strongest(dimension="significance", limit=10):
-    memories = load_memories()
-    active = [m for m in memories if m.get("status", "active") == "active"]
-    active.sort(key=lambda m: m.get("likert", {}).get(dimension, 3), reverse=True)
-    return active[:limit]
+    return _store().get_strongest(dimension, limit)
 
 
 def review(days=30):
-    from datetime import datetime, timedelta
-    cutoff = (datetime.now() - timedelta(days=days)).isoformat()
-    memories = load_memories()
-    return [m for m in memories
-            if m.get("status", "active") == "active"
-            and m.get("created_at", m.get("timestamp", "")) >= cutoff]
+    return _store().get_for_review(days)
 
 
 def get_by_id(memory_id):
-    memories = load_memories()
-    for m in memories:
-        if str(m.get("id")) == str(memory_id):
-            return m
-    return None
+    return _store().get_by_id(memory_id)
 
 
 if __name__ == "__main__":

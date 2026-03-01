@@ -8,71 +8,20 @@ Usage:
   echo "Something" | python store_memory.py
 """
 import sys
-import os
-import json
-import hashlib
 import argparse
-from datetime import datetime
-from pathlib import Path
-from sentence_transformers import SentenceTransformer
-import numpy as np
+from semantic_memory import SemanticMemoryStore, memory_write_lock, STORAGE_PATH
 from likert_scorer import score_memory
-
-STORAGE_PATH = Path("/media/YOUR_USERNAME/CompanionHome/memory-server/memory_store.json")
-EMBEDDINGS_PATH = Path("/media/YOUR_USERNAME/CompanionHome/memory-server/memory_embeddings.npy")
-
-
-def generate_id(content, timestamp):
-    hash_input = (content + timestamp).encode('utf-8')
-    return "mem_" + hashlib.md5(hash_input).hexdigest()[:6]
 
 
 def store(content, context=None, intensity=3, valence=3, significance=3,
           source="manual", contact=None):
-    memories = []
-    if STORAGE_PATH.exists():
-        with open(STORAGE_PATH) as f:
-            memories = json.load(f)
-
-    now = datetime.now().isoformat()
-    memory_id = generate_id(content, now)
-
-    memory = {
-        "id": memory_id,
-        "content": content,
-        "context": context or [],
-        "date": now[:10],
-        "created_at": now,
-        "source": source,
-        "contact": contact,
-        "likert": {
-            "intensity": max(1, min(5, intensity)),
-            "valence": max(1, min(5, valence)),
-            "significance": max(1, min(5, significance))
-        },
-        "review_history": [],
-        "status": "active",
-        "decay_eligible": significance < 4,
-        "schema_refs": []
-    }
-
-    memories.append(memory)
-    tmp_path = STORAGE_PATH.with_suffix('.tmp')
-    with open(tmp_path, 'w') as f:
-        json.dump(memories, f, indent=2)
-    os.replace(str(tmp_path), str(STORAGE_PATH))
-
-    # Update embeddings
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    new_emb = model.encode([content], show_progress_bar=False)
-    if EMBEDDINGS_PATH.exists():
-        existing = np.load(EMBEDDINGS_PATH)
-        embeddings = np.vstack([existing, new_emb])
-    else:
-        embeddings = new_emb
-    np.save(EMBEDDINGS_PATH, embeddings)
-
-    print(f"Stored memory {memory_id}")
+    with memory_write_lock():
+        ms = SemanticMemoryStore(STORAGE_PATH)
+        memory = ms.store_memory(content=content, context=context,
+                                  intensity=intensity, valence=valence,
+                                  significance=significance, source=source,
+                                  contact=contact)
+    print(f"Stored memory {memory['id']}")
 
 
 if __name__ == "__main__":

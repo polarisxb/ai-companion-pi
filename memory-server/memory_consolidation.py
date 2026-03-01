@@ -215,9 +215,10 @@ def execute():
     shutil.move(str(tmp_store), str(MEMORY_STORE))
     print(f"Kept {len(kept)} active memories ({len(non_active)} non-active preserved)")
 
-    # Embeddings note
-    if EMBEDDINGS_FILE.exists():
-        print(f"Note: Embeddings are now stale. Rebuild recommended.")
+    # Rebuild embeddings (loading triggers _rebuild_embeddings when count mismatches)
+    from semantic_memory import SemanticMemoryStore
+    ms = SemanticMemoryStore(MEMORY_STORE)
+    print(f"Rebuilt embeddings for {len(ms.memories)} memories")
 
     # Update index
     index = load_index()
