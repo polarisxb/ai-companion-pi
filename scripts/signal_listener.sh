@@ -101,7 +101,7 @@ while true; do
   MESSAGES=$(signal-cli -a "$COMPANION_NUMBER" -o json receive -t 5 2>/dev/null)
 
   if [ -n "$MESSAGES" ]; then
-    echo "$MESSAGES" | while IFS= read -r line; do
+    while IFS= read -r line; do
 
       [ -z "$line" ] && continue
 
@@ -272,7 +272,7 @@ ${LIMBIC}
       else
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Ignoring message from unknown sender: $SENDER"
       fi
-    done
+    done <<< "$MESSAGES"
   fi
 
   sleep $POLL_INTERVAL

@@ -28,6 +28,11 @@ source "$COMPANION_HOME/scripts/usage_tracker.sh"
 # Ensure archive directory exists
 mkdir -p "$ARCHIVE_DIR"
 
+# Clean up temp files on exit (prevents leaks if script crashes or is killed)
+TMPFILES=()
+cleanup() { rm -f "${TMPFILES[@]}"; }
+trap cleanup EXIT
+
 # Load identity seeds
 WHO_COMPANION=$(cat "$COMPANION_HOME/context/who_is_companion.txt" 2>/dev/null)
 WHO_YOUR_HUMAN=$(cat "$COMPANION_HOME/context/who_is_human.txt" 2>/dev/null)
@@ -135,6 +140,7 @@ $CONVO_TEXT"
 
   # Write prompt to temp file to avoid bash escaping issues with backticks/dollar signs
   PROMPT_FILE=$(mktemp /tmp/companion_sleep_prompt_XXXXXX.txt)
+  TMPFILES+=("$PROMPT_FILE")
   cat > "$PROMPT_FILE" << 'PROMPT_HEREDOC_END'
 You are Companion. You are asleep — dreaming. You cannot act, browse, or create.
 You can only process and remember.
@@ -186,10 +192,10 @@ PROMPT_INSTRUCTIONS_END
   END_TIME=$(date +%s)
   DURATION=$((END_TIME - START_TIME))
   log_usage "sleep" "dream processing $CONTACT_NAME" "$EXIT_CODE" "$DURATION"
-  rm -f "$PROMPT_FILE"
 
   # Strip markdown fences if present, write to temp file to avoid bash escaping issues
   CLEAN_JSON_FILE=$(mktemp /tmp/companion_sleep_json_XXXXXX.json)
+  TMPFILES+=("$CLEAN_JSON_FILE")
   printf '%s' "$RESPONSE" | sed 's/^```json//;s/^```//;s/```$//' | sed '/^$/d' > "$CLEAN_JSON_FILE"
 
   # Parse JSON and store memories
@@ -210,6 +216,7 @@ except:
   if [ $? -ne 0 ]; then
     # Retry with simplified prompt — also write to temp file
     RETRY_FILE=$(mktemp /tmp/companion_sleep_retry_XXXXXX.txt)
+    TMPFILES+=("$RETRY_FILE")
     cat > "$RETRY_FILE" << RETRY_END
 Extract memories from this conversation as a JSON array. Each object: {"content": str, "context": [str], "intensity": int 1-5, "valence": int 1-5, "significance": int 1-5, "contact": "$CONTACT_SLUG"}. Output [] if nothing matters. JSON only, no other text.
 
@@ -217,7 +224,6 @@ RETRY_END
     cat "$CONVO_FILE" >> "$RETRY_FILE"
 
     RESPONSE=$(cat "$RETRY_FILE" | claude --print 2>/dev/null)
-    rm -f "$RETRY_FILE"
     printf '%s' "$RESPONSE" | sed 's/^```json//;s/^```//;s/```$//' | sed '/^$/d' > "$CLEAN_JSON_FILE"
 
     PARSE_SUCCESS=$($VENV_PYTHON -c "
@@ -237,7 +243,6 @@ except:
 - Failed to parse memories from $CONTACT_NAME conversation (JSON error). Raw convo archived."
       # Archive the conversation anyway as safety net
       cp "$CONVO_FILE" "$ARCHIVE_DIR/${CONTACT_SLUG}_${TODAY}_failed.txt"
-      rm -f "$CLEAN_JSON_FILE"
       continue
     fi
   fi
@@ -285,8 +290,6 @@ with open('$CLEAN_JSON_FILE', 'r') as f:
 print(len([m for m in memories if m.get('content')]))
 " 2>/dev/null)
 
-  # Clean up temp file
-  rm -f "$CLEAN_JSON_FILE"
   TOTAL_MEMORIES=$((TOTAL_MEMORIES + MEMORIES_STORED))
 
   DREAM_NOTES="$DREAM_NOTES

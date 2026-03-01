@@ -8,6 +8,7 @@ Usage:
   echo "Something" | python store_memory.py
 """
 import sys
+import os
 import json
 import hashlib
 import argparse
@@ -56,8 +57,10 @@ def store(content, context=None, intensity=3, valence=3, significance=3,
     }
 
     memories.append(memory)
-    with open(STORAGE_PATH, 'w') as f:
+    tmp_path = STORAGE_PATH.with_suffix('.tmp')
+    with open(tmp_path, 'w') as f:
         json.dump(memories, f, indent=2)
+    os.replace(str(tmp_path), str(STORAGE_PATH))
 
     # Update embeddings
     model = SentenceTransformer('all-MiniLM-L6-v2')

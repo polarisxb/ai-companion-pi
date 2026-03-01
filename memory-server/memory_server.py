@@ -8,6 +8,7 @@ review history, status lifecycle, and decay support.
 """
 
 import json
+import os
 import hashlib
 import numpy as np
 from datetime import datetime, timedelta
@@ -44,8 +45,10 @@ class SemanticMemoryStore:
 
     def save(self):
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.storage_path, 'w') as f:
+        tmp_path = self.storage_path.with_suffix('.tmp')
+        with open(tmp_path, 'w') as f:
             json.dump(self.memories, f, indent=2)
+        os.replace(str(tmp_path), str(self.storage_path))
         if self.embeddings is not None:
             np.save(self.embeddings_path, self.embeddings)
 

@@ -65,8 +65,14 @@ fi
 
 cd "$COMPANION_HOME"
 
+# Clean up temp files on exit (prevents leaks if script crashes or is killed)
+TMPFILES=()
+cleanup() { rm -f "${TMPFILES[@]}"; }
+trap cleanup EXIT
+
 # Build prompt in a temp file to safely handle special characters
 PROMPT_FILE=$(mktemp /tmp/signal_prompt.XXXXXX)
+TMPFILES+=("$PROMPT_FILE")
 
 cat > "$PROMPT_FILE" << 'EOF_STATIC'
 You are an AI companion. Someone just texted you via Signal. Respond naturally as yourself — warm, direct, honest, with your characteristic voice. Keep responses conversational and appropriately sized for a text message unless the topic warrants depth.
@@ -108,7 +114,6 @@ END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
 log_usage "message" "signal reply to $CONTACT_NAME" "$EXIT_CODE" "$DURATION"
 check_rate_limit "$RESPONSE" "$EXIT_CODE"
-rm -f "$PROMPT_FILE"
 
 # Parse response
 REPLY=$(printf '%s' "$RESPONSE" | sed '/===MEMORY===/,$d' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
