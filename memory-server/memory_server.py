@@ -15,6 +15,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 from sentence_transformers import SentenceTransformer
 from autonomous_memory import MemoryDecisionEngine
+from likert_scorer import score_memory
 
 
 class SemanticMemoryStore:
@@ -262,13 +263,18 @@ def auto_process_message(message: str, role: str = "user") -> str:
         return "Message added to conversation buffer"
     should_store = decision_engine.should_store(message, role)
     if should_store:
+        intensity = should_store.get("intensity", 3)
+        valence = should_store.get("valence", 3)
+        significance = should_store.get("significance", 3)
+        if intensity == 3 and valence == 3 and significance == 3:
+            intensity, valence, significance = score_memory(should_store["content"])
         memory = memory_store.store_memory(
             content=should_store["content"],
             context=should_store.get("context", should_store.get("tags", [])),
             source=should_store.get("source", "auto"),
-            intensity=should_store.get("intensity", 3),
-            valence=should_store.get("valence", 3),
-            significance=should_store.get("significance", 3)
+            intensity=intensity,
+            valence=valence,
+            significance=significance
         )
         ctx_str = ", ".join(memory.get("context", []))
         result.append(f"Stored ({memory['id']}) - Context: {ctx_str}")
@@ -559,10 +565,18 @@ def end_conversation() -> str:
         return "Conversation too short to summarize"
     summary_config = decision_engine.summarize_conversation(conversation_buffer)
     if summary_config:
+        intensity = summary_config.get("intensity", 3)
+        valence = summary_config.get("valence", 3)
+        significance = summary_config.get("significance", 3)
+        if intensity == 3 and valence == 3 and significance == 3:
+            intensity, valence, significance = score_memory(summary_config["content"])
         memory = memory_store.store_memory(
             content=summary_config["content"],
             context=summary_config.get("context", summary_config.get("tags", [])),
-            source="conversation"
+            source="conversation",
+            intensity=intensity,
+            valence=valence,
+            significance=significance
         )
         conversation_buffer = []
         return f"Conversation summary stored ({memory['id']})\n{summary_config['content']}"

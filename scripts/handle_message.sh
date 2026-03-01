@@ -138,7 +138,7 @@ fi
 
 # Store memory if applicable
 if [ "$MEMORY_LINE" != "NOMEMORY" ] && [ -n "$MEMORY_LINE" ]; then
-  $VENV_PYTHON "$MEMORY_DIR/store_memory.py" "$MEMORY_LINE" --source signal --contact "$CONTACT_SLUG" 2>/dev/null
+  $VENV_PYTHON "$MEMORY_DIR/store_memory.py" "$MEMORY_LINE" --source signal --contact "$CONTACT_SLUG" --auto-score 2>/dev/null
 fi
 
 # Handle actions

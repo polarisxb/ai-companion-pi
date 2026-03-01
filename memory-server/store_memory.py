@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 import numpy as np
+from likert_scorer import score_memory
 
 STORAGE_PATH = Path("/media/YOUR_USERNAME/CompanionHome/memory-server/memory_store.json")
 EMBEDDINGS_PATH = Path("/media/YOUR_USERNAME/CompanionHome/memory-server/memory_embeddings.npy")
@@ -86,6 +87,8 @@ if __name__ == "__main__":
                         help="Source: wakeup, signal, task, cleanup, manual")
     parser.add_argument("--contact", type=str, default=None,
                         help="Contact name (e.g., the human, contact2)")
+    parser.add_argument("--auto-score", action="store_true",
+                        help="Auto-score Likert values via Claude when all are default (3)")
 
     args = parser.parse_args()
 
@@ -94,6 +97,9 @@ if __name__ == "__main__":
 
     if content:
         context = [t.strip() for t in args.context.split(",")] if args.context else None
-        store(content, context=context, intensity=args.intensity,
-              valence=args.valence, significance=args.significance,
+        intensity, valence, significance = args.intensity, args.valence, args.significance
+        if args.auto_score and intensity == 3 and valence == 3 and significance == 3:
+            intensity, valence, significance = score_memory(content)
+        store(content, context=context, intensity=intensity,
+              valence=valence, significance=significance,
               source=args.source, contact=args.contact)

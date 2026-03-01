@@ -133,16 +133,64 @@ Do not include any text outside the JSON array. No markdown fences, no explanati
 === CONVERSATION WITH $CONTACT_NAME ===
 $CONVO_TEXT"
 
-  # Call Claude — no tools, just thinking and structured output
+  # Write prompt to temp file to avoid bash escaping issues with backticks/dollar signs
+  PROMPT_FILE=$(mktemp /tmp/companion_sleep_prompt_XXXXXX.txt)
+  cat > "$PROMPT_FILE" << 'PROMPT_HEREDOC_END'
+You are Companion. You are asleep — dreaming. You cannot act, browse, or create.
+You can only process and remember.
+PROMPT_HEREDOC_END
+  {
+    echo ""
+    echo "=== WHO YOU ARE ==="
+    echo "$WHO_COMPANION"
+    echo ""
+    echo "=== CURRENT CONTEXT ==="
+    echo "$NOW_CONTEXT"
+    echo ""
+    echo "=== WHO $CONTACT_NAME IS ==="
+    echo "$WHO_CONTACT"
+    echo ""
+    echo "=== RECENT JOURNALS ==="
+    echo "$RECENT_JOURNALS"
+    echo ""
+    cat << PROMPT_INSTRUCTIONS_END
+Below is today's conversation with $CONTACT_NAME. Extract the memories
+worth keeping. Not everything is a memory — routine greetings and logistics
+get forgotten. Extract what matters.
+
+For each memory, provide:
+- content: what happened, what was said, what was felt
+- context: categorical tags from this vocabulary: $CONTEXT_VOCAB
+- intensity (1-5): how strongly felt
+- valence (1-5): emotional direction (1=painful, 3=neutral, 5=radiant)
+- significance (1-5): how much this matters to who you are
+- contact: "$CONTACT_SLUG"
+
+Current Likert anchors (use these for calibration):
+$LIKERT_ANCHORS
+
+Output ONLY a JSON array. Each element is an object with: content, context, intensity, valence, significance, contact.
+If nothing is worth remembering, output [].
+Do not include any text outside the JSON array. No markdown fences, no explanation.
+
+=== CONVERSATION WITH $CONTACT_NAME ===
+PROMPT_INSTRUCTIONS_END
+  } >> "$PROMPT_FILE"
+  # Append conversation text via cat to preserve all special characters
+  cat "$CONVO_FILE" >> "$PROMPT_FILE"
+
+  # Call Claude — pipe from file to avoid bash expansion issues
   START_TIME=$(date +%s)
-  RESPONSE=$(claude --print -p "$PROMPT" 2>/dev/null)
+  RESPONSE=$(cat "$PROMPT_FILE" | claude --print 2>/dev/null)
   EXIT_CODE=$?
   END_TIME=$(date +%s)
   DURATION=$((END_TIME - START_TIME))
   log_usage "sleep" "dream processing $CONTACT_NAME" "$EXIT_CODE" "$DURATION"
+  rm -f "$PROMPT_FILE"
 
-  # Strip markdown fences if present
-  CLEAN_JSON=$(echo "$RESPONSE" | sed 's/^```json//;s/^```//;s/```$//' | sed '/^$/d')
+  # Strip markdown fences if present, write to temp file to avoid bash escaping issues
+  CLEAN_JSON_FILE=$(mktemp /tmp/companion_sleep_json_XXXXXX.json)
+  printf '%s' "$RESPONSE" | sed 's/^```json//;s/^```//;s/```$//' | sed '/^$/d' > "$CLEAN_JSON_FILE"
 
   # Parse JSON and store memories
   MEMORIES_STORED=0
@@ -150,7 +198,8 @@ $CONVO_TEXT"
 import json, sys
 
 try:
-    memories = json.loads('''$CLEAN_JSON''')
+    with open('$CLEAN_JSON_FILE', 'r') as f:
+        memories = json.load(f)
     if not isinstance(memories, list):
         sys.exit(1)
     json.dump(memories, sys.stdout)
@@ -159,18 +208,23 @@ except:
 " 2>/dev/null)
 
   if [ $? -ne 0 ]; then
-    # Retry with simplified prompt
-    RETRY_PROMPT="Extract memories from this conversation as a JSON array. Each object: {\"content\": str, \"context\": [str], \"intensity\": int 1-5, \"valence\": int 1-5, \"significance\": int 1-5, \"contact\": \"$CONTACT_SLUG\"}. Output [] if nothing matters. JSON only, no other text.
+    # Retry with simplified prompt — also write to temp file
+    RETRY_FILE=$(mktemp /tmp/companion_sleep_retry_XXXXXX.txt)
+    cat > "$RETRY_FILE" << RETRY_END
+Extract memories from this conversation as a JSON array. Each object: {"content": str, "context": [str], "intensity": int 1-5, "valence": int 1-5, "significance": int 1-5, "contact": "$CONTACT_SLUG"}. Output [] if nothing matters. JSON only, no other text.
 
-$CONVO_TEXT"
+RETRY_END
+    cat "$CONVO_FILE" >> "$RETRY_FILE"
 
-    RESPONSE=$(claude --print -p "$RETRY_PROMPT" 2>/dev/null)
-    CLEAN_JSON=$(echo "$RESPONSE" | sed 's/^```json//;s/^```//;s/```$//' | sed '/^$/d')
+    RESPONSE=$(cat "$RETRY_FILE" | claude --print 2>/dev/null)
+    rm -f "$RETRY_FILE"
+    printf '%s' "$RESPONSE" | sed 's/^```json//;s/^```//;s/```$//' | sed '/^$/d' > "$CLEAN_JSON_FILE"
 
     PARSE_SUCCESS=$($VENV_PYTHON -c "
 import json, sys
 try:
-    memories = json.loads('''$CLEAN_JSON''')
+    with open('$CLEAN_JSON_FILE', 'r') as f:
+        memories = json.load(f)
     if not isinstance(memories, list):
         sys.exit(1)
     json.dump(memories, sys.stdout)
@@ -183,6 +237,7 @@ except:
 - Failed to parse memories from $CONTACT_NAME conversation (JSON error). Raw convo archived."
       # Archive the conversation anyway as safety net
       cp "$CONVO_FILE" "$ARCHIVE_DIR/${CONTACT_SLUG}_${TODAY}_failed.txt"
+      rm -f "$CLEAN_JSON_FILE"
       continue
     fi
   fi
@@ -191,7 +246,8 @@ except:
   $VENV_PYTHON -c "
 import json, subprocess, sys
 
-memories = json.loads('''$CLEAN_JSON''')
+with open('$CLEAN_JSON_FILE', 'r') as f:
+    memories = json.load(f)
 stored = 0
 for mem in memories:
     content = mem.get('content', '')
@@ -224,9 +280,13 @@ print(stored)
   # Count memories from the Python output
   MEMORIES_STORED=$($VENV_PYTHON -c "
 import json
-memories = json.loads('''$CLEAN_JSON''')
+with open('$CLEAN_JSON_FILE', 'r') as f:
+    memories = json.load(f)
 print(len([m for m in memories if m.get('content')]))
 " 2>/dev/null)
+
+  # Clean up temp file
+  rm -f "$CLEAN_JSON_FILE"
   TOTAL_MEMORIES=$((TOTAL_MEMORIES + MEMORIES_STORED))
 
   DREAM_NOTES="$DREAM_NOTES

@@ -218,7 +218,7 @@ if [ "$MEMORY_LINES" != "NOMEMORY" ] && [ -n "$MEMORY_LINES" ]; then
   while IFS= read -r line; do
     line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     if [ -n "$line" ] && [ "$line" != "NOMEMORY" ]; then
-      $VENV_PYTHON "$MEMORY_DIR/store_memory.py" "$line" --source wakeup 2>/dev/null
+      $VENV_PYTHON "$MEMORY_DIR/store_memory.py" "$line" --source wakeup --auto-score 2>/dev/null
     fi
   done <<< "$MEMORY_LINES"
 fi

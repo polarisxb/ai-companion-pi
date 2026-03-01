@@ -28,7 +28,6 @@ class MemoryDecisionEngine:
                 "content": message,
                 "context": ["explicit-request"],
                 "source": "auto",
-                "intensity": 3, "valence": 3, "significance": 4
             }
 
         personal_markers = self._detect_personal_info(message)
@@ -37,7 +36,6 @@ class MemoryDecisionEngine:
                 "content": message,
                 "context": personal_markers["tags"],
                 "source": "auto",
-                "intensity": 3, "valence": 3, "significance": 3
             }
 
         preference_markers = self._detect_preferences(message)
@@ -46,7 +44,6 @@ class MemoryDecisionEngine:
                 "content": message,
                 "context": ["preference"] + preference_markers.get("tags", []),
                 "source": "auto",
-                "intensity": 3, "valence": 3, "significance": 3
             }
 
         if self._is_decision(message):
@@ -54,7 +51,6 @@ class MemoryDecisionEngine:
                 "content": message,
                 "context": ["decision", "plan"],
                 "source": "auto",
-                "intensity": 3, "valence": 3, "significance": 3
             }
 
         if self._is_milestone(message):
@@ -62,7 +58,6 @@ class MemoryDecisionEngine:
                 "content": message,
                 "context": ["milestone"],
                 "source": "auto",
-                "intensity": 4, "valence": 4, "significance": 3
             }
 
         if self._is_correction(message):
@@ -70,7 +65,6 @@ class MemoryDecisionEngine:
                 "content": message,
                 "context": ["correction", "fact"],
                 "source": "auto",
-                "intensity": 2, "valence": 3, "significance": 3
             }
 
         return None
@@ -179,6 +173,5 @@ class MemoryDecisionEngine:
                 "content": summary,
                 "context": ["summary"],
                 "source": "conversation",
-                "intensity": 3, "valence": 3, "significance": 3
             }
         return None
