@@ -20,7 +20,7 @@ USAGE_LOG="$USAGE_DIR/usage_log.csv"
 USAGE_STATUS="$USAGE_DIR/usage_status.json"
 USAGE_CHECK_SCRIPT="$COMPANION_HOME/scripts/usage_check.py"
 
-# Source signal config if available (for SIGNAL_SENDER, YOUR_HUMAN_NUMBER, send_signal)
+# Source signal config if available (for COMPANION_NUMBER, HUMAN_NUMBER, signal_send_text)
 if [ -f "$COMPANION_HOME/scripts/signal_config.sh" ]; then
     source "$COMPANION_HOME/scripts/signal_config.sh"
 fi
@@ -75,13 +75,13 @@ check_rate_limit() {
         log_usage "rate_limit" "Rate limit detected" "$EXIT_CODE" "0"
 
         # Send immediate Signal alert
-        if type send_signal &>/dev/null; then
-            send_signal "🛑 I just got rate limited. You might want to ease up on Claude for a bit."
-        elif [ -n "$SIGNAL_SENDER" ] && [ -n "$YOUR_HUMAN_NUMBER" ]; then
+        if type signal_send_text &>/dev/null; then
+            signal_send_text "🛑 I just got rate limited. You might want to ease up on Claude for a bit."
+        elif [ -n "$COMPANION_NUMBER" ] && [ -n "$HUMAN_NUMBER" ]; then
             flock -w 10 /tmp/signal_send.lock \
-                signal-cli -a "$SIGNAL_SENDER" send -m \
+                signal-cli -a "$COMPANION_NUMBER" send -m \
                 "🛑 I just got rate limited. You might want to ease up on Claude for a bit." \
-                "$YOUR_HUMAN_NUMBER" 2>/dev/null
+                "$HUMAN_NUMBER" 2>/dev/null
         fi
     fi
 }
@@ -98,12 +98,12 @@ check_usage() {
 
     if [ -n "$ALERT_MSG" ]; then
         # Send the alert via Signal
-        if type send_signal &>/dev/null; then
-            send_signal "$ALERT_MSG"
-        elif [ -n "$SIGNAL_SENDER" ] && [ -n "$YOUR_HUMAN_NUMBER" ]; then
+        if type signal_send_text &>/dev/null; then
+            signal_send_text "$ALERT_MSG"
+        elif [ -n "$COMPANION_NUMBER" ] && [ -n "$HUMAN_NUMBER" ]; then
             flock -w 10 /tmp/signal_send.lock \
-                signal-cli -a "$SIGNAL_SENDER" send -m "$ALERT_MSG" \
-                "$YOUR_HUMAN_NUMBER" 2>/dev/null
+                signal-cli -a "$COMPANION_NUMBER" send -m "$ALERT_MSG" \
+                "$HUMAN_NUMBER" 2>/dev/null
         fi
     fi
 }

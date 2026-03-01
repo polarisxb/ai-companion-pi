@@ -102,7 +102,7 @@ EOF_FOOTER
 
 # Pass prompt via file to avoid shell expansion issues
 START_TIME=$(date +%s)
-RESPONSE=$(claude --print --dangerously-skip-permissions -p "$(cat "$PROMPT_FILE")")
+RESPONSE=$(cat "$PROMPT_FILE" | claude --print --dangerously-skip-permissions)
 EXIT_CODE=$?
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))

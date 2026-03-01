@@ -26,4 +26,5 @@ else
   MSG="$*"
 fi
 
-signal-cli -a "$COMPANION_NUMBER" send -m "$MSG" "$RECIPIENT"
+flock -w 30 /tmp/signal_send.lock \
+    signal-cli -a "$COMPANION_NUMBER" send -m "$MSG" "$RECIPIENT"
