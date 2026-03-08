@@ -1898,12 +1898,59 @@ TEMPLATE = """
             if (e.key === 'Escape') document.getElementById('lightbox').classList.remove('open');
         });
     </script>
+    <script>
+    // Screensaver idle detection — navigate to face after 5 minutes of inactivity
+    (function() {
+        var idleTimeout;
+        var IDLE_MS = 5 * 60 * 1000;
+        function resetIdle() {
+            clearTimeout(idleTimeout);
+            idleTimeout = setTimeout(function() {
+                window.location.href = '/face?idle=1';
+            }, IDLE_MS);
+        }
+        ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(function(e) {
+            document.addEventListener(e, resetIdle, {passive: true});
+        });
+        resetIdle();
+    })();
+    </script>
 </body>
 </html>
 """
 
 
 # === Routes ===
+
+@app.route("/face")
+def face_display():
+    """Companion's face — WebGL shader version (falls back to canvas 2D)."""
+    shader_file = WINDOW_DIR / "face_shader.html"
+    if shader_file.exists():
+        return send_file(shader_file)
+    face_file = WINDOW_DIR / "face.html"
+    if face_file.exists():
+        return send_file(face_file)
+    return "Face not found", 404
+
+
+@app.route("/face/shader")
+def face_shader_dev():
+    """Development route — always serves the shader version."""
+    shader_file = WINDOW_DIR / "face_shader.html"
+    if shader_file.exists():
+        return send_file(shader_file)
+    return "Shader face not found", 404
+
+
+@app.route("/face_state.json")
+def face_state():
+    """Serve face state for radar/system integration. 204 if no file exists."""
+    state_file = WINDOW_DIR / "face_state.json"
+    if state_file.exists():
+        return send_file(state_file, mimetype="application/json")
+    return "", 204
+
 
 @app.route("/content/<filename>")
 def serve_content(filename):

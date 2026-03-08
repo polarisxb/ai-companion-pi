@@ -354,6 +354,48 @@ def get_memories_for_review(since_days: int = 30) -> str:
 
 
 @mcp.tool()
+def get_lexicon(canonical: str = None) -> str:
+    """View personal vocabulary mappings.
+
+    The lexicon is Companion's learned language — how specific people use words.
+    If canonical is provided, show that entry. Otherwise show all.
+    """
+    entries = memory_store.get_lexicon_entry(canonical)
+    if not entries:
+        if canonical:
+            return f"No lexicon entry for '{canonical}'"
+        return "Lexicon is empty. Learn vocabulary through conversations or add entries manually."
+
+    output = f"Personal Lexicon ({len(entries)} entries):\n\n"
+    for entry in entries:
+        output += f"  {entry['canonical']}: {', '.join(entry['variants'])}\n"
+        if entry.get("context"):
+            output += f"    context: {entry['context']}\n"
+        output += f"    learned from: {entry.get('learned_from', '?')}"
+        output += f"  ({entry.get('learned_at', '?')})\n"
+        output += "-" * 40 + "\n"
+    return output
+
+
+@mcp.tool()
+def add_lexicon_entry(canonical: str, variants: list[str],
+                      learned_from: str = "self", context: str = None) -> str:
+    """Add or update a vocabulary mapping in the personal lexicon.
+
+    This is language acquisition, not a thesaurus. Map how specific people
+    use words — synonyms, slang, nicknames, shorthand.
+    If the canonical term already exists, new variants are merged in.
+    """
+    entry = memory_store.add_lexicon_entry(
+        canonical=canonical, variants=variants,
+        learned_from=learned_from, context=context
+    )
+    return (f"Lexicon updated: {entry['canonical']} -> {', '.join(entry['variants'])}\n"
+            f"Learned from: {entry.get('learned_from', '?')} | "
+            f"Context: {entry.get('context', '(none)')}")
+
+
+@mcp.tool()
 def end_conversation() -> str:
     """Create end-of-conversation summary."""
     global conversation_buffer

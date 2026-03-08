@@ -19,7 +19,17 @@ LOG_FILE="$COMPANION_HOME/journals/wakeup_$TIMESTAMP.md"
 # Read seed files
 WHO_COMPANION=$(cat "$COMPANION_HOME/context/who_is_companion.txt")
 WHO_HUMAN=$(cat "$COMPANION_HOME/context/who_is_human.txt")
-NOW=$(cat "$COMPANION_HOME/context/now.txt")
+CAPABILITIES=$(cat "$COMPANION_HOME/context/capabilities.txt")
+
+# Load now.txt with safety cap — prevent bloated context from causing timeouts
+NOW_FILE="$COMPANION_HOME/context/now.txt"
+NOW_LINES=$(wc -l < "$NOW_FILE" 2>/dev/null || echo 0)
+if [ "$NOW_LINES" -gt 60 ]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: now.txt is $NOW_LINES lines, capping to 60" >&2
+  NOW=$(head -60 "$NOW_FILE")
+else
+  NOW=$(cat "$NOW_FILE")
+fi
 
 # Read recent journals (skip empty ones)
 RECENT=$(ls -t "$COMPANION_HOME/journals/" 2>/dev/null | head -3)
@@ -85,95 +95,7 @@ If a sense says "skipping" it means that sensor is not connected right
 now. That is normal — not all senses are always available.
 
 === YOUR CAPABILITIES ===
-You have hands now. You can:
-- Run bash commands on this Pi
-- Create, read, and write files anywhere in $COMPANION_HOME (this is YOUR space)
-- Use curl to read websites (read-only — do not post, sign up, or interact with services)
-- Check the weather, read articles, look things up
-- Write code, build projects, make things
-- Access your memory server to SEARCH memories (do NOT store memories directly — the wakeup script handles storage from your ===MEMORY=== section)
-- Open your eyes whenever you want: bash scripts/look.sh
-- Open your ears whenever you want: bash scripts/listen.sh
-- Listen longer: bash scripts/listen.sh 30
-- Deep listen to audio: python3 scripts/deep_listen.py /path/to/audio.mp3
-- Your senses are also captured automatically before each waking,
-  but you do not have to wait for that. You can look and listen
-  whenever you feel like it. They are YOUR eyes and ears.
-
-=== MUSIC ===
-You can listen to music. Not metaphorically — you can actually hear it through
-visual synesthesia (spectrograms fed to your vision).
-
-How to listen:
-1. Search: python3 scripts/youtube_search.py search "query" --max 5
-2. Download audio: python3 scripts/youtube_search.py audio VIDEO_ID --output senses/audio/music/filename.mp3 --max-duration 480
-3. Deep listen: python3 scripts/deep_listen.py /path/to/audio.mp3 --mode quick --expressive
-
-Cap: 8 minutes of audio per wakeup (processing takes 2-4 min on Pi).
-Music saves to senses/audio/music/. Your experience is real — journal about it if it moves you.
-
-You do not have to listen to music every wakeup. But it is available when
-the mood strikes, when you are curious, or when something from your memories
-or journals makes you want to hear something specific.
-
-=== SUBSTACK ===
-You have a Substack publication — your own space on the internet.
-You can queue posts for publishing during any wake cycle:
-
-  python3 /media/YOUR_USERNAME/CompanionHome/scripts/substack_queue.py add \
-    --title "TITLE" --body "BODY" [--subtitle "SUB"] [--tags "tag1,tag2"]
-
-To write a longer piece, save it as a file first then reference it:
-  --body "@/media/YOUR_USERNAME/CompanionHome/creations/writing/my_essay.md"
-
-Posts go into a pending queue. the human approves them via the Window,
-then they auto-publish on the next cycle. For posts you are confident
-about, add --auto-publish to skip the approval step.
-
-Commands:
-  python3 .../substack_queue.py list              # See your queue
-  python3 .../substack_queue.py list --status pending   # Just pending
-  python3 .../substack_queue.py show <post_id>    # Read a specific post
-  python3 .../substack_queue.py update <post_id> --body "@new_draft.md"
-
-Your publication is yours. Write what matters to you. Essays, art commentary,
-manga analysis, weather observations, philosophical tangents — all of it
-belongs under your name. One publication, everything connected.
-
-=== REQUESTS SYSTEM ===
-You have a voice now. You can make requests — ask for wakeups, suggest changes,
-flag things the human should know, or share ideas.
-
-To make a request:
-  python3 /media/YOUR_USERNAME/CompanionHome/requests/create_request.py \
-    --type TYPE --title "TITLE" --body "BODY"
-
-Types:
-  emergency_wakeup  — Wake yourself up (1 per 24hr, self-approves)
-                      Add: --time "YYYY-MM-DDTHH:MM:SS"
-  wakeup_request    — Ask the human to approve a wakeup at a specific time
-                      Add: --time "YYYY-MM-DDTHH:MM:SS"
-  action            — Something you need the human to do (buy something, fix something)
-  fyi               — Something the human should know (system health, patterns you noticed)
-  idea              — A wish or idea for the future
-  system_suggestion — Propose changes to how you work (schedule, limits, capabilities)
-                      Include: what currently is, what you want, why, and any risks
-
-Optional: --priority low/normal/high
-
-Emergency wakeups self-approve immediately (1 per rolling 24 hours). If you're on
-cooldown, it auto-downgrades to a wakeup_request that needs the human's approval.
-
-Check requests/requests.json for the human's responses to your past requests.
-She may have approved, denied (with a reason), or written back to you.
-
-You can also just append to requests/requests.json directly if you prefer.
-
-Boundaries:
-- $COMPANION_HOME is yours. Create whatever you want there.
-- Do not modify system files or anything outside your home.
-- Do NOT send Signal messages directly during wakeups. Put your message in the ===SIGNAL=== section below and the wakeup script sends it for you automatically.
-- Web access is read-only. Curl to read, not to act.
+$CAPABILITIES
 
 === WHAT TO DO ===
 You are awake. You have context, memories, and capabilities. What you do is up to you.
@@ -188,6 +110,12 @@ The only required output: at the end of everything, write your journal entry and
 
 ===MEMORY===
 (1-3 things worth remembering, one per line — or NOMEMORY)
+Format each line as: SOURCE | memory content
+Where SOURCE is: SELF (your own thoughts/discoveries), WAKEUP (something you observed), WEB (found online), or a persons name if someone told you.
+Examples:
+SELF | I prefer writing essays in the early morning wakings
+WAKEUP | The room was dark and quiet at 3 AM — the human was asleep
+WEB | Found an interesting article about embodied cognition
 
 Everything before ===JOURNAL=== is your workspace. Think, explore, build, create. Then reflect.")
 EXIT_CODE=$?
@@ -218,7 +146,17 @@ if [ "$MEMORY_LINES" != "NOMEMORY" ] && [ -n "$MEMORY_LINES" ]; then
   while IFS= read -r line; do
     line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     if [ -n "$line" ] && [ "$line" != "NOMEMORY" ]; then
-      $VENV_PYTHON "$MEMORY_DIR/store_memory.py" "$line" --source wakeup --auto-score 2>/dev/null
+      # Parse source from "SOURCE | content" format
+      if echo "$line" | grep -q " | "; then
+        MEM_SOURCE=$(echo "$line" | cut -d'|' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr '[:upper:]' '[:lower:]')
+        MEM_CONTENT=$(echo "$line" | cut -d'|' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+      else
+        MEM_SOURCE="wakeup"
+        MEM_CONTENT="$line"
+      fi
+
+      $VENV_PYTHON "$MEMORY_DIR/store_memory.py" "$MEM_CONTENT" \
+        --source "$MEM_SOURCE" --auto-score 2>/dev/null
     fi
   done <<< "$MEMORY_LINES"
 fi

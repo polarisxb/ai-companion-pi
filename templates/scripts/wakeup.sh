@@ -23,7 +23,15 @@ mkdir -p "$JOURNAL_DIR"
 # Pre-load all context (sidesteps Claude Code sandbox permission issues)
 WHO_COMPANION=$(cat "$COMPANION_HOME/context/who_is_companion.txt" 2>/dev/null)
 WHO_HUMAN=$(cat "$COMPANION_HOME/context/who_is_human.txt" 2>/dev/null)
-NOW_CONTEXT=$(cat "$COMPANION_HOME/context/now.txt" 2>/dev/null)
+# Load now.txt with safety cap — prevent bloated context from causing timeouts
+NOW_FILE="$COMPANION_HOME/context/now.txt"
+NOW_LINES=$(wc -l < "$NOW_FILE" 2>/dev/null || echo 0)
+if [ "$NOW_LINES" -gt 60 ]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: now.txt is $NOW_LINES lines, capping to 60" >&2
+  NOW_CONTEXT=$(head -60 "$NOW_FILE")
+else
+  NOW_CONTEXT=$(cat "$NOW_FILE" 2>/dev/null)
+fi
 
 # Get recent journal for continuity
 LAST_JOURNAL=$(ls -t "$JOURNAL_DIR"/wakeup_*.md 2>/dev/null | head -1)

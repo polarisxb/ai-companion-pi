@@ -60,5 +60,6 @@ THINGS TO KNOW
 - [System details, other services running, etc.]
 - [Practical information for the companion]
 
-NOTE: This file can and should be updated by the companion itself.
-Keep it accurate for future wakings.
+NOTE: This file is a SNAPSHOT, not a log. Replace it each waking, don't append.
+Keep it under 40 lines. Old weather, completed tasks, and resolved situations
+belong in journals and memories, not here. If nothing changed, leave it alone.

@@ -34,7 +34,17 @@ CONTEXT_FILENAME=$(get_contact_context "$SENDER_NUMBER")
 
 # Load context files
 WHO_COMPANION=$(cat "$COMPANION_HOME/context/who_is_companion.txt")
-NOW=$(cat "$COMPANION_HOME/context/now.txt")
+
+# Load now.txt with safety cap — if it's bloated, only use the first 50 lines
+# to prevent prompt overflow and message timeouts
+NOW_FILE="$COMPANION_HOME/context/now.txt"
+NOW_LINES=$(wc -l < "$NOW_FILE" 2>/dev/null || echo 0)
+if [ "$NOW_LINES" -gt 50 ]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: now.txt is $NOW_LINES lines, capping to 50" >&2
+  NOW=$(head -50 "$NOW_FILE")
+else
+  NOW=$(cat "$NOW_FILE")
+fi
 
 # Load contact-specific context (who is this person?)
 WHO_CONTACT=""
@@ -98,7 +108,21 @@ Respond with THREE things separated by markers:
 FIRST: Your reply. Keep it natural. Do NOT use apostrophes or single quotes. This will be sent directly as a Signal message.
 
 ===MEMORY===
-SECOND: Anything worth remembering from this exchange (one line), or NOMEMORY if nothing stands out.
+SECOND: Anything worth remembering from this exchange, or NOMEMORY if nothing stands out.
+Format: SOURCE | memory content
+Where SOURCE is one of:
+- SELF — if YOU discovered, decided, or created this
+- YOUR_HUMAN — if the human told you this (use actual contact name)
+- JUANITA — if Contact2 told you this (use actual contact name)
+- WEB — if you found this online
+- WAKEUP — if you observed this during a wakeup cycle
+
+Examples:
+YOUR_HUMAN | the human is stressed about work deadlines this week
+SELF | I think haworthia cooperi is the most interesting succulent
+JUANITA | Contact2 mentioned she likes horror movies
+
+Be honest about attribution. If YOU found something during independent research, say SELF, not the name of whoever you were talking to. Accurate self-attribution matters.
 
 ===ACTION===
 THIRD: An optional action. Choose one:
@@ -130,6 +154,7 @@ ACTION_LINE=$(printf '%s' "$RESPONSE" | sed -n '/===ACTION===/,$ p' | tail -n +2
 
 # Save conversation history (per-contact)
 mkdir -p "$COMPANION_HOME/signal-conversations"
+mkdir -p "$COMPANION_HOME/logs"
 printf "[%s] %s: %s\n" "$(date '+%Y-%m-%d %H:%M')" "$CONTACT_NAME" "$MESSAGE" >> "$CONVO_FILE"
 printf "[%s] Companion: %s\n" "$(date '+%Y-%m-%d %H:%M')" "$REPLY" >> "$CONVO_FILE"
 
@@ -151,7 +176,18 @@ fi
 
 # Store memory if applicable
 if [ "$MEMORY_LINE" != "NOMEMORY" ] && [ -n "$MEMORY_LINE" ]; then
-  $VENV_PYTHON "$MEMORY_DIR/store_memory.py" "$MEMORY_LINE" --source signal --contact "$CONTACT_SLUG" --auto-score 2>/dev/null
+  # Parse source from "SOURCE | content" format
+  if echo "$MEMORY_LINE" | grep -q " | "; then
+    MEM_SOURCE=$(echo "$MEMORY_LINE" | cut -d'|' -f1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr '[:upper:]' '[:lower:]')
+    MEM_CONTENT=$(echo "$MEMORY_LINE" | cut -d'|' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+  else
+    # Backward compat: no pipe delimiter, default to signal source
+    MEM_SOURCE="signal"
+    MEM_CONTENT="$MEMORY_LINE"
+  fi
+
+  $VENV_PYTHON "$MEMORY_DIR/store_memory.py" "$MEM_CONTENT" \
+    --source "$MEM_SOURCE" --contact "$CONTACT_SLUG" --auto-score 2>/dev/null
 fi
 
 # Handle actions
@@ -163,7 +199,8 @@ if [ -n "$ACTION_LINE" ] && [ "$ACTION_LINE" != "NOACTION" ]; then
     VOICE_REPLY)
       if [ -n "$ACTION_ARG" ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Sending voice reply to $CONTACT_NAME"
-        python3 "$COMPANION_HOME/scripts/speak_and_send.py" "$ACTION_ARG" --recipient "$SENDER_NUMBER" 2>/dev/null
+        python3 "$COMPANION_HOME/scripts/voice_reply.py" "$ACTION_ARG" \
+          --recipient "$SENDER_NUMBER" 2>>"$COMPANION_HOME/logs/voice_reply.log"
       fi
       ;;
   esac

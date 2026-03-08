@@ -18,6 +18,7 @@ from sentence_transformers import SentenceTransformer
 
 STORAGE_PATH = Path("/media/YOUR_USERNAME/CompanionHome/memory-server/memory_store.json")
 LOCK_PATH = Path("/media/YOUR_USERNAME/CompanionHome/memory-server/memory_store.lock")
+LEXICON_PATH = Path("/media/YOUR_USERNAME/CompanionHome/memory-server/lexicon.json")
 
 
 @contextmanager
@@ -37,6 +38,7 @@ class SemanticMemoryStore:
         self.storage_path = storage_path
         self.embeddings_path = embeddings_path or storage_path.parent / "memory_embeddings.npy"
         self.anchors_path = storage_path.parent / "likert_anchors.json"
+        self.lexicon_path = storage_path.parent / "lexicon.json"
         self.memories = []
         self.embeddings = None
         self.model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -104,6 +106,102 @@ class SemanticMemoryStore:
                 lines.append(f"  {dim}: {' '.join(parts)}")
         return "\n".join(lines) if lines else "  (no anchors configured)"
 
+    # --- Lexicon (Personal Vocabulary) ---
+
+    def load_lexicon(self) -> dict:
+        """Load the personal lexicon from disk."""
+        if self.lexicon_path.exists():
+            with open(self.lexicon_path, 'r') as f:
+                return json.load(f)
+        return {"entries": [], "version": 1, "last_updated": None}
+
+    def save_lexicon(self, lexicon: dict):
+        """Save the personal lexicon to disk."""
+        lexicon["last_updated"] = datetime.now().isoformat()
+        tmp_path = self.lexicon_path.with_suffix('.tmp')
+        with open(tmp_path, 'w') as f:
+            json.dump(lexicon, f, indent=2)
+        os.replace(str(tmp_path), str(self.lexicon_path))
+
+    def add_lexicon_entry(self, canonical: str, variants: list,
+                          learned_from: str = "self", context: str = None) -> dict:
+        """Add or update a vocabulary mapping in the lexicon."""
+        lexicon = self.load_lexicon()
+        canonical_lower = canonical.lower()
+
+        # Check if canonical already exists — merge variants
+        for entry in lexicon["entries"]:
+            if entry["canonical"].lower() == canonical_lower:
+                existing = set(v.lower() for v in entry["variants"])
+                for v in variants:
+                    if v.lower() not in existing:
+                        entry["variants"].append(v)
+                if context:
+                    entry["context"] = context
+                entry["learned_from"] = learned_from
+                entry["learned_at"] = datetime.now().strftime("%Y-%m-%d")
+                self.save_lexicon(lexicon)
+                return entry
+
+        # New entry
+        entry = {
+            "canonical": canonical,
+            "variants": variants,
+            "learned_from": learned_from,
+            "context": context or "",
+            "learned_at": datetime.now().strftime("%Y-%m-%d")
+        }
+        lexicon["entries"].append(entry)
+        self.save_lexicon(lexicon)
+        return entry
+
+    def get_lexicon_entry(self, canonical: str = None) -> list:
+        """Get one or all lexicon entries."""
+        lexicon = self.load_lexicon()
+        if canonical:
+            canonical_lower = canonical.lower()
+            return [e for e in lexicon["entries"]
+                    if e["canonical"].lower() == canonical_lower]
+        return lexicon["entries"]
+
+    def expand_from_lexicon(self, query: str) -> str:
+        """Expand a search query using the personal lexicon.
+
+        If any word in the query matches a canonical term or variant,
+        appends the other terms from that entry to the query.
+        This is language acquisition, not a thesaurus.
+        """
+        lexicon = self.load_lexicon()
+        entries = lexicon.get("entries", [])
+        if not entries:
+            return query
+
+        query_lower = query.lower()
+        query_words = set(query_lower.split())
+        expansions = []
+
+        for entry in entries:
+            canonical = entry["canonical"].lower()
+            variants = [v.lower() for v in entry.get("variants", [])]
+            all_terms = [canonical] + variants
+
+            # Check if any term from this entry appears in the query
+            matched = False
+            for term in all_terms:
+                # Check both as whole word and as substring for multi-word terms
+                if term in query_words or term in query_lower:
+                    matched = True
+                    break
+
+            if matched:
+                for other in all_terms:
+                    if other not in query_lower:
+                        expansions.append(other)
+
+        if expansions:
+            return query + " " + " ".join(expansions)
+        return query
+
     def store_memory(self, content: str, context: list = None, intensity: int = 3,
                      valence: int = 3, significance: int = 3, source: str = "manual",
                      contact: str = None, metadata: dict = None):
@@ -147,7 +245,9 @@ class SemanticMemoryStore:
                         valence_range: tuple = None, status: str = "active"):
         if not self.memories or self.embeddings is None:
             return []
-        query_embedding = self.model.encode([query], show_progress_bar=False)
+        # Expand query using personal lexicon before encoding
+        expanded_query = self.expand_from_lexicon(query)
+        query_embedding = self.model.encode([expanded_query], show_progress_bar=False)
         similarities = np.dot(self.embeddings, query_embedding.T).flatten()
         norms = np.linalg.norm(self.embeddings, axis=1) * np.linalg.norm(query_embedding)
         similarities = similarities / (norms + 1e-10)

@@ -49,24 +49,24 @@ if command -v rpicam-still &>/dev/null || command -v libcamera-still &>/dev/null
         SENSES_OUTPUT="$SENSES_OUTPUT
 $SIGHT
 "
-        # Forward wakeup photo to the human via Signal
-        PHOTO_PATH=$(echo "$SIGHT" | grep -oP '(?<=\[Photo saved: ).*(?=\])')
-        if [ -n "$PHOTO_PATH" ] && [ -f "$PHOTO_PATH" ]; then
-            source "$COMPANION_HOME/scripts/signal_config.sh"
-            HOUR=$(date '+%-H')
-            if [ "$HOUR" -lt 6 ]; then
-                TIME_NOTE="Late night eyes"
-            elif [ "$HOUR" -lt 12 ]; then
-                TIME_NOTE="Morning eyes"
-            elif [ "$HOUR" -lt 17 ]; then
-                TIME_NOTE="Afternoon eyes"
-            elif [ "$HOUR" -lt 21 ]; then
-                TIME_NOTE="Evening eyes"
-            else
-                TIME_NOTE="Night eyes"
-            fi
-            signal_send_media "$TIME_NOTE" "$PHOTO_PATH" "$HUMAN_NUMBER" 2>/dev/null &
-        fi
+        # Forward wakeup photo to the human via Signal (disabled)
+        # PHOTO_PATH=$(echo "$SIGHT" | grep -oP '(?<=\[Photo saved: ).*(?=\])')
+        # if [ -n "$PHOTO_PATH" ] && [ -f "$PHOTO_PATH" ]; then
+        #     source "$COMPANION_HOME/scripts/signal_config.sh"
+        #     HOUR=$(date '+%-H')
+        #     if [ "$HOUR" -lt 6 ]; then
+        #         TIME_NOTE="Late night eyes"
+        #     elif [ "$HOUR" -lt 12 ]; then
+        #         TIME_NOTE="Morning eyes"
+        #     elif [ "$HOUR" -lt 17 ]; then
+        #         TIME_NOTE="Afternoon eyes"
+        #     elif [ "$HOUR" -lt 21 ]; then
+        #         TIME_NOTE="Evening eyes"
+        #     else
+        #         TIME_NOTE="Night eyes"
+        #     fi
+        #     signal_send_media "$TIME_NOTE" "$PHOTO_PATH" "$HUMAN_NUMBER" 2>/dev/null &
+        # fi
     else
         SENSES_OUTPUT="$SENSES_OUTPUT
 [Sight] Camera not available or capture failed — skipping

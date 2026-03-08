@@ -22,7 +22,15 @@ fi
 # Load context
 WHO_COMPANION=$(cat "$COMPANION_HOME/context/who_is_companion.txt" 2>/dev/null)
 WHO_HUMAN=$(cat "$COMPANION_HOME/context/who_is_human.txt" 2>/dev/null)
-NOW_CONTEXT=$(cat "$COMPANION_HOME/context/now.txt" 2>/dev/null)
+# Load now.txt with safety cap — prevent bloated context from causing timeouts
+NOW_FILE="$COMPANION_HOME/context/now.txt"
+NOW_LINES=$(wc -l < "$NOW_FILE" 2>/dev/null || echo 0)
+if [ "$NOW_LINES" -gt 50 ]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: now.txt is $NOW_LINES lines, capping to 50" >&2
+  NOW_CONTEXT=$(head -50 "$NOW_FILE")
+else
+  NOW_CONTEXT=$(cat "$NOW_FILE" 2>/dev/null)
+fi
 
 # Load recent conversation for continuity
 CONVO_FILE="$SIGNAL_CONVERSATIONS/current.txt"
