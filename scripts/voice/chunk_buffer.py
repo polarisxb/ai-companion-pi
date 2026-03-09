@@ -24,21 +24,34 @@ from typing import Optional
 HARD_BOUNDARIES = {'.', '?', '!', '\n'}
 SOFT_BOUNDARIES = {',', ';', ':', '\u2014', '\u2013'}  # em-dash, en-dash
 
-MIN_WORDS = 4
-MAX_WORDS = 12
-SOFT_THRESHOLD = 6  # split at soft boundary if buffer >= this many words
+MIN_WORDS = 6
+MAX_WORDS = 50
+SOFT_THRESHOLD = 30  # split at soft boundary if buffer >= this many words
 
 # Abbreviations where trailing period is NOT a sentence boundary
 ABBREVIATIONS = {'dr', 'mr', 'mrs', 'ms', 'vs', 'etc', 'e.g', 'i.e',
                  'prof', 'sr', 'jr', 'st', 'ave', 'dept', 'approx'}
 
 # Markdown formatting to strip
-_MARKDOWN_RE = re.compile(r'[*_]{1,3}')
+_BOLD_ITALIC_RE = re.compile(r'[*_]{1,3}')
+_HEADING_RE = re.compile(r'^#{1,6}\s+', re.MULTILINE)
+_BULLET_RE = re.compile(r'^\s*[-*+]\s+', re.MULTILINE)
+_NUMBERED_RE = re.compile(r'^\s*\d+\.\s+', re.MULTILINE)
+_LINK_RE = re.compile(r'\[([^\]]+)\]\([^)]+\)')
+_CODE_INLINE_RE = re.compile(r'`([^`]+)`')
+_BLOCKQUOTE_RE = re.compile(r'^\s*>\s*', re.MULTILINE)
 
 
 def _strip_markdown(text: str) -> str:
-    """Remove markdown bold/italic markers."""
-    return _MARKDOWN_RE.sub('', text)
+    """Remove markdown formatting so Piper doesn't read syntax aloud."""
+    text = _HEADING_RE.sub('', text)
+    text = _BLOCKQUOTE_RE.sub('', text)
+    text = _BULLET_RE.sub('', text)
+    text = _NUMBERED_RE.sub('', text)
+    text = _LINK_RE.sub(r'\1', text)          # [text](url) -> text
+    text = _CODE_INLINE_RE.sub(r'\1', text)   # `code` -> code
+    text = _BOLD_ITALIC_RE.sub('', text)
+    return text
 
 
 def _word_count(text: str) -> int:
@@ -114,8 +127,8 @@ class ChunkBuffer:
         return None
 
     def _emit(self, text: str) -> None:
-        """Clean and emit a chunk if it's non-empty and meets min length."""
-        cleaned = _strip_markdown(text).strip()
+        """Emit a chunk if it's non-empty and meets min length."""
+        cleaned = text.strip()
         if not cleaned:
             return
         if _word_count(cleaned) < MIN_WORDS:
@@ -126,7 +139,7 @@ class ChunkBuffer:
 
     def _force_emit(self, text: str) -> None:
         """Emit a chunk regardless of min-word count (used for flush)."""
-        cleaned = _strip_markdown(text).strip()
+        cleaned = text.strip()
         if cleaned:
             self._ready.append(cleaned)
 
@@ -229,8 +242,10 @@ class ChunkBuffer:
 def chunk_text(text: str) -> list[str]:
     """Split complete text into voice-memo-sized chunks.
 
-    Convenience function — feeds all tokens then flushes.
+    Convenience function — strips markdown, feeds all tokens, then flushes.
     """
+    # Strip markdown before chunking so syntax doesn't interfere with boundaries
+    text = _strip_markdown(text)
     buf = ChunkBuffer()
     # Feed word-by-word to simulate streaming
     words = text.split()

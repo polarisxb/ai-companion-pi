@@ -8,6 +8,25 @@ export HOME="/home/YOUR_USERNAME"
 
 COMPANION_HOME="/media/YOUR_USERNAME/CompanionHome"
 
+# Skip wakeup if sleep cycle is active
+SLEEP_FLAG="$COMPANION_HOME/memory-server/.sleep_active"
+if [ -f "$SLEEP_FLAG" ]; then
+  FLAG_AGE=$(( $(date +%s) - $(stat -c %Y "$SLEEP_FLAG") ))
+  if [ "$FLAG_AGE" -lt 7200 ]; then
+    # Flag is fresh (<2 hours) — sleep cycle is running, skip this wakeup
+    mkdir -p "$COMPANION_HOME/logs"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Skipped wakeup — sleep cycle active (flag age: ${FLAG_AGE}s)" \
+      >> "$COMPANION_HOME/logs/wakeup_skipped.log"
+    exit 0
+  else
+    # Stale flag (>2 hours) — likely a crash, remove and proceed
+    rm -f "$SLEEP_FLAG"
+    mkdir -p "$COMPANION_HOME/logs"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Removed stale sleep flag (age: ${FLAG_AGE}s)" \
+      >> "$COMPANION_HOME/logs/wakeup_skipped.log"
+  fi
+fi
+
 # Usage tracking
 source "$COMPANION_HOME/scripts/usage_tracker.sh"
 MEMORY_DIR="$COMPANION_HOME/memory-server"
@@ -160,3 +179,6 @@ if [ "$MEMORY_LINES" != "NOMEMORY" ] && [ -n "$MEMORY_LINES" ]; then
     fi
   done <<< "$MEMORY_LINES"
 fi
+
+# Update window display so it never goes stale
+bash "$COMPANION_HOME/scripts/update_window.sh" 2>/dev/null

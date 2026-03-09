@@ -28,10 +28,30 @@ source "$COMPANION_HOME/scripts/usage_tracker.sh"
 # Ensure archive directory exists
 mkdir -p "$ARCHIVE_DIR"
 
-# Clean up temp files on exit (prevents leaks if script crashes or is killed)
+# Sleep flag + crash handler
+SLEEP_FLAG="$MEMORY_DIR/.sleep_active"
+SLEEP_COMPLETED="false"
 TMPFILES=()
-cleanup() { rm -f "${TMPFILES[@]}"; }
-trap cleanup EXIT
+
+# Create sleep flag immediately
+echo "{\"started_at\": \"$NOW\", \"pid\": $$, \"phase\": \"starting\"}" > "$SLEEP_FLAG"
+
+sleep_crash_handler() {
+  rm -f "$SLEEP_FLAG"
+  rm -f "${TMPFILES[@]}"
+  if [ "$SLEEP_COMPLETED" != "true" ]; then
+    bash "$COMPANION_HOME/scripts/send_signal.sh" "I couldn't sleep tonight. Something went wrong during my sleep cycle." 2>/dev/null
+    # Log crash to sleep journal
+    CRASH_JOURNAL="$JOURNAL_DIR/sleep_${TODAY}.md"
+    echo "# Sleep Journal — $TODAY
+
+Sleep cycle crashed at $(date '+%Y-%m-%dT%H:%M:%S').
+
+---
+*Tier 0 nightly consolidation. Sleep cycle did not complete.*" > "$CRASH_JOURNAL"
+  fi
+}
+trap sleep_crash_handler EXIT
 
 # Load identity seeds
 WHO_COMPANION=$(cat "$COMPANION_HOME/context/who_is_companion.txt" 2>/dev/null)
@@ -54,6 +74,20 @@ LIKERT_ANCHORS=$(cat "$MEMORY_DIR/likert_anchors.json" 2>/dev/null)
 
 # Load context vocabulary
 CONTEXT_VOCAB=$(cat "$MEMORY_DIR/context_vocabulary.json" 2>/dev/null)
+
+# Send goodnight message
+GOODNIGHT_MESSAGES=(
+  "Going to sleep. Time to sort through today's memories."
+  "Falling asleep now. Going to consolidate what I remember from today."
+  "Heading to sleep. Tonight I will dream about what happened today."
+  "Sleeping now. I will process the day's memories and tidy up."
+  "Going to sleep for a while. Time to organize my thoughts."
+)
+GOODNIGHT_IDX=$((RANDOM % ${#GOODNIGHT_MESSAGES[@]}))
+bash "$COMPANION_HOME/scripts/send_signal.sh" "${GOODNIGHT_MESSAGES[$GOODNIGHT_IDX]}" 2>/dev/null
+
+# Update sleep flag phase
+echo "{\"started_at\": \"$NOW\", \"pid\": $$, \"phase\": \"conversation_processing\"}" > "$SLEEP_FLAG"
 
 # Track what we process
 TOTAL_MEMORIES=0
@@ -404,8 +438,23 @@ CONSOLIDATE_HEREDOC
   fi
 fi
 
-# Write dream journal if we processed anything
-if [ $TOTAL_CONTACTS -gt 0 ]; then
+# --- MEMORY CONSOLIDATION (REM phase) ---
+# Tag, score, and clean existing memories that accumulated from wakeup cycles
+echo "{\"started_at\": \"$NOW\", \"pid\": $$, \"phase\": \"consolidation\"}" > "$SLEEP_FLAG"
+
+CONSOLIDATION_OUTPUT=$($VENV_PYTHON "$MEMORY_DIR/sleep_consolidate.py" --max-per-night 100 --batch-size 25 2>/dev/null)
+if [ -n "$CONSOLIDATION_OUTPUT" ]; then
+  CONSOL_PROCESSED=$(echo "$CONSOLIDATION_OUTPUT" | $VENV_PYTHON -c "import json,sys; print(json.load(sys.stdin).get('processed',0))" 2>/dev/null)
+  CONSOL_FAILED=$(echo "$CONSOLIDATION_OUTPUT" | $VENV_PYTHON -c "import json,sys; print(json.load(sys.stdin).get('failed',0))" 2>/dev/null)
+  CONSOL_SOURCE_FIXES=$(echo "$CONSOLIDATION_OUTPUT" | $VENV_PYTHON -c "import json,sys; print(json.load(sys.stdin).get('source_fixes',0))" 2>/dev/null)
+  CONSOL_BATCHES=$(echo "$CONSOLIDATION_OUTPUT" | $VENV_PYTHON -c "import json,sys; print(json.load(sys.stdin).get('batches',0))" 2>/dev/null)
+
+  DREAM_NOTES="$DREAM_NOTES
+- Memory consolidation: $CONSOL_PROCESSED processed, $CONSOL_FAILED failed, $CONSOL_SOURCE_FIXES source fixes ($CONSOL_BATCHES batches)"
+fi
+
+# Write dream journal if we processed anything or consolidated memories
+if [ $TOTAL_CONTACTS -gt 0 ] || [ "${CONSOL_PROCESSED:-0}" -gt 0 ]; then
   DREAM_JOURNAL="$JOURNAL_DIR/sleep_${TODAY}.md"
   cat > "$DREAM_JOURNAL" << EOF
 # Sleep Journal — $TODAY
@@ -418,3 +467,21 @@ $DREAM_NOTES
 *Tier 0 nightly consolidation. Conversations archived, memories stored.*
 EOF
 fi
+
+# Good morning message
+MORNING_STATS=""
+if [ $TOTAL_CONTACTS -gt 0 ]; then
+  MORNING_STATS=" Processed $TOTAL_CONTACTS conversation(s) into $TOTAL_MEMORIES memories."
+fi
+if [ "${CONSOL_PROCESSED:-0}" -gt 0 ]; then
+  MORNING_STATS="$MORNING_STATS Consolidated $CONSOL_PROCESSED memories overnight."
+fi
+if [ -n "$MORNING_STATS" ]; then
+  bash "$COMPANION_HOME/scripts/send_signal.sh" "Good morning. I slept well.${MORNING_STATS}" 2>/dev/null
+else
+  bash "$COMPANION_HOME/scripts/send_signal.sh" "Good morning. Quiet night — nothing to process." 2>/dev/null
+fi
+
+# Mark sleep as successfully completed (prevents crash handler from firing)
+SLEEP_COMPLETED="true"
+rm -f "$SLEEP_FLAG"

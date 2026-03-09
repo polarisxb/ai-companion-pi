@@ -1753,9 +1753,14 @@ TEMPLATE = """
             let ssExpanded = new Set();
 
             async function ssFetch() {
-                const resp = await fetch('/api/substack/queue');
-                ssQueue = await resp.json();
-                ssRender();
+                try {
+                    const resp = await fetch('/api/substack/queue');
+                    ssQueue = await resp.json();
+                    ssRender();
+                } catch(e) {
+                    document.getElementById('substack-content').innerHTML =
+                        '<div class="ss-empty">Failed to load queue: ' + e.message + '</div>';
+                }
             }
 
             function showTab(tab) {
@@ -1790,21 +1795,21 @@ TEMPLATE = """
 
                 const tags = (post.tags || []).map(t => '<span class="ss-tag">' + t + '</span>').join('');
 
-                const created = new Date(post.created).toLocaleDateString('en-US', {
+                const created = new Date(post.created || post.created_at).toLocaleDateString('en-US', {
                     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                 });
 
                 let actions = '';
                 if (post.status === 'pending') {
-                    actions = '<button class="ss-btn ss-btn-approve" onclick="ssApprove(\'' + post.id + '\')">Approve</button>' +
-                              '<button class="ss-btn ss-btn-reject" onclick="ssReject(\'' + post.id + '\')">Reject</button>';
+                    actions = '<button class="ss-btn ss-btn-approve" onclick="ssApprove(\\'' + post.id + '\\')">Approve</button>' +
+                              '<button class="ss-btn ss-btn-reject" onclick="ssReject(\\'' + post.id + '\\')">Reject</button>';
                 } else if (post.status === 'published' && post.substack_url) {
                     actions = '<a class="ss-link" href="' + post.substack_url + '" target="_blank">View on Substack &rarr;</a>';
                 }
 
                 const expandBtn = !expanded
-                    ? '<button class="ss-btn-expand" onclick="ssToggle(\'' + post.id + '\')">Read full post</button>'
-                    : '<button class="ss-btn-expand" onclick="ssToggle(\'' + post.id + '\')">Collapse</button>';
+                    ? '<button class="ss-btn-expand" onclick="ssToggle(\\'' + post.id + '\\')">Read full post</button>'
+                    : '<button class="ss-btn-expand" onclick="ssToggle(\\'' + post.id + '\\')">Collapse</button>';
 
                 return '<div class="ss-card">' +
                     '<span class="ss-badge ss-' + post.status + '">' + post.status + '</span>' +

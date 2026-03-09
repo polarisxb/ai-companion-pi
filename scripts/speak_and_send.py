@@ -29,7 +29,6 @@ Voice setup (run once):
 
 import sys
 import os
-import json
 import subprocess
 import tempfile
 import argparse
@@ -175,11 +174,10 @@ def text_to_speech(text, output_path, voice_model=None):
                 ],
                 capture_output=True, text=True, timeout=30
             )
-            # Clean up WAV
-            if os.path.exists(wav_path) and wav_path != output_path:
-                os.unlink(wav_path)
-
             if convert_result.returncode == 0 and os.path.exists(ogg_path):
+                # Clean up WAV after successful conversion
+                if os.path.exists(wav_path) and wav_path != output_path:
+                    os.unlink(wav_path)
                 return True
             else:
                 print("OGG conversion failed, using WAV", file=sys.stderr)
