@@ -1,0 +1,269 @@
+{
+  "ok": true,
+  "milestone": "M6.1",
+  "recommendation": "migration_manifest_ready",
+  "companion_home": "/home/polaris/digital_life",
+  "pi_presence": {
+    "required": false,
+    "detected": false,
+    "evidence": [],
+    "claim": "local_manifest_only"
+  },
+  "profile": {
+    "name": "m6-migration-manifest",
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "cron_replacement": false,
+    "timer_installation": false,
+    "scheduler_mutation_allowed": false,
+    "semantic_shadow_authoritative": false,
+    "real_wake_requested": false,
+    "provider_generation_requested": false,
+    "raw_output_storage_required": "hash_only",
+    "dashboard_write_allowed": false,
+    "system_config_mutation_allowed": false,
+    "signal_voice_hardware_activation_allowed": false
+  },
+  "source_reports": {
+    "m4_post_change_guard": {
+      "path": "life-loop/m4_post_change_guard_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M4.7",
+      "recommendation": "m4_still_deployable",
+      "saved_at": "2026-06-15T12:04:38.602768"
+    },
+    "m5_quality_release": {
+      "path": "life-loop/m5_quality_release_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M5.6",
+      "recommendation": "m5_quality_ready_for_m6",
+      "saved_at": "2026-06-15T12:04:57.376713",
+      "audit_anomalies": {
+        "canonical_event_count": 3,
+        "advisory_anomaly_count": 2,
+        "blocking_anomaly_count": 0,
+        "missing_canonical_event_ids": []
+      }
+    },
+    "m5_final_freeze": {
+      "path": "life-loop/m5_final_freeze_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M5.7",
+      "recommendation": "m5_frozen_ready_for_m6",
+      "saved_at": "2026-06-15T12:05:05.572845",
+      "quality_contract": {
+        "provider": "deepseek",
+        "memory_mode": "json",
+        "cron_replacement": false,
+        "semantic_shadow_authoritative": false,
+        "real_wake_in_freeze": false,
+        "provider_generation_in_freeze": false,
+        "dashboard_write_allowed": false,
+        "raw_output_storage": "hash_only",
+        "canonical_m5_trial_cycles": 3,
+        "advisory_audit_anomalies_allowed": true,
+        "blocking_audit_anomalies_allowed": false
+      }
+    }
+  },
+  "deployment_package": {
+    "required_repository_paths": [
+      "companion_core/",
+      "scripts/run_wake_cycle.py",
+      "scripts/run_pi_predeploy.py",
+      "scripts/run_m3_release_gate.py",
+      "scripts/run_m3_final_freeze.py",
+      "scripts/run_m4_deploy_check.py",
+      "scripts/run_m4_wake_trial.py",
+      "scripts/run_m4_runtime_validation.py",
+      "scripts/run_m4_post_change_guard.py",
+      "scripts/run_m4_observation_check.py",
+      "scripts/run_m5_quality_check.py",
+      "scripts/run_m5_quality_trial.py",
+      "scripts/run_m5_quality_release_gate.py",
+      "scripts/run_m5_final_freeze.py",
+      "scripts/replay_wake_output.py",
+      "scripts/run_replay_regression.py",
+      "scripts/start_window.sh",
+      "scripts/start_memory_http.sh",
+      "window/window.py",
+      "memory-server/",
+      "requests/",
+      "templates/",
+      "docs/internal-life-loop.md",
+      "docs/m4-deployment-runtime-design.md",
+      "docs/m4-pi-runbook.md",
+      "docs/m5-companion-quality-design.md",
+      "docs/m6-pi-field-pilot-design.md",
+      "docs/m6-pi-migration-checklist.md",
+      "requirements.txt",
+      "requirements-dev.txt",
+      "setup.sh"
+    ],
+    "runtime_artifacts_to_preserve": [
+      "life-loop/m3_release_gate_report.json",
+      "life-loop/m3_final_freeze_report.json",
+      "life-loop/m4_deploy_report.json",
+      "life-loop/m4_wake_trial_report.json",
+      "life-loop/m4_runtime_validation_report.json",
+      "life-loop/m4_post_change_guard_report.json",
+      "life-loop/m4_observation_report.json",
+      "life-loop/m5_quality_report.json",
+      "life-loop/m5_quality_trial_report.json",
+      "life-loop/m5_quality_release_report.json",
+      "life-loop/m5_final_freeze_report.json",
+      "life-loop/m6_migration_manifest.json",
+      "life-loop/context_capsule.json",
+      "life-loop/companion_state.json",
+      "life-loop/wake_events.jsonl",
+      "journals/",
+      "memory-server/memory_store.json",
+      "requests/requests.json",
+      "window/status.json",
+      "context/who_is_companion.txt",
+      "context/who_is_human.txt",
+      "context/now.txt"
+    ],
+    "exclude_from_transfer": [
+      ".git/",
+      ".venv/",
+      "__pycache__/",
+      ".pytest_cache/",
+      ".omx/",
+      ".codex/",
+      ".agents/",
+      ".secrets/",
+      ".env",
+      ".env.*",
+      "scripts/substack_config.local.sh",
+      "node_modules/",
+      "*.pid",
+      "core.*",
+      "life-loop/model_outputs/"
+    ],
+    "inactive_optional_surfaces": [
+      "Signal",
+      "voice",
+      "camera",
+      "sensors",
+      "hardware",
+      "Substack",
+      "dashboard write actions"
+    ]
+  },
+  "secret_boundary": {
+    "copy_secret_values": false,
+    "allowed_metadata": [
+      "secret file path",
+      "environment variable name",
+      "presence or absence",
+      "permission expectation"
+    ],
+    "expected_pi_secret_paths": [
+      ".secrets/deepseek.env"
+    ],
+    "expected_environment_variables": [
+      "DEEPSEEK_API_KEY"
+    ],
+    "permission_expectations": {
+      ".secrets/": "0700",
+      ".secrets/deepseek.env": "0600"
+    },
+    "disallowed_secret_material": [
+      "API key values",
+      "token prefixes or suffixes",
+      ".env contents",
+      "shell history containing exported secrets",
+      "raw provider request or response bodies"
+    ]
+  },
+  "network_boundary": {
+    "dashboard_write_allowed": false,
+    "memory_http_default_host": "127.0.0.1",
+    "new_lan_exposure_allowed": false,
+    "firewall_or_router_changes_allowed": false
+  },
+  "scheduler_boundary": {
+    "cron_replacement": false,
+    "timer_installation": false,
+    "service_enablement": false,
+    "crontab_edit_allowed": false,
+    "readiness_stage": "M6.6"
+  },
+  "ownership_permissions": {
+    "repository_owner": "pi deployment user",
+    "runtime_owner": "pi deployment user",
+    "secrets_readable_by": "pi deployment user only",
+    "requires_sudo_for_m6_1": false,
+    "runtime_directories": [
+      "life-loop/",
+      "journals/",
+      "memory-server/",
+      "requests/",
+      "window/",
+      "tasks/logs/"
+    ]
+  },
+  "stages": [
+    {
+      "name": "m5_final_freeze_evidence",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M5.7 final freeze evidence is present and ready for M6"
+    },
+    {
+      "name": "m4_deployability_evidence",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M4 post-change guard remains deployable"
+    },
+    {
+      "name": "package_inventory",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "Required repository paths and runtime artifacts are enumerated"
+    },
+    {
+      "name": "exclude_policy",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "Development caches, virtualenvs, local secrets, and raw model outputs are excluded by default"
+    },
+    {
+      "name": "secret_boundary",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "Manifest records secret metadata only and no secret values"
+    },
+    {
+      "name": "scheduler_boundary",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.1 does not replace cron, install timers, enable services, or edit crontab"
+    },
+    {
+      "name": "optional_surface_boundary",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "Signal, voice, camera, sensors, hardware, and dashboard writes remain inactive for M6.1"
+    }
+  ],
+  "stop_reasons": [],
+  "pending_reasons": [],
+  "saved_at": "2026-06-15T15:42:54+08:00",
+  "next_commands": {
+    "m6_2_preflight_v2": "define and run a local non-generative M6.2 preflight gate",
+    "m5_final_freeze_no_write": ".venv/bin/python scripts/run_m5_final_freeze.py --companion-home /home/polaris/digital_life --no-write-report",
+    "json_validation": "python3 -m json.tool life-loop/m6_migration_manifest.json >/dev/null"
+  }
+}

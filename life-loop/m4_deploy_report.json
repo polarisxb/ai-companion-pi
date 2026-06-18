@@ -1,0 +1,319 @@
+{
+  "ok": true,
+  "milestone": "M4.2",
+  "recommendation": "ready_for_manual_wake",
+  "companion_home": "/home/polaris/digital_life",
+  "final_freeze_report": "life-loop/m3_final_freeze_report.json",
+  "profile": {
+    "name": "pi-deploy-check",
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "cron_replacement": false,
+    "semantic_shadow_authoritative": false,
+    "real_wake_requested": false,
+    "provider_generation_requested": false,
+    "provider_preflight_requested": false,
+    "raw_output_storage_required": "hash_only",
+    "dashboard_reachability_required": false
+  },
+  "frozen_commands": {
+    "release_gate": "python3 scripts/run_m3_release_gate.py --companion-home /home/polaris/digital_life --smoke-home /tmp/companion-m325-release-gate-smoke --provider deepseek --memory-mode json --since-trigger m324-deepseek-shadow --trial-limit 1",
+    "final_freeze": "python3 scripts/run_m3_final_freeze.py --companion-home /home/polaris/digital_life --expected-provider deepseek --expected-memory-mode json --expected-trial-trigger m324-deepseek-shadow"
+  },
+  "next_commands": {
+    "deploy_check": "python3 scripts/run_m4_deploy_check.py --companion-home /home/polaris/digital_life",
+    "manual_wake_after_m4_3_wrapper": "python3 scripts/run_m4_wake_trial.py --companion-home /home/polaris/digital_life"
+  },
+  "stages": [
+    {
+      "name": "final_freeze_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "final-freeze report loaded",
+      "details": {
+        "path": "/home/polaris/digital_life/life-loop/m3_final_freeze_report.json",
+        "milestone": "M3.26",
+        "recommendation": "m3_frozen_ready_for_m4",
+        "saved_at": "2026-06-14T17:20:18.598511"
+      }
+    },
+    {
+      "name": "final_freeze_result",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M3 final freeze is ready for M4",
+      "details": {
+        "ok": true,
+        "milestone": "M3.26",
+        "recommendation": "m3_frozen_ready_for_m4",
+        "stop_reasons": []
+      }
+    },
+    {
+      "name": "frozen_deployment_contract",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M3 frozen deployment contract is intact",
+      "details": {
+        "expected": {
+          "provider": "deepseek",
+          "memory_mode": "json",
+          "cron_replacement": false,
+          "semantic_shadow_authoritative": false,
+          "raw_output_storage": "hash_only",
+          "real_wake_in_freeze": false
+        },
+        "actual": {
+          "provider": "deepseek",
+          "memory_mode": "json",
+          "cron_replacement": false,
+          "real_wake_in_freeze": false,
+          "semantic_shadow_authoritative": false,
+          "raw_output_storage": "hash_only"
+        }
+      }
+    },
+    {
+      "name": "semantic_shadow_authority",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "semantic shadow authority is isolated",
+      "details": {
+        "ok": true,
+        "message": "semantic shadow authority is isolated",
+        "main_memory_count": 47,
+        "shadow_memory_count": 0,
+        "main_store": "memory-server/memory_store.json",
+        "shadow_store": "life-loop/semantic_shadow/memory_store.json",
+        "problems": []
+      }
+    },
+    {
+      "name": "python_runtime",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "Python 3.14.5 runtime is usable",
+      "details": {
+        "version": "3.14.5",
+        "executable": "/home/polaris/digital_life/.venv/bin/python",
+        "virtualenv_active": true
+      }
+    },
+    {
+      "name": "json_mode_imports",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "JSON-mode runtime imports are available",
+      "details": {
+        "imports": [
+          {
+            "name": "json",
+            "ok": true,
+            "status": "passed"
+          },
+          {
+            "name": "companion_core.lifecycle",
+            "ok": true,
+            "status": "passed"
+          },
+          {
+            "name": "companion_core.llm",
+            "ok": true,
+            "status": "passed"
+          },
+          {
+            "name": "companion_core.memory",
+            "ok": true,
+            "status": "passed"
+          },
+          {
+            "name": "companion_core.parser",
+            "ok": true,
+            "status": "passed"
+          },
+          {
+            "name": "flask",
+            "ok": true,
+            "status": "passed"
+          },
+          {
+            "name": "markdown",
+            "ok": true,
+            "status": "passed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "deepseek_api_key",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "DeepSeek API key metadata is present",
+      "details": {
+        "accepted_env_names": [
+          "COMPANION_LLM_API_KEY",
+          "DEEPSEEK_API_KEY"
+        ],
+        "present_env_names": [
+          "DEEPSEEK_API_KEY"
+        ],
+        "local_secrets": {
+          "exists": true,
+          "path": "/home/polaris/digital_life/.secrets/deepseek.env",
+          "loaded": [
+            "DEEPSEEK_API_KEY"
+          ]
+        },
+        "secret_values": "redacted"
+      }
+    },
+    {
+      "name": "context_files",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "context files are present and customized",
+      "details": {
+        "files": [
+          {
+            "name": "context/who_is_companion.txt",
+            "ok": true,
+            "status": "passed",
+            "message": "context/who_is_companion.txt is present and customized"
+          },
+          {
+            "name": "context/who_is_human.txt",
+            "ok": true,
+            "status": "passed",
+            "message": "context/who_is_human.txt is present and customized"
+          },
+          {
+            "name": "context/now.txt",
+            "ok": true,
+            "status": "passed",
+            "message": "context/now.txt is present and customized"
+          }
+        ]
+      }
+    },
+    {
+      "name": "writable_runtime_paths",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "runtime directories are writable",
+      "details": {
+        "paths": [
+          {
+            "name": "life-loop",
+            "ok": true,
+            "status": "passed",
+            "message": "life-loop is writable"
+          },
+          {
+            "name": "journals",
+            "ok": true,
+            "status": "passed",
+            "message": "journals is writable"
+          },
+          {
+            "name": "requests",
+            "ok": true,
+            "status": "passed",
+            "message": "requests is writable"
+          },
+          {
+            "name": "memory-server",
+            "ok": true,
+            "status": "passed",
+            "message": "memory-server is writable"
+          },
+          {
+            "name": "window",
+            "ok": true,
+            "status": "passed",
+            "message": "window is writable"
+          },
+          {
+            "name": "window/content",
+            "ok": true,
+            "status": "passed",
+            "message": "window/content is writable"
+          }
+        ]
+      }
+    },
+    {
+      "name": "raw_output_storage",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "raw model output storage defaults to hash-only",
+      "details": {
+        "raw_output_storage": "hash_only",
+        "env_var": "COMPANION_STORE_RAW_OUTPUTS"
+      }
+    },
+    {
+      "name": "runtime_files",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "dashboard/window runtime files are present",
+      "details": {
+        "files": [
+          {
+            "name": "scripts/run_wake_cycle.py",
+            "ok": true,
+            "status": "passed",
+            "message": "scripts/run_wake_cycle.py is present"
+          },
+          {
+            "name": "scripts/start_window.sh",
+            "ok": true,
+            "status": "passed",
+            "message": "scripts/start_window.sh is present"
+          },
+          {
+            "name": "scripts/start_memory_http.sh",
+            "ok": true,
+            "status": "passed",
+            "message": "scripts/start_memory_http.sh is present"
+          },
+          {
+            "name": "window/window.py",
+            "ok": true,
+            "status": "passed",
+            "message": "window/window.py is present"
+          },
+          {
+            "name": "memory-server/memory_server_http.py",
+            "ok": true,
+            "status": "passed",
+            "message": "memory-server/memory_server_http.py is present"
+          }
+        ]
+      }
+    },
+    {
+      "name": "dashboard_reachability",
+      "status": "skipped",
+      "ok": true,
+      "required": false,
+      "message": "dashboard/window reachability is advisory and not required for M4.2",
+      "details": {
+        "checked": false,
+        "required_for_m4_2": false
+      }
+    }
+  ],
+  "stop_reasons": [],
+  "saved_at": "2026-06-14T20:21:11.275445"
+}

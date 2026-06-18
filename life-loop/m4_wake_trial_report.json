@@ -1,0 +1,169 @@
+{
+  "ok": true,
+  "milestone": "M4.3",
+  "recommendation": "continue_runtime_validation",
+  "companion_home": "/home/polaris/digital_life",
+  "profile": {
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "trigger": "m4-pi-manual-wake",
+    "cron_replacement": false,
+    "semantic_shadow_authoritative": false,
+    "raw_output_storage": "hash_only"
+  },
+  "deploy_report": {
+    "ok": true,
+    "recommendation": "ready_for_manual_wake",
+    "saved_at": "2026-06-14T20:21:11.275445"
+  },
+  "retry_policy": {
+    "max_attempts": 2,
+    "retryable_categories": [
+      "infrastructure"
+    ],
+    "non_retryable_categories": [
+      "provider",
+      "parser",
+      "grounding",
+      "authority",
+      "memory",
+      "request",
+      "unknown"
+    ]
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "trigger": "m4-pi-manual-wake:attempt-1",
+      "status": "completed",
+      "event_id": "wake_20260614_203125_687853_95fc481b",
+      "event_status": "completed",
+      "failure_category": "none",
+      "retryable": false
+    }
+  ],
+  "latest_event": {
+    "id": "wake_20260614_203125_687853_95fc481b",
+    "trigger": "m4-pi-manual-wake:attempt-1",
+    "status": "completed",
+    "provider": "deepseek",
+    "memory_backend": "json",
+    "started_at": "2026-06-14T20:31:25.687853",
+    "completed_at": "2026-06-14T20:31:58.946825",
+    "journal": "journals/wakeup_2026-06-14_20-31-58-942594.md"
+  },
+  "quality_gate": {
+    "decision": "accepted",
+    "context_eligible": true,
+    "blocking_warnings": [],
+    "advisory_warnings": [],
+    "checked_at": "2026-06-14T20:31:58.942570"
+  },
+  "grounding": {
+    "supported": 0,
+    "unsupported": 0,
+    "ignored": 1,
+    "warnings": [],
+    "decisions": [
+      {
+        "action": "ignored",
+        "reason": "claim type does not require evidence",
+        "claim_type": "collaboration_fact",
+        "claim_excerpt": "用户选择了M3双轨方向：保持旧唤醒路径安全，同时改进Python生命循环的陪伴质量",
+        "content_hash": "339b2475c3158bbf",
+        "evidence_refs": [
+          "context.now"
+        ],
+        "matched_refs": []
+      }
+    ],
+    "evidence": [
+      {
+        "ref_id": "context.who_human",
+        "source_type": "system",
+        "authority": "system_config",
+        "content_hash": "a34fd03fd8baf28d"
+      },
+      {
+        "ref_id": "context.now",
+        "source_type": "system",
+        "authority": "system_config",
+        "content_hash": "6181d1f566d84d6e"
+      },
+      {
+        "ref_id": "context.capsule",
+        "source_type": "derived",
+        "authority": "prompt_read_model",
+        "content_hash": "6cb1546ba93a3e02"
+      }
+    ]
+  },
+  "semantic_shadow": {
+    "enabled": true,
+    "store_path": "life-loop/semantic_shadow/memory_store.json",
+    "attempted": 0,
+    "succeeded": 0,
+    "failed": 0,
+    "skipped": 0,
+    "results": []
+  },
+  "output_audit": {
+    "raw_output_storage": "hash_only",
+    "initial_hash": "994e641315b92a0d",
+    "final_hash": "41132580a2ee5ca4",
+    "initial_raw_output_stored": false,
+    "final_raw_output_stored": false,
+    "repair_attempt_count": 1
+  },
+  "failure_audit": {
+    "category": "none",
+    "retryable": false,
+    "reason": ""
+  },
+  "stages": [
+    {
+      "name": "m4_deploy_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M4 deploy report is ready",
+      "details": {
+        "path": "life-loop/m4_deploy_report.json",
+        "ok": true,
+        "milestone": "M4.2",
+        "recommendation": "ready_for_manual_wake",
+        "saved_at": "2026-06-14T20:21:11.275445"
+      }
+    },
+    {
+      "name": "wake_trial_profile",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M4 wake trial profile is deepseek + json",
+      "details": {
+        "provider": "deepseek",
+        "memory_mode": "json",
+        "trigger": "m4-pi-manual-wake",
+        "cron_replacement": false,
+        "semantic_shadow_authoritative": false
+      }
+    },
+    {
+      "name": "raw_output_storage",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "raw model output storage is hash-only",
+      "details": {
+        "raw_output_storage": "hash_only"
+      }
+    }
+  ],
+  "stop_reasons": [],
+  "next_commands": {
+    "deploy_check": "python3 scripts/run_m4_deploy_check.py --companion-home /home/polaris/digital_life",
+    "wake_trial": "python3 scripts/run_m4_wake_trial.py --companion-home /home/polaris/digital_life"
+  },
+  "saved_at": "2026-06-14T20:31:58.947359"
+}

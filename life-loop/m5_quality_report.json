@@ -1,0 +1,428 @@
+{
+  "ok": true,
+  "milestone": "M5.1",
+  "recommendation": "ready_for_quality_tuning",
+  "companion_home": "/home/polaris/digital_life",
+  "profile": {
+    "name": "m5-quality-observation",
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "cron_replacement": false,
+    "semantic_shadow_authoritative": false,
+    "real_wake_requested": false,
+    "provider_generation_requested": false,
+    "raw_output_storage_required": "hash_only",
+    "min_events": 1,
+    "min_accepted_events": 1,
+    "limit": 10,
+    "since": null,
+    "trigger_prefix": null,
+    "m4_wake_baseline_scope": true,
+    "baseline_event_id": "wake_20260614_203125_687853_95fc481b"
+  },
+  "source_reports": {
+    "m4_post_change_guard": {
+      "path": "life-loop/m4_post_change_guard_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M4.7",
+      "recommendation": "m4_still_deployable",
+      "saved_at": "2026-06-15T11:21:15.926976",
+      "expected_milestone": "M4.7",
+      "message": "report loaded"
+    },
+    "m4_runtime_validation": {
+      "path": "life-loop/m4_runtime_validation_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M4.6",
+      "recommendation": "m4_runtime_validated",
+      "saved_at": "2026-06-14T20:38:05.372424",
+      "expected_milestone": "M4.6",
+      "message": "report loaded"
+    },
+    "m4_observation": {
+      "path": "life-loop/m4_observation_report.json",
+      "loaded": true,
+      "ok": false,
+      "milestone": "M4.8",
+      "recommendation": "continue_observation",
+      "saved_at": "2026-06-14T21:22:49.955990",
+      "expected_milestone": "M4.8",
+      "message": "report loaded"
+    },
+    "m4_wake_trial": {
+      "path": "life-loop/m4_wake_trial_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M4.3",
+      "recommendation": "continue_runtime_validation",
+      "saved_at": "2026-06-14T20:31:58.947359",
+      "expected_milestone": "M4.3",
+      "message": "report loaded"
+    }
+  },
+  "sample": {
+    "events_considered": 2,
+    "completed_events": 2,
+    "accepted_events": 2,
+    "rejected_events": 0,
+    "first_event": "wake_20260614_203125_687853_95fc481b",
+    "latest_event": "wake_20260615_013102_655490_419b62a2",
+    "since": null,
+    "trigger_prefix": null,
+    "baseline_event_id": "wake_20260614_203125_687853_95fc481b"
+  },
+  "quality_profile": {
+    "quality_warning_count": 0,
+    "quality_warnings": [],
+    "blocking_warning_count": 0,
+    "blocking_warnings": [],
+    "advisory_warning_count": 0,
+    "advisory_warnings": [],
+    "warning_categories": {}
+  },
+  "stages": [
+    {
+      "name": "m4_baseline",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M4 baseline supports M5 quality work",
+      "details": {
+        "post_change_guard": {
+          "path": "life-loop/m4_post_change_guard_report.json",
+          "loaded": true,
+          "ok": true,
+          "milestone": "M4.7",
+          "recommendation": "m4_still_deployable",
+          "saved_at": "2026-06-15T11:21:15.926976",
+          "expected_milestone": "M4.7",
+          "message": "report loaded"
+        },
+        "runtime_validation": {
+          "path": "life-loop/m4_runtime_validation_report.json",
+          "loaded": true,
+          "ok": true,
+          "milestone": "M4.6",
+          "recommendation": "m4_runtime_validated",
+          "saved_at": "2026-06-14T20:38:05.372424",
+          "expected_milestone": "M4.6",
+          "message": "report loaded"
+        },
+        "observation": {
+          "path": "life-loop/m4_observation_report.json",
+          "loaded": true,
+          "ok": false,
+          "milestone": "M4.8",
+          "recommendation": "continue_observation",
+          "saved_at": "2026-06-14T21:22:49.955990",
+          "expected_milestone": "M4.8",
+          "message": "report loaded"
+        }
+      }
+    },
+    {
+      "name": "event_sample",
+      "status": "passed",
+      "ok": true,
+      "required": false,
+      "message": "quality sample is sufficient",
+      "details": {
+        "event_count": 2,
+        "accepted_count": 2,
+        "rejected_count": 0,
+        "min_events": 1,
+        "min_accepted_events": 1,
+        "baseline_event_id": "wake_20260614_203125_687853_95fc481b",
+        "since": null,
+        "trigger_prefix": null,
+        "limit": 10
+      }
+    },
+    {
+      "name": "event_health",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "selected wake events completed",
+      "details": {
+        "failures": []
+      }
+    },
+    {
+      "name": "quality_warning_profile",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "quality warnings are non-blocking",
+      "details": {
+        "quality_warning_count": 0,
+        "quality_warnings": [],
+        "blocking_warning_count": 0,
+        "blocking_warnings": [],
+        "advisory_warning_count": 0,
+        "advisory_warnings": [],
+        "warning_categories": {},
+        "unexpected_rejections": []
+      }
+    },
+    {
+      "name": "relationship_continuity",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "accepted events have usable journal continuity",
+      "details": {
+        "accepted_count": 2,
+        "context_capsule_update_count": 2,
+        "short_journal_event_ids": []
+      }
+    },
+    {
+      "name": "emotion_status_continuity",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "accepted events update companion mood/status",
+      "details": {
+        "accepted_count": 2,
+        "missing_state_event_ids": []
+      }
+    },
+    {
+      "name": "language_surface",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "accepted journals contain Chinese-visible prose",
+      "details": {
+        "checked_count": 2,
+        "findings": [
+          {
+            "event_id": "wake_20260614_203125_687853_95fc481b",
+            "journal": "journals/wakeup_2026-06-14_20-31-58-942594.md",
+            "cjk_chars": 202,
+            "problem": null
+          },
+          {
+            "event_id": "wake_20260615_013102_655490_419b62a2",
+            "journal": "journals/wakeup_2026-06-15_01-31-33-421238.md",
+            "cjk_chars": 257,
+            "problem": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "request_discipline",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "requests remain disciplined",
+      "details": {
+        "request_count": 0,
+        "request_errors": [],
+        "noisy_requests": []
+      }
+    },
+    {
+      "name": "memory_discipline",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "memory writes have no backend failures",
+      "details": {
+        "memory_count": 0,
+        "memory_write_failures": []
+      }
+    },
+    {
+      "name": "grounding_integrity",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "grounding has no unsupported final claims",
+      "details": {
+        "unsupported": [],
+        "supported": 1,
+        "ignored": 2
+      }
+    },
+    {
+      "name": "semantic_shadow_isolation",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "semantic shadow authority is isolated",
+      "details": {
+        "ok": true,
+        "message": "semantic shadow authority is isolated",
+        "main_memory_count": 47,
+        "shadow_memory_count": 0,
+        "main_store": "memory-server/memory_store.json",
+        "shadow_store": "life-loop/semantic_shadow/memory_store.json",
+        "problems": []
+      }
+    },
+    {
+      "name": "output_storage_policy",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "selected output audit is hash-only",
+      "details": {
+        "problems": [],
+        "events_without_output_audit": []
+      }
+    },
+    {
+      "name": "dashboard_read_only",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "/life M5 dashboard surface is read-only",
+      "details": {
+        "path": "window/window.py",
+        "life_get_route": true,
+        "m5_life_non_get_routes": [],
+        "non_get_routes": [
+          {
+            "rule": "/api/substack/approve/<post_id>",
+            "endpoint": "substack.substack_approve",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/api/substack/reject/<post_id>",
+            "endpoint": "substack.substack_reject",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/board/post",
+            "endpoint": "board_post",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/board/upload",
+            "endpoint": "board_upload",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/submit",
+            "endpoint": "task_submit",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/cancel",
+            "endpoint": "task_cancel",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/remove/<task_id>",
+            "endpoint": "task_remove",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/merge/<task_id>",
+            "endpoint": "task_merge",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/test/<task_id>",
+            "endpoint": "task_test",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/push/<task_id>",
+            "endpoint": "task_push",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/revert/<task_id>",
+            "endpoint": "task_revert",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/cleanup/<task_id>",
+            "endpoint": "task_cleanup",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/requests/api/approve/<request_id>",
+            "endpoint": "approve_request",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/requests/api/deny/<request_id>",
+            "endpoint": "deny_request",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/requests/api/respond/<request_id>",
+            "endpoint": "respond_request",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/requests/api/done/<request_id>",
+            "endpoint": "done_request",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/requests/api/acknowledge/<request_id>",
+            "endpoint": "acknowledge_request",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/requests/api/trial/<request_id>",
+            "endpoint": "trial_request",
+            "methods": [
+              "POST"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "pending_reasons": [],
+  "stop_reasons": [],
+  "next_commands": {
+    "quality_check": "python3 scripts/run_m5_quality_check.py --companion-home /home/polaris/digital_life",
+    "m4_post_change_guard": "python3 scripts/run_m4_post_change_guard.py --companion-home /home/polaris/digital_life",
+    "targeted_tests": "python3 -m pytest tests/test_internal_life_loop.py -q"
+  },
+  "saved_at": "2026-06-15T11:21:25.569028"
+}

@@ -1,0 +1,391 @@
+{
+  "ok": true,
+  "milestone": "M4.6",
+  "recommendation": "m4_runtime_validated",
+  "companion_home": "/home/polaris/digital_life",
+  "profile": {
+    "name": "m4-runtime-validation",
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "cron_replacement": false,
+    "semantic_shadow_authoritative": false,
+    "real_wake_requested": false,
+    "provider_generation_requested": false,
+    "raw_output_storage_required": "hash_only",
+    "require_raspberry_pi": false
+  },
+  "source_reports": {
+    "deploy": {
+      "path": "life-loop/m4_deploy_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M4.2",
+      "recommendation": "ready_for_manual_wake",
+      "saved_at": "2026-06-14T20:21:11.275445"
+    },
+    "wake_trial": {
+      "path": "life-loop/m4_wake_trial_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M4.3",
+      "recommendation": "continue_runtime_validation",
+      "saved_at": "2026-06-14T20:31:58.947359"
+    }
+  },
+  "stages": [
+    {
+      "name": "m4_deploy_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "m4_deploy_report loaded",
+      "details": {
+        "path": "life-loop/m4_deploy_report.json",
+        "ok": true,
+        "milestone": "M4.2",
+        "recommendation": "ready_for_manual_wake",
+        "saved_at": "2026-06-14T20:21:11.275445"
+      }
+    },
+    {
+      "name": "m4_deploy_result",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M4 deploy report is ready",
+      "details": {
+        "ok": true,
+        "recommendation": "ready_for_manual_wake",
+        "stop_reasons": []
+      }
+    },
+    {
+      "name": "m4_deploy_profile",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M4 deploy profile preserves the frozen runtime contract",
+      "details": {
+        "expected": {
+          "provider": "deepseek",
+          "memory_mode": "json",
+          "cron_replacement": false,
+          "semantic_shadow_authoritative": false,
+          "real_wake_requested": false,
+          "provider_generation_requested": false,
+          "raw_output_storage_required": "hash_only"
+        },
+        "actual": {
+          "name": "pi-deploy-check",
+          "provider": "deepseek",
+          "memory_mode": "json",
+          "cron_replacement": false,
+          "semantic_shadow_authoritative": false,
+          "real_wake_requested": false,
+          "provider_generation_requested": false,
+          "provider_preflight_requested": false,
+          "raw_output_storage_required": "hash_only",
+          "dashboard_reachability_required": false
+        }
+      }
+    },
+    {
+      "name": "m4_wake_trial_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "m4_wake_trial_report loaded",
+      "details": {
+        "path": "life-loop/m4_wake_trial_report.json",
+        "ok": true,
+        "milestone": "M4.3",
+        "recommendation": "continue_runtime_validation",
+        "saved_at": "2026-06-14T20:31:58.947359"
+      }
+    },
+    {
+      "name": "m4_wake_result",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M4 wake trial completed successfully",
+      "details": {
+        "ok": true,
+        "recommendation": "continue_runtime_validation",
+        "failure_audit": {
+          "category": "none",
+          "retryable": false,
+          "reason": ""
+        },
+        "stop_reasons": []
+      }
+    },
+    {
+      "name": "m4_wake_profile",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M4 wake profile preserves the frozen runtime contract",
+      "details": {
+        "expected": {
+          "provider": "deepseek",
+          "memory_mode": "json",
+          "cron_replacement": false,
+          "semantic_shadow_authoritative": false,
+          "raw_output_storage": "hash_only"
+        },
+        "actual": {
+          "provider": "deepseek",
+          "memory_mode": "json",
+          "trigger": "m4-pi-manual-wake",
+          "cron_replacement": false,
+          "semantic_shadow_authoritative": false,
+          "raw_output_storage": "hash_only"
+        }
+      }
+    },
+    {
+      "name": "m4_wake_attempt",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M4 wake attempt history is successful and bounded",
+      "details": {
+        "attempt_count": 1,
+        "retry_policy": {
+          "max_attempts": 2,
+          "retryable_categories": [
+            "infrastructure"
+          ],
+          "non_retryable_categories": [
+            "provider",
+            "parser",
+            "grounding",
+            "authority",
+            "memory",
+            "request",
+            "unknown"
+          ]
+        },
+        "final_attempt": {
+          "attempt": 1,
+          "trigger": "m4-pi-manual-wake:attempt-1",
+          "status": "completed",
+          "event_id": "wake_20260614_203125_687853_95fc481b",
+          "event_status": "completed",
+          "failure_category": "none",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "m4_output_audit",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M4 wake output audit is hash-only",
+      "details": {
+        "raw_output_storage": "hash_only",
+        "initial_hash": "994e641315b92a0d",
+        "final_hash": "41132580a2ee5ca4",
+        "initial_raw_output_stored": false,
+        "final_raw_output_stored": false,
+        "repair_attempt_count": 1
+      }
+    },
+    {
+      "name": "m4_latest_event",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "latest M4 wake event is complete and journaled",
+      "details": {
+        "id": "wake_20260614_203125_687853_95fc481b",
+        "trigger": "m4-pi-manual-wake:attempt-1",
+        "status": "completed",
+        "provider": "deepseek",
+        "memory_backend": "json",
+        "journal": "journals/wakeup_2026-06-14_20-31-58-942594.md",
+        "journal_exists": true
+      }
+    },
+    {
+      "name": "semantic_shadow_authority",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "semantic shadow authority is isolated",
+      "details": {
+        "ok": true,
+        "message": "semantic shadow authority is isolated",
+        "main_memory_count": 47,
+        "shadow_memory_count": 0,
+        "main_store": "memory-server/memory_store.json",
+        "shadow_store": "life-loop/semantic_shadow/memory_store.json",
+        "problems": []
+      }
+    },
+    {
+      "name": "dashboard_life_read_only",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "/life M3/M4 dashboard surface is read-only",
+      "details": {
+        "path": "window/window.py",
+        "life_get_route": true,
+        "m3_m4_non_get_routes": [],
+        "non_get_routes": [
+          {
+            "rule": "/api/substack/approve/<post_id>",
+            "endpoint": "substack.substack_approve",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/api/substack/reject/<post_id>",
+            "endpoint": "substack.substack_reject",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/board/post",
+            "endpoint": "board_post",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/board/upload",
+            "endpoint": "board_upload",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/submit",
+            "endpoint": "task_submit",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/cancel",
+            "endpoint": "task_cancel",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/remove/<task_id>",
+            "endpoint": "task_remove",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/merge/<task_id>",
+            "endpoint": "task_merge",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/test/<task_id>",
+            "endpoint": "task_test",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/push/<task_id>",
+            "endpoint": "task_push",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/revert/<task_id>",
+            "endpoint": "task_revert",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/tasks/cleanup/<task_id>",
+            "endpoint": "task_cleanup",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/requests/api/approve/<request_id>",
+            "endpoint": "approve_request",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/requests/api/deny/<request_id>",
+            "endpoint": "deny_request",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/requests/api/respond/<request_id>",
+            "endpoint": "respond_request",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/requests/api/done/<request_id>",
+            "endpoint": "done_request",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/requests/api/acknowledge/<request_id>",
+            "endpoint": "acknowledge_request",
+            "methods": [
+              "POST"
+            ]
+          },
+          {
+            "rule": "/requests/api/trial/<request_id>",
+            "endpoint": "trial_request",
+            "methods": [
+              "POST"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "platform_identity",
+      "status": "warning",
+      "ok": true,
+      "required": false,
+      "message": "Raspberry Pi platform was not detected; this is advisory unless --require-raspberry-pi is set",
+      "details": {
+        "system": "Linux",
+        "machine": "x86_64",
+        "python": "3.14.5",
+        "device_tree_model": null,
+        "raspberry_pi_detected": false,
+        "require_raspberry_pi": false
+      }
+    }
+  ],
+  "stop_reasons": [],
+  "next_commands": {
+    "deploy_check": "python3 scripts/run_m4_deploy_check.py --companion-home /home/polaris/digital_life",
+    "wake_trial": "python3 scripts/run_m4_wake_trial.py --companion-home /home/polaris/digital_life --timeout 300",
+    "runtime_validation": "python3 scripts/run_m4_runtime_validation.py --companion-home /home/polaris/digital_life"
+  },
+  "saved_at": "2026-06-14T20:38:05.372424"
+}

@@ -1,0 +1,159 @@
+{
+  "ok": true,
+  "milestone": "M5.7",
+  "recommendation": "m5_frozen_ready_for_m6",
+  "companion_home": "/home/polaris/digital_life",
+  "release_gate_report": "life-loop/m5_quality_release_report.json",
+  "quality_contract": {
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "cron_replacement": false,
+    "semantic_shadow_authoritative": false,
+    "real_wake_in_freeze": false,
+    "provider_generation_in_freeze": false,
+    "dashboard_write_allowed": false,
+    "raw_output_storage": "hash_only",
+    "canonical_m5_trial_cycles": 3,
+    "advisory_audit_anomalies_allowed": true,
+    "blocking_audit_anomalies_allowed": false
+  },
+  "frozen_commands": {
+    "quality_release_gate": "python3 scripts/run_m5_quality_release_gate.py --companion-home /home/polaris/digital_life --min-trial-cycles 3",
+    "final_freeze": "python3 scripts/run_m5_final_freeze.py --companion-home /home/polaris/digital_life --expected-provider deepseek --expected-memory-mode json",
+    "m4_post_change_guard": "python3 scripts/run_m4_post_change_guard.py --companion-home /home/polaris/digital_life"
+  },
+  "stages": [
+    {
+      "name": "release_gate_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M5.6 release gate report loaded",
+      "details": {
+        "path": "life-loop/m5_quality_release_report.json",
+        "ok": true,
+        "milestone": "M5.6",
+        "recommendation": "m5_quality_ready_for_m6",
+        "saved_at": "2026-06-15T12:04:57.376713"
+      }
+    },
+    {
+      "name": "release_result",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M5.6 release gate is ready for final freeze",
+      "details": {
+        "ok": true,
+        "milestone": "M5.6",
+        "recommendation": "m5_quality_ready_for_m6",
+        "stop_reasons": []
+      }
+    },
+    {
+      "name": "frozen_profile",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M5 quality profile is frozen",
+      "details": {
+        "expected_provider": "deepseek",
+        "expected_memory_mode": "json",
+        "profile": {
+          "name": "m5-quality-release-gate",
+          "provider": "deepseek",
+          "memory_mode": "json",
+          "cron_replacement": false,
+          "semantic_shadow_authoritative": false,
+          "real_wake_requested": false,
+          "provider_generation_requested": false,
+          "raw_output_storage_required": "hash_only",
+          "dashboard_write_allowed": false,
+          "min_trial_cycles": 3
+        }
+      }
+    },
+    {
+      "name": "required_release_stages",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "all required M5.6 release stages passed",
+      "details": {
+        "required": [
+          "m4_post_change_guard",
+          "m5_quality_report",
+          "m5_trial_report",
+          "m5_quality_stages",
+          "m5_trial_profile",
+          "m5_trial_attempts",
+          "m5_quality_contract",
+          "semantic_shadow_authority",
+          "audit_anomalies"
+        ],
+        "present": [
+          "audit_anomalies",
+          "m4_post_change_guard",
+          "m5_quality_contract",
+          "m5_quality_report",
+          "m5_quality_stages",
+          "m5_trial_attempts",
+          "m5_trial_profile",
+          "m5_trial_report",
+          "semantic_shadow_authority"
+        ]
+      }
+    },
+    {
+      "name": "source_report_contract",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M4/M5 source reports are frozen",
+      "details": {
+        "m4_post_change_guard": {
+          "path": "life-loop/m4_post_change_guard_report.json",
+          "loaded": true,
+          "ok": true,
+          "milestone": "M4.7",
+          "recommendation": "m4_still_deployable",
+          "saved_at": "2026-06-15T12:04:38.602768"
+        },
+        "m5_quality": {
+          "path": "life-loop/m5_quality_report.json",
+          "loaded": true,
+          "ok": true,
+          "milestone": "M5.1",
+          "recommendation": "ready_for_quality_tuning",
+          "saved_at": "2026-06-15T11:21:25.569028"
+        },
+        "m5_trial": {
+          "path": "life-loop/m5_quality_trial_report.json",
+          "loaded": true,
+          "ok": true,
+          "milestone": "M5.5",
+          "recommendation": "continue_quality_observation",
+          "saved_at": "2026-06-15T11:23:34.192527"
+        }
+      }
+    },
+    {
+      "name": "audit_contract",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M5.5 audit anomalies are advisory-only",
+      "details": {
+        "trigger_prefix": "m5-manual-quality-trial",
+        "canonical_event_count": 3,
+        "same_trigger_event_count": 5,
+        "extra_event_count": 2,
+        "advisory_anomaly_count": 2,
+        "blocking_anomaly_count": 0,
+        "missing_canonical_event_ids": []
+      }
+    }
+  ],
+  "stop_reasons": [],
+  "saved_at": "2026-06-15T12:05:05.572845"
+}

@@ -1,0 +1,157 @@
+{
+  "ok": true,
+  "milestone": "M3.26",
+  "recommendation": "m3_frozen_ready_for_m4",
+  "companion_home": "/home/polaris/digital_life",
+  "release_gate_report": "life-loop/m3_release_gate_report.json",
+  "deployment_contract": {
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "cron_replacement": false,
+    "real_wake_in_freeze": false,
+    "semantic_shadow_authoritative": false,
+    "raw_output_storage": "hash_only"
+  },
+  "frozen_commands": {
+    "release_gate": "python3 scripts/run_m3_release_gate.py --companion-home /home/polaris/digital_life --smoke-home /tmp/companion-m325-release-gate-smoke --provider deepseek --memory-mode json --since-trigger m324-deepseek-shadow --trial-limit 1",
+    "final_freeze": "python3 scripts/run_m3_final_freeze.py --companion-home /home/polaris/digital_life --expected-provider deepseek --expected-memory-mode json --expected-trial-trigger m324-deepseek-shadow"
+  },
+  "stages": [
+    {
+      "name": "release_gate_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "release gate report loaded",
+      "details": {
+        "path": "/home/polaris/digital_life/life-loop/m3_release_gate_report.json",
+        "milestone": "M3.25",
+        "recommendation": "ready_for_m4",
+        "saved_at": "2026-06-14T17:13:17.133392"
+      }
+    },
+    {
+      "name": "release_result",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "release gate is ready_for_m4",
+      "details": {
+        "ok": true,
+        "milestone": "M3.25",
+        "recommendation": "ready_for_m4",
+        "stop_reasons": []
+      }
+    },
+    {
+      "name": "deployment_profile",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "deployment profile is frozen",
+      "details": {
+        "expected_provider": "deepseek",
+        "expected_memory_mode": "json",
+        "expected_trial_trigger": "m324-deepseek-shadow",
+        "actual": {
+          "provider": "deepseek",
+          "memory_mode": "json",
+          "cron_replacement": false,
+          "trial_since_trigger": "m324-deepseek-shadow",
+          "trial_limit": 1
+        }
+      }
+    },
+    {
+      "name": "required_stages",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "all required release stages passed",
+      "details": {
+        "required": [
+          "predeploy",
+          "trial_summary",
+          "semantic_shadow_authority"
+        ],
+        "present": [
+          "predeploy",
+          "semantic_shadow_authority",
+          "trial_summary"
+        ]
+      }
+    },
+    {
+      "name": "predeploy_contract",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "predeploy contract is frozen",
+      "details": {
+        "profile": {
+          "name": "pi-json",
+          "provider": "deepseek",
+          "memory_mode": "json",
+          "cron_replacement": false,
+          "real_wake_requested": false,
+          "raw_output_storage_required": "hash_only"
+        },
+        "real_wake": {
+          "name": "real_wake",
+          "status": "skipped",
+          "ok": true,
+          "required": false,
+          "message": "real provider wake was not requested"
+        },
+        "raw_output_storage": {
+          "name": "raw_output_storage",
+          "status": "passed",
+          "ok": true,
+          "required": true,
+          "message": "raw model output storage is disabled",
+          "details": {
+            "raw_output_storage_enabled": false,
+            "allow_raw_output_storage": false
+          }
+        }
+      }
+    },
+    {
+      "name": "trial_contract",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "trial contract is frozen",
+      "details": {
+        "events_considered": 1,
+        "latest_event": "wake_20260614_170258_084784_1fd4b85c",
+        "latest_trigger": "m324-deepseek-shadow:1",
+        "since_trigger": "m324-deepseek-shadow",
+        "semantic_shadow": {
+          "events": 1,
+          "enabled": 1,
+          "attempted": 0,
+          "succeeded": 0,
+          "failed": 0,
+          "skipped": 0
+        }
+      }
+    },
+    {
+      "name": "semantic_shadow_contract",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "semantic shadow remains non-authoritative",
+      "details": {
+        "main_memory_count": 47,
+        "shadow_memory_count": 0,
+        "main_store": "memory-server/memory_store.json",
+        "shadow_store": "life-loop/semantic_shadow/memory_store.json",
+        "problems": []
+      }
+    }
+  ],
+  "stop_reasons": [],
+  "saved_at": "2026-06-14T17:20:18.598511"
+}

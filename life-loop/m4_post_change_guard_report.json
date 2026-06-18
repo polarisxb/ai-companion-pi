@@ -1,0 +1,50 @@
+{
+  "ok": true,
+  "milestone": "M4.7",
+  "recommendation": "m4_still_deployable",
+  "companion_home": "/home/polaris/digital_life",
+  "profile": {
+    "name": "m4-post-change-guard",
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "cron_replacement": false,
+    "semantic_shadow_authoritative": false,
+    "real_wake_requested": false,
+    "provider_generation_requested": false,
+    "requires_existing_wake_trial_report": true
+  },
+  "stages": [
+    {
+      "name": "m4_deploy_check_current",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "current code passes M4 deploy check",
+      "details": {
+        "ok": true,
+        "milestone": "M4.2",
+        "recommendation": "ready_for_manual_wake",
+        "stop_reasons": []
+      }
+    },
+    {
+      "name": "m4_runtime_validation_current",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "current code preserves M4 runtime validation",
+      "details": {
+        "ok": true,
+        "milestone": "M4.6",
+        "recommendation": "m4_runtime_validated",
+        "stop_reasons": []
+      }
+    }
+  ],
+  "stop_reasons": [],
+  "next_commands": {
+    "post_change_guard": "python3 scripts/run_m4_post_change_guard.py --companion-home /home/polaris/digital_life",
+    "full_tests": "python3 -m pytest"
+  },
+  "saved_at": "2026-06-15T12:04:38.602768"
+}

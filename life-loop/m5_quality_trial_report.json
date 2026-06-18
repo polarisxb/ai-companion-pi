@@ -1,0 +1,170 @@
+{
+  "ok": true,
+  "milestone": "M5.5",
+  "recommendation": "continue_quality_observation",
+  "companion_home": "/home/polaris/digital_life",
+  "provider": "deepseek",
+  "memory_mode": "json",
+  "cycles_requested": 3,
+  "profile": {
+    "trigger": "m5-manual-quality-trial",
+    "cron_replacement": false,
+    "semantic_shadow_authoritative": false,
+    "real_wake_requested": true,
+    "provider_generation_requested": true,
+    "raw_output_storage": "hash_only"
+  },
+  "stages": [
+    {
+      "name": "m4_post_change_guard",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M4 post-change guard supports M5.5",
+      "details": {
+        "ok": true,
+        "milestone": "M4.7",
+        "recommendation": "m4_still_deployable",
+        "saved_at": "2026-06-15T11:21:15.926976"
+      }
+    },
+    {
+      "name": "m5_quality_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M5 quality report supports M5.5",
+      "details": {
+        "ok": true,
+        "milestone": "M5.1",
+        "recommendation": "ready_for_quality_tuning",
+        "saved_at": "2026-06-15T11:21:25.569028"
+      }
+    },
+    {
+      "name": "trial_profile",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M5.5 trial profile is explicit deepseek + json",
+      "details": {
+        "provider": "deepseek",
+        "memory_mode": "json",
+        "cycles": 3,
+        "trigger": "m5-manual-quality-trial",
+        "cron_replacement": false,
+        "semantic_shadow_authoritative": false,
+        "real_wake_requested": true,
+        "provider_generation_requested": true
+      }
+    },
+    {
+      "name": "deepseek_api_key",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "API key loaded from DEEPSEEK_API_KEY",
+      "details": {
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "present": true,
+        "secret_loaded_from_file": true,
+        "secret_file_exists": true
+      }
+    },
+    {
+      "name": "raw_output_storage",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "raw model output storage is hash-only",
+      "details": {
+        "raw_output_storage": "hash_only"
+      }
+    }
+  ],
+  "attempts": [
+    {
+      "cycle": 1,
+      "trigger": "m5-manual-quality-trial:cycle-1",
+      "status": "completed",
+      "event_id": "wake_20260615_112154_254488_d3e48c79",
+      "event_status": "completed",
+      "quality_gate_decision": "accepted",
+      "context_eligible": true,
+      "quality_warnings": []
+    },
+    {
+      "cycle": 2,
+      "trigger": "m5-manual-quality-trial:cycle-2",
+      "status": "completed",
+      "event_id": "wake_20260615_112209_042715_26d7688c",
+      "event_status": "completed",
+      "quality_gate_decision": "accepted",
+      "context_eligible": true,
+      "quality_warnings": []
+    },
+    {
+      "cycle": 3,
+      "trigger": "m5-manual-quality-trial:cycle-3",
+      "status": "completed",
+      "event_id": "wake_20260615_112246_246448_988c0b0f",
+      "event_status": "completed",
+      "quality_gate_decision": "accepted",
+      "context_eligible": true,
+      "quality_warnings": []
+    }
+  ],
+  "latest_event": {
+    "id": "wake_20260615_112246_246448_988c0b0f",
+    "trigger": "m5-manual-quality-trial:cycle-3",
+    "status": "completed",
+    "provider": "deepseek",
+    "memory_backend": "json",
+    "started_at": "2026-06-15T11:22:46.246448",
+    "completed_at": "2026-06-15T11:23:34.190828",
+    "journal": "journals/wakeup_2026-06-15_11-23-34-184725.md"
+  },
+  "quality_profile": {
+    "quality_warning_count": 0,
+    "quality_warnings": [],
+    "blocking_warning_count": 0,
+    "blocking_warnings": [],
+    "advisory_warning_count": 0,
+    "advisory_warnings": []
+  },
+  "context_acceptance": {
+    "completed_events": 3,
+    "accepted_events": 3,
+    "rejected_events": 0
+  },
+  "request_discipline": {
+    "request_count": 0,
+    "request_error_count": 0
+  },
+  "memory_discipline": {
+    "memory_count": 2,
+    "memory_write_failures": 0
+  },
+  "grounding": {
+    "supported": 1,
+    "unsupported": 0,
+    "ignored": 7
+  },
+  "semantic_shadow": {
+    "attempted": 0,
+    "succeeded": 0,
+    "failed": 0,
+    "skipped": 0
+  },
+  "output_audit": {
+    "raw_output_storage": "hash_only",
+    "raw_output_stored_count": 0,
+    "audit_count": 3
+  },
+  "stop_reasons": [],
+  "next_commands": {
+    "quality_trial": "python3 scripts/run_m5_quality_trial.py --companion-home /home/polaris/digital_life --cycles 3",
+    "quality_check": "python3 scripts/run_m5_quality_check.py --companion-home /home/polaris/digital_life"
+  },
+  "saved_at": "2026-06-15T11:23:34.192527"
+}

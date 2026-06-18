@@ -1,0 +1,490 @@
+{
+  "ok": true,
+  "milestone": "M3.25",
+  "recommendation": "ready_for_m4",
+  "profile": {
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "cron_replacement": false,
+    "trial_since_trigger": "m324-deepseek-shadow",
+    "trial_limit": 1
+  },
+  "companion_home": "/home/polaris/digital_life",
+  "smoke_home": "/tmp/companion-m325-release-gate-smoke",
+  "stages": [
+    {
+      "name": "predeploy",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "predeploy passed",
+      "details": {
+        "ok": true,
+        "profile": {
+          "name": "pi-json",
+          "provider": "deepseek",
+          "memory_mode": "json",
+          "cron_replacement": false,
+          "real_wake_requested": false,
+          "raw_output_storage_required": "hash_only"
+        },
+        "companion_home": "/home/polaris/digital_life",
+        "smoke_home": "/tmp/companion-m325-release-gate-smoke",
+        "trigger": "m325-release-gate",
+        "stages": [
+          {
+            "name": "readiness",
+            "status": "passed",
+            "ok": true,
+            "required": true,
+            "message": "target runtime readiness passed",
+            "details": {
+              "ok": true,
+              "companion_home": "/home/polaris/digital_life",
+              "provider": "deepseek",
+              "memory_mode": "json",
+              "checks": [
+                {
+                  "name": "python.runtime",
+                  "status": "passed",
+                  "message": "Python 3.14.5 in virtualenv (/home/polaris/digital_life/.venv/bin/python)"
+                },
+                {
+                  "name": "local_secrets",
+                  "status": "passed",
+                  "message": "loaded secret keys from /home/polaris/digital_life/.secrets/deepseek.env: DEEPSEEK_API_KEY"
+                },
+                {
+                  "name": "import.flask",
+                  "status": "passed",
+                  "message": "flask is importable"
+                },
+                {
+                  "name": "import.markdown",
+                  "status": "passed",
+                  "message": "markdown is importable"
+                },
+                {
+                  "name": "import.mcp",
+                  "status": "warning",
+                  "message": "mcp is not importable"
+                },
+                {
+                  "name": "import.numpy",
+                  "status": "warning",
+                  "message": "numpy is not importable; needed for semantic-first dual memory, not JSON mode"
+                },
+                {
+                  "name": "import.sentence_transformers",
+                  "status": "warning",
+                  "message": "sentence_transformers is not importable; needed for semantic-first dual memory, not JSON mode"
+                },
+                {
+                  "name": "deepseek.api_key",
+                  "status": "passed",
+                  "message": "API key loaded from DEEPSEEK_API_KEY"
+                },
+                {
+                  "name": "context.who_is_companion.txt",
+                  "status": "passed",
+                  "message": "/home/polaris/digital_life/context/who_is_companion.txt is present and customized"
+                },
+                {
+                  "name": "context.who_is_human.txt",
+                  "status": "passed",
+                  "message": "/home/polaris/digital_life/context/who_is_human.txt is present and customized"
+                },
+                {
+                  "name": "context.now.txt",
+                  "status": "passed",
+                  "message": "/home/polaris/digital_life/context/now.txt is present and customized"
+                },
+                {
+                  "name": "memory_store",
+                  "status": "passed",
+                  "message": "/home/polaris/digital_life/memory-server/memory_store.json is valid JSON"
+                },
+                {
+                  "name": "requests_file",
+                  "status": "passed",
+                  "message": "/home/polaris/digital_life/requests/requests.json is valid JSON"
+                },
+                {
+                  "name": "writable.life-loop",
+                  "status": "passed",
+                  "message": "/home/polaris/digital_life/life-loop is writable"
+                },
+                {
+                  "name": "writable.journals",
+                  "status": "passed",
+                  "message": "/home/polaris/digital_life/journals is writable"
+                },
+                {
+                  "name": "writable.requests",
+                  "status": "passed",
+                  "message": "/home/polaris/digital_life/requests is writable"
+                },
+                {
+                  "name": "writable.window",
+                  "status": "passed",
+                  "message": "/home/polaris/digital_life/window is writable"
+                },
+                {
+                  "name": "writable.content",
+                  "status": "passed",
+                  "message": "/home/polaris/digital_life/window/content is writable"
+                },
+                {
+                  "name": "writable.memory-server",
+                  "status": "passed",
+                  "message": "/home/polaris/digital_life/memory-server is writable"
+                },
+                {
+                  "name": "semantic_memory_module",
+                  "status": "warning",
+                  "message": "semantic memory module cannot import: ModuleNotFoundError: No module named 'numpy'"
+                },
+                {
+                  "name": "memory_mode",
+                  "status": "passed",
+                  "message": "JSON memory mode selected"
+                },
+                {
+                  "name": "provider.preflight",
+                  "status": "warning",
+                  "message": "provider preflight was skipped"
+                }
+              ]
+            }
+          },
+          {
+            "name": "raw_output_storage",
+            "status": "passed",
+            "ok": true,
+            "required": true,
+            "message": "raw model output storage is disabled",
+            "details": {
+              "raw_output_storage_enabled": false,
+              "allow_raw_output_storage": false
+            }
+          },
+          {
+            "name": "prepare_smoke_home",
+            "status": "passed",
+            "ok": true,
+            "required": true,
+            "message": "isolated smoke home prepared",
+            "details": {
+              "copied_context_files": [
+                "who_is_companion.txt",
+                "who_is_human.txt",
+                "now.txt"
+              ],
+              "cleaned_runtime_paths": []
+            }
+          },
+          {
+            "name": "fake_wake_smoke",
+            "status": "passed",
+            "ok": true,
+            "required": true,
+            "message": "fake wake smoke passed",
+            "details": {
+              "event_id": "wake_20260614_171317_128691_1568377a",
+              "journal": "/tmp/companion-m325-release-gate-smoke/journals/wakeup_2026-06-14_17-13-17-131456.md",
+              "quality_gate": {
+                "decision": "accepted",
+                "context_eligible": true,
+                "blocking_warnings": [],
+                "advisory_warnings": [],
+                "checked_at": "2026-06-14T17:13:17.131450"
+              },
+              "grounding": {
+                "supported": 0,
+                "unsupported": 0,
+                "ignored": 0,
+                "warnings": [],
+                "decisions": [],
+                "evidence": [
+                  {
+                    "ref_id": "context.who_human",
+                    "source_type": "system",
+                    "authority": "system_config",
+                    "content_hash": "a34fd03fd8baf28d"
+                  },
+                  {
+                    "ref_id": "context.now",
+                    "source_type": "system",
+                    "authority": "system_config",
+                    "content_hash": "6181d1f566d84d6e"
+                  }
+                ]
+              },
+              "output_audit": {
+                "raw_output_storage": "hash_only",
+                "initial": {
+                  "content_hash": "d5dd5c5fcf1f2fa3",
+                  "raw_output_stored": false,
+                  "raw_output_path": null,
+                  "sections": [
+                    "COMPANION_STATE",
+                    "JOURNAL",
+                    "MEMORY",
+                    "REQUESTS",
+                    "SIGNAL"
+                  ],
+                  "journal_chars": 245,
+                  "grounding_claim_count": 0,
+                  "memory_count": 1,
+                  "request_count": 1
+                },
+                "final": {
+                  "content_hash": "d5dd5c5fcf1f2fa3",
+                  "raw_output_stored": false,
+                  "raw_output_path": null,
+                  "sections": [
+                    "COMPANION_STATE",
+                    "JOURNAL",
+                    "MEMORY",
+                    "REQUESTS",
+                    "SIGNAL"
+                  ],
+                  "journal_chars": 245,
+                  "grounding_claim_count": 0,
+                  "memory_count": 1,
+                  "request_count": 1
+                },
+                "repair_attempts": []
+              }
+            }
+          },
+          {
+            "name": "replay_regression",
+            "status": "passed",
+            "ok": true,
+            "required": true,
+            "message": "replay regression passed",
+            "details": {
+              "ok": true,
+              "regression_case_count": 2,
+              "replay_passed": 2,
+              "replay_failed": 0,
+              "cases": [
+                {
+                  "name": "supported_current_context",
+                  "passed": true,
+                  "expect_context_eligible": true,
+                  "actual_context_eligible": true,
+                  "grounding": {
+                    "supported": 1,
+                    "unsupported": 0,
+                    "ignored": 0,
+                    "warnings": [],
+                    "decisions": [
+                      {
+                        "action": "supported",
+                        "reason": "claim matched cited prompt evidence",
+                        "claim_type": "current_context",
+                        "claim_excerpt": "CURRENT CONTEXT =============== Last updated: 2026-06-12 M3 focus: - Improve co...",
+                        "content_hash": "6181d1f566d84d6e",
+                        "evidence_refs": [
+                          "context.now"
+                        ],
+                        "matched_refs": [
+                          "context.now"
+                        ]
+                      }
+                    ],
+                    "evidence": [
+                      {
+                        "ref_id": "context.who_human",
+                        "source_type": "system",
+                        "authority": "system_config",
+                        "content_hash": "a34fd03fd8baf28d"
+                      },
+                      {
+                        "ref_id": "context.now",
+                        "source_type": "system",
+                        "authority": "system_config",
+                        "content_hash": "6181d1f566d84d6e"
+                      }
+                    ]
+                  },
+                  "quality": {
+                    "journal_chars": 144,
+                    "memory_count": 0,
+                    "request_count": 0,
+                    "request_error_count": 0,
+                    "companion_state_updated": true,
+                    "warnings": []
+                  },
+                  "quality_gate": {
+                    "decision": "accepted",
+                    "context_eligible": true,
+                    "blocking_warnings": [],
+                    "advisory_warnings": [],
+                    "checked_at": "2026-06-14T17:13:17.132491"
+                  }
+                },
+                {
+                  "name": "unsupported_stable_fact",
+                  "passed": true,
+                  "expect_context_eligible": false,
+                  "actual_context_eligible": false,
+                  "grounding": {
+                    "supported": 0,
+                    "unsupported": 1,
+                    "ignored": 0,
+                    "warnings": [
+                      "unsupported grounded claim"
+                    ],
+                    "decisions": [
+                      {
+                        "action": "unsupported",
+                        "reason": "cited evidence did not support claim",
+                        "claim_type": "stable_fact",
+                        "claim_excerpt": "稳定等待已经被确认是合格服务。",
+                        "content_hash": "328b3c53f7febcbb",
+                        "evidence_refs": [
+                          "context.now"
+                        ],
+                        "matched_refs": []
+                      }
+                    ],
+                    "evidence": [
+                      {
+                        "ref_id": "context.who_human",
+                        "source_type": "system",
+                        "authority": "system_config",
+                        "content_hash": "a34fd03fd8baf28d"
+                      },
+                      {
+                        "ref_id": "context.now",
+                        "source_type": "system",
+                        "authority": "system_config",
+                        "content_hash": "6181d1f566d84d6e"
+                      }
+                    ]
+                  },
+                  "quality": {
+                    "journal_chars": 15,
+                    "memory_count": 0,
+                    "request_count": 0,
+                    "request_error_count": 0,
+                    "companion_state_updated": true,
+                    "warnings": [
+                      "journal is short (15 chars)",
+                      "unsupported grounded claim"
+                    ]
+                  },
+                  "quality_gate": {
+                    "decision": "rejected",
+                    "context_eligible": false,
+                    "blocking_warnings": [
+                      "unsupported grounded claim"
+                    ],
+                    "advisory_warnings": [
+                      "journal is short (15 chars)"
+                    ],
+                    "checked_at": "2026-06-14T17:13:17.132742"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "real_wake",
+            "status": "skipped",
+            "ok": true,
+            "required": false,
+            "message": "real provider wake was not requested"
+          }
+        ],
+        "stop_reasons": [],
+        "recommendation": "ready"
+      }
+    },
+    {
+      "name": "trial_summary",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "trial summary passed",
+      "details": {
+        "ok": true,
+        "recommendation": "continue",
+        "events_considered": 1,
+        "completed": 1,
+        "failed": 0,
+        "providers": {
+          "deepseek": 1
+        },
+        "memory_backends": {
+          "json": 1
+        },
+        "memory_count": 0,
+        "request_count": 0,
+        "request_error_count": 0,
+        "quality_warning_count": 0,
+        "quality_warnings": [],
+        "blocking_quality_warning_count": 0,
+        "blocking_quality_warnings": [],
+        "advisory_quality_warning_count": 0,
+        "advisory_quality_warnings": [],
+        "memory_write_failures": 0,
+        "context_rejection_count": 0,
+        "context_capsule_updates": 1,
+        "memory_policy": {
+          "accepted": 0,
+          "rejected": 0,
+          "prompt_eligible": 0
+        },
+        "memory_evaluations": {
+          "approved": 0,
+          "rejected": 0,
+          "unchanged": 0
+        },
+        "grounding": {
+          "supported": 1,
+          "unsupported": 0,
+          "ignored": 0
+        },
+        "repairs": {
+          "attempted": 1,
+          "succeeded": 1,
+          "failed": 0
+        },
+        "semantic_shadow": {
+          "events": 1,
+          "enabled": 1,
+          "attempted": 0,
+          "succeeded": 0,
+          "failed": 0,
+          "skipped": 0
+        },
+        "stop_reasons": [],
+        "since_trigger": "m324-deepseek-shadow",
+        "latest_event": "wake_20260614_170258_084784_1fd4b85c",
+        "latest_trigger": "m324-deepseek-shadow:1"
+      }
+    },
+    {
+      "name": "semantic_shadow_authority",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "semantic shadow authority is isolated",
+      "details": {
+        "ok": true,
+        "message": "semantic shadow authority is isolated",
+        "main_memory_count": 47,
+        "shadow_memory_count": 0,
+        "main_store": "memory-server/memory_store.json",
+        "shadow_store": "life-loop/semantic_shadow/memory_store.json",
+        "problems": []
+      }
+    }
+  ],
+  "stop_reasons": [],
+  "saved_at": "2026-06-14T17:13:17.133392"
+}

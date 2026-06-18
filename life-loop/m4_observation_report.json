@@ -1,0 +1,88 @@
+{
+  "ok": false,
+  "milestone": "M4.8",
+  "recommendation": "continue_observation",
+  "companion_home": "/home/polaris/digital_life",
+  "profile": {
+    "name": "m4-runtime-observation",
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "cron_replacement": false,
+    "semantic_shadow_authoritative": false,
+    "real_wake_requested": false,
+    "provider_generation_requested": false,
+    "observation_hours": 24,
+    "min_completed_events": 2,
+    "since": "2026-06-14T20:31:00",
+    "trigger_prefix": null
+  },
+  "summary": {
+    "event_count": 1,
+    "completed_count": 1,
+    "failed_count": 0,
+    "observed_hours": 0.0,
+    "first_event": "wake_20260614_203125_687853_95fc481b",
+    "latest_event": "wake_20260614_203125_687853_95fc481b",
+    "semantic_shadow_advisory_count": 0
+  },
+  "stages": [
+    {
+      "name": "observation_scope",
+      "status": "passed",
+      "ok": true,
+      "required": false,
+      "message": "wake events found in observation scope",
+      "details": {
+        "event_count": 1,
+        "completed_count": 1,
+        "since": "2026-06-14T20:31:00",
+        "trigger_prefix": null,
+        "observation_hours": 24,
+        "min_completed_events": 2
+      }
+    },
+    {
+      "name": "observation_window",
+      "status": "pending",
+      "ok": false,
+      "required": false,
+      "message": "completed wake events 1 < required 2; observed hours 0.00 < required 24",
+      "details": {
+        "observed_hours": 0.0,
+        "required_hours": 24,
+        "completed_count": 1,
+        "required_completed_events": 2
+      }
+    },
+    {
+      "name": "event_health",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "wake events are healthy",
+      "details": {
+        "failures": []
+      }
+    },
+    {
+      "name": "semantic_shadow_observation",
+      "status": "passed",
+      "ok": true,
+      "required": false,
+      "message": "semantic shadow observation is clean",
+      "details": {
+        "advisory": []
+      }
+    }
+  ],
+  "pending_reasons": [
+    "completed wake events 1 < required 2",
+    "observed hours 0.00 < required 24"
+  ],
+  "stop_reasons": [],
+  "next_commands": {
+    "observation_check": "python3 scripts/run_m4_observation_check.py --companion-home /home/polaris/digital_life --hours 24",
+    "post_change_guard": "python3 scripts/run_m4_post_change_guard.py --companion-home /home/polaris/digital_life"
+  },
+  "saved_at": "2026-06-14T21:22:49.955990"
+}
