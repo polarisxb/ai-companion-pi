@@ -16,7 +16,6 @@ from .m7_memory_gate import (
     write_m7_memory_proposal_report,
 )
 from .dialogue_replay import DialogueReplayCheckResult, check_dialogue_transcript
-from .m7_memory_gate import run_m7_memory_proposal_gate
 from .memory import JsonMemoryStore, SemanticFirstMemoryStore
 from .llm import (
     ClaudeCliClient,
@@ -98,7 +97,6 @@ __all__ = [
     "ReplayResult",
     "ReplayRunner",
     "SemanticShadowWriter",
-    "DialogueRunner",
     "append_wake_event",
     "check_llm_provider",
     "check_runtime_readiness",
@@ -106,7 +104,6 @@ __all__ = [
     "load_dialogue_context",
     "parse_dialogue_output",
     "check_dialogue_transcript",
-    "M7MemoryProposalGateResult",
     "run_m7_memory_proposal_gate",
     "write_m7_memory_proposal_report",
     "create_llm_client",
@@ -129,7 +126,6 @@ __all__ = [
     "run_m6_recovery_drill",
     "run_m6_scheduler_readiness_check",
     "run_m6_final_freeze_check",
-    "run_m7_memory_proposal_gate",
     "run_m4_observation_check",
     "run_m4_wake_trial",
     "classify_wake_trial_failure",

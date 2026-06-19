@@ -1,0 +1,48 @@
+{
+  "boundaries": {
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false
+  },
+  "counts": {
+    "accepted_memory": 3,
+    "conversation_events": 3,
+    "proposal_memory": 0,
+    "proposal_source_linked": 0,
+    "transcript_turns": 6
+  },
+  "errors": [],
+  "ok": true,
+  "prompt_authority_status": {
+    "accepted_prompt_authoritative_count": 0,
+    "proposal_authority_promoted": false,
+    "proposal_prompt_authoritative_count": 0,
+    "proposals_prompt_authoritative": false
+  },
+  "provider_calls": 0,
+  "recommendation": "m7_memory_proposals_ready",
+  "saved_at": "2026-06-19T17:36:38.206831",
+  "schema_version": 1,
+  "separation": {
+    "acceptance_workflow_present": false,
+    "accepted_memory_file": "memory-server/memory_store.json",
+    "proposal_file": "life-loop/memory_proposals.jsonl",
+    "proposals_separate_from_accepted_memory": true
+  },
+  "source_linkage": {
+    "all_proposals_linked": true,
+    "proposal_records_with_required_linkage": 0,
+    "required_fields": [
+      "conversation_id",
+      "source_turn_id"
+    ]
+  },
+  "stop_reasons": [
+    "accepted_memory_source_event_missing",
+    "accepted_memory_source_event_missing",
+    "accepted_memory_source_event_missing",
+    "no_memory_proposals_observed"
+  ]
+}

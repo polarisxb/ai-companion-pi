@@ -25,11 +25,6 @@ from werkzeug.utils import secure_filename
 import markdown
 import sys
 
-from companion_core import CompanionPaths, DialogueRunner, JsonMemoryStore, SemanticFirstMemoryStore, create_llm_client, load_local_secrets
-from companion_core.dialogue import _clean_visible_text
-
-app = Flask(__name__)
-
 # === CONFIGURE THESE PATHS ===
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -42,7 +37,7 @@ if SCRIPTS_DIR.exists():
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from companion_core import CompanionPaths, DialogueRunner, JsonMemoryStore, SemanticFirstMemoryStore, create_llm_client, load_local_secrets
-from companion_core.dialogue import _clean_visible_text, load_transcript_turns
+from companion_core.dialogue import _clean_visible_text
 
 app = Flask(__name__)
 
@@ -83,6 +78,7 @@ TASK_QUEUE = TASKS_DIR / "task_queue.json"
 TASK_CONFIG = TASKS_DIR / "task_config.json"
 TASK_LOCK = "/tmp/task_queue.lock"
 REQUESTS_FILE = COMPANION_HOME / "requests" / "requests.json"
+CONVERSATIONS_DIR = COMPANION_HOME / "conversations"
 DEFAULT_CHAT_ERROR = "I could not send that chat turn yet. Your text is still here."
 
 # Ensure all directories exist
@@ -497,54 +493,6 @@ def save_requests_file(requests_list):
         lock_fd.close()
 
 
-def get_chat_transcripts():
-    if not CONVERSATIONS_DIR.exists():
-        return []
-    return sorted(CONVERSATIONS_DIR.glob("*.jsonl"), key=lambda path: path.stat().st_mtime, reverse=True)
-
-
-def get_chat_turns(conversation_id=None):
-    transcript_path = None
-    if conversation_id:
-        safe_id = "".join(ch if ch.isalnum() or ch in {"_", "-", "."} else "_" for ch in conversation_id).strip("._")
-        candidate = CONVERSATIONS_DIR / f"{safe_id}.jsonl"
-        if candidate.exists():
-            transcript_path = candidate
-    if transcript_path is None:
-        transcripts = get_chat_transcripts()
-        transcript_path = transcripts[0] if transcripts else None
-    if transcript_path is None:
-        return [], conversation_id or ""
-    turns = load_transcript_turns(transcript_path, include_failed=True)
-    active_conversation_id = conversation_id or (turns[-1].get("conversation_id") if turns else transcript_path.stem)
-    return turns, active_conversation_id
-
-
-def get_memory_proposal_count():
-    try:
-        return sum(1 for line in MEMORY_PROPOSALS_FILE.read_text().splitlines() if line.strip())
-    except (FileNotFoundError, OSError):
-        return 0
-
-
-def _chat_context(conversation_id=None, error=None, failed_input="", provider=None, memory_mode=None):
-    ctx = _base_context()
-    provider = provider or os.environ.get("COMPANION_LLM_PROVIDER", "deepseek")
-    memory_mode = memory_mode or os.environ.get("COMPANION_MEMORY_MODE", "json")
-    turns, active_conversation_id = get_chat_turns(conversation_id)
-    ctx.update(
-        page="chat",
-        chat_turns=turns,
-        chat_error=error,
-        failed_input=failed_input,
-        conversation_id=active_conversation_id,
-        provider=provider,
-        memory_mode=memory_mode,
-        memory_proposal_count=get_memory_proposal_count(),
-    )
-    return ctx
-
-
 def get_emergency_cooldown_info(requests_list):
     now = datetime.now()
     last_emergency = None
@@ -667,7 +615,7 @@ def get_chat_state(conversation_id=None, limit=40, error=None, preserved_input="
         candidate = DialogueRunner(paths)._transcript_path(conversation_id)
         if candidate.exists():
             transcript_path = candidate
-    if transcript_path is None and transcripts:
+    elif transcripts:
         transcript_path = transcripts[0]
     transcript = _load_jsonl(transcript_path, limit=limit) if transcript_path else []
     active_conversation_id = conversation_id or (transcript[-1].get("conversation_id") if transcript else "")
@@ -1224,59 +1172,6 @@ TEMPLATE = """
                                 font-family: 'IBM Plex Mono', monospace; }
         .board-empty { text-align: center; padding: 30px; color: var(--text-dim);
                        font-style: italic; font-size: 0.9em; }
-        .chat-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-        .chat-pill { border: 1px solid var(--border); border-radius: 999px; padding: 5px 10px;
-                     color: var(--text-secondary); font-family: 'IBM Plex Mono', monospace; font-size: 0.72em; }
-        .chat-transcript { display: flex; flex-direction: column; gap: 12px; }
-        .chat-row { background: var(--bg-deep); border: 1px solid var(--border); border-radius: 10px;
-                    padding: 14px 16px; }
-        .chat-row.human { border-left: 3px solid var(--accent-blue); }
-        .chat-row.assistant { border-left: 3px solid var(--accent-green); }
-        .chat-row.failed { border-left: 3px solid var(--accent-red); }
-        .chat-role { color: var(--text-dim); font-family: 'IBM Plex Mono', monospace;
-                     font-size: 0.68em; text-transform: uppercase; letter-spacing: 0.12em; }
-        .chat-content { color: var(--text-secondary); white-space: pre-wrap; margin-top: 6px; }
-        .chat-time { color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 0.65em; margin-top: 8px; }
-        .chat-error { color: var(--accent-red); background: rgba(160,84,84,0.12);
-                      border: 1px solid rgba(160,84,84,0.35); border-radius: 8px;
-                      padding: 12px 14px; margin-bottom: 14px; font-size: 0.85em; }
-
-        /* ── M7 chat ── */
-        .chat-layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; align-items: start; }
-        .chat-transcript { display: flex; flex-direction: column; gap: 12px; }
-        .chat-turn { padding: 14px 16px; border-radius: 12px; background: var(--bg-deep); border: 1px solid var(--border); }
-        .chat-turn.assistant { border-color: rgba(74,111,165,0.45); }
-        .chat-turn.failed { border-color: var(--accent-red); }
-        .chat-role { font-family: 'IBM Plex Mono', monospace; font-size: 0.68em; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; }
-        .chat-content { color: var(--text-secondary); white-space: pre-wrap; font-size: 0.94em; }
-        .chat-meta { margin-top: 6px; color: var(--text-dim); font-size: 0.72em; font-family: 'IBM Plex Mono', monospace; }
-        .chat-composer textarea { width: 100%; min-height: 118px; padding: 15px; background: var(--bg-deep); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-family: 'DM Sans', sans-serif; font-size: 0.95em; resize: vertical; }
-        .chat-composer textarea:focus { outline: none; border-color: var(--accent-blue); }
-        .chat-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
-        .chat-row input, .chat-row select { background: var(--bg-deep); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
-        .chat-strip { display: grid; gap: 8px; }
-        .chat-strip div { padding: 10px; background: var(--bg-deep); border-radius: 8px; color: var(--text-secondary); font-size: 0.82em; }
-        .chat-error { border: 1px solid var(--accent-red); color: var(--accent-red); background: rgba(160,84,84,0.08); border-radius: 8px; padding: 12px; margin-bottom: 16px; }
-        .chat-empty { color: var(--text-dim); font-style: italic; padding: 24px 0; text-align: center; }
-
-        /* ── M7 chat ── */
-        .chat-layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; align-items: start; }
-        .chat-transcript { display: flex; flex-direction: column; gap: 12px; }
-        .chat-turn { padding: 14px 16px; border-radius: 12px; background: var(--bg-deep); border: 1px solid var(--border); }
-        .chat-turn.assistant { border-color: rgba(74,111,165,0.45); }
-        .chat-turn.failed { border-color: var(--accent-red); }
-        .chat-role { font-family: 'IBM Plex Mono', monospace; font-size: 0.68em; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; }
-        .chat-content { color: var(--text-secondary); white-space: pre-wrap; font-size: 0.94em; }
-        .chat-meta { margin-top: 6px; color: var(--text-dim); font-size: 0.72em; font-family: 'IBM Plex Mono', monospace; }
-        .chat-composer textarea { width: 100%; min-height: 118px; padding: 15px; background: var(--bg-deep); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-family: 'DM Sans', sans-serif; font-size: 0.95em; resize: vertical; }
-        .chat-composer textarea:focus { outline: none; border-color: var(--accent-blue); }
-        .chat-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
-        .chat-row input, .chat-row select { background: var(--bg-deep); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
-        .chat-strip { display: grid; gap: 8px; }
-        .chat-strip div { padding: 10px; background: var(--bg-deep); border-radius: 8px; color: var(--text-secondary); font-size: 0.82em; }
-        .chat-error { border: 1px solid var(--accent-red); color: var(--accent-red); background: rgba(160,84,84,0.08); border-radius: 8px; padding: 12px; margin-bottom: 16px; }
-        .chat-empty { color: var(--text-dim); font-style: italic; padding: 24px 0; text-align: center; }
-
         /* ─────────────────────────────────────────
            KEEPSAKES — 5-slot horizontal exhibition
         ───────────────────────────────────────── */
@@ -1669,17 +1564,18 @@ TEMPLATE = """
         .reply-form input { flex: 1; }
 
         /* ── Chat ── */
-        .chat-meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .chat-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .chat-pill { background: var(--bg-deep); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
                      font-family: 'IBM Plex Mono', monospace; font-size: 0.72em; color: var(--text-dim); overflow-wrap: anywhere; }
         .chat-pill span { display: block; color: var(--text-secondary); margin-top: 3px; }
         .chat-transcript { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
         .chat-row { max-width: 86%; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border); }
-        .chat-row-human { align-self: flex-end; background: rgba(74,111,165,0.14); border-color: rgba(74,111,165,0.35); }
-        .chat-row-assistant { align-self: flex-start; background: var(--bg-deep); }
-        .chat-row-failed { border-color: var(--accent-red); opacity: 0.85; }
+        .chat-row.human { align-self: flex-end; background: rgba(74,111,165,0.14); border-color: rgba(74,111,165,0.35); }
+        .chat-row.assistant { align-self: flex-start; background: var(--bg-deep); }
+        .chat-row.failed { border-color: var(--accent-red); opacity: 0.85; }
         .chat-role { font-family: 'IBM Plex Mono', monospace; font-size: 0.68em; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 6px; }
         .chat-content { color: var(--text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
+        .chat-time { color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 0.65em; margin-top: 8px; }
         .chat-error { border-left: 3px solid var(--accent-red); background: rgba(160,84,84,0.12); padding: 12px 14px; border-radius: 8px; color: var(--text-secondary); margin-bottom: 16px; }
         .chat-form textarea { width: 100%; min-height: 115px; padding: 15px; background: var(--bg-deep); border: 1px solid var(--border);
                               border-radius: 8px; color: var(--text-primary); font-family: 'DM Sans', sans-serif; font-size: 0.95em; resize: vertical; }
@@ -1814,61 +1710,6 @@ TEMPLATE = """
                     </div>
                     {% endfor %}
                 </div>
-            </div>
-
-        {% elif page == 'chat' %}
-            {% if chat_error %}
-            <div class="chat-error">{{ chat_error }}</div>
-            {% endif %}
-            <div class="chat-layout">
-                <div>
-                    <div class="card">
-                        <div class="card-title">Text Chat</div>
-                        <div class="chat-transcript">
-                            {% if chat_turns %}
-                                {% for turn in chat_turns %}
-                                <div class="chat-turn {{ turn.role }} {{ 'failed' if turn.status == 'failed' }}">
-                                    <div class="chat-role">{{ turn.role }}{% if turn.status == 'failed' %} · failed{% endif %}</div>
-                                    <div class="chat-content">{{ turn.content }}</div>
-                                    <div class="chat-meta">{{ turn.created_at[:19].replace('T', ' ') if turn.created_at else '' }}</div>
-                                </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="chat-empty">Start a conversation without waking the scheduler.</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">Composer</div>
-                        <form class="chat-composer" action="/chat/send" method="POST">
-                            <textarea name="message" placeholder="write to Companion...">{{ failed_input or '' }}</textarea>
-                            <div class="chat-row">
-                                <input name="conversation_id" placeholder="conversation id" value="{{ conversation_id or '' }}">
-                                <select name="provider">
-                                    {% for option in chat_providers %}
-                                    <option value="{{ option }}" {{ 'selected' if option == provider }}>{{ option }}</option>
-                                    {% endfor %}
-                                </select>
-                                <select name="memory_mode">
-                                    <option value="json" {{ 'selected' if memory_mode == 'json' }}>json memory</option>
-                                    <option value="dual" {{ 'selected' if memory_mode == 'dual' }}>dual memory</option>
-                                </select>
-                                <button type="submit" class="btn">Send</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                <aside class="card">
-                    <div class="card-title">State</div>
-                    <div class="chat-strip">
-                        <div><strong>mood</strong><br>{{ status.mood | default('') }}</div>
-                        <div><strong>status</strong><br>{{ status.status | default(status.message | default('')) }}</div>
-                        <div><strong>provider</strong><br>{{ provider }}</div>
-                        <div><strong>memory mode</strong><br>{{ memory_mode }}</div>
-                        <div><strong>conversation</strong><br>{{ conversation_id or 'new conversation' }}</div>
-                        <div><strong>memory proposals</strong><br>{{ memory_proposal_count }}</div>
-                    </div>
-                </aside>
             </div>
 
         {% elif page == 'board' %}
@@ -2740,82 +2581,6 @@ def manifest():
 @app.route("/icon.svg")
 def icon():
     return send_file(ICON_FILE, mimetype="image/svg+xml")
-
-
-def _chat_context(*, conversation_id: str = "", provider: str = "", memory_mode: str = "", error: str = "", failed_input: str = ""):
-    ctx = _base_context()
-    paths = CompanionPaths(COMPANION_HOME)
-    transcript_path = paths.conversations_dir / f"{_safe_conversation_id(conversation_id)}.jsonl" if conversation_id else None
-    transcript = load_transcript_turns(transcript_path, include_failed=True) if transcript_path else []
-    ctx.update(
-        page="chat",
-        chat_provider=provider or CHAT_DEFAULT_PROVIDER,
-        chat_memory_mode=memory_mode or CHAT_DEFAULT_MEMORY_MODE,
-        chat_conversation_id=conversation_id or "",
-        chat_transcript=transcript,
-        chat_memory_proposal_count=_memory_proposal_count(paths.memory_proposals_file, conversation_id=conversation_id or None),
-        chat_error=error,
-        chat_failed_input=failed_input,
-    )
-    return ctx
-
-
-def _build_chat_runner(*, provider: str, memory_mode: str) -> DialogueRunner:
-    paths = CompanionPaths(COMPANION_HOME)
-    paths.ensure_runtime_dirs()
-    load_local_secrets(paths)
-    if provider == "fake":
-        llm_client = create_llm_client("fake")
-    else:
-        llm_client = create_llm_client(
-            provider,
-            timeout_seconds=int(os.environ.get("COMPANION_CHAT_TIMEOUT", "300")),
-            model=os.environ.get("COMPANION_LLM_MODEL"),
-            base_url=os.environ.get("COMPANION_LLM_BASE_URL"),
-            api_key_env=os.environ.get("COMPANION_LLM_API_KEY_ENV", "COMPANION_LLM_API_KEY"),
-        )
-    memory_store = SemanticFirstMemoryStore(paths.memory_store) if memory_mode == "dual" else JsonMemoryStore(paths.memory_store)
-    return DialogueRunner(paths, llm_client=llm_client, memory_store=memory_store)
-
-
-def _chat_error_response(*, error: str, failed_input: str, conversation_id: str | None, provider: str, memory_mode: str, wants_json: bool, status_code: int):
-    payload = {
-        "ok": False,
-        "error": error,
-        "failed_input": failed_input,
-        "conversation_id": conversation_id or "",
-    }
-    if wants_json:
-        return jsonify(payload), status_code
-    ctx = _chat_context(
-        conversation_id=conversation_id or "",
-        provider=provider,
-        memory_mode=memory_mode,
-        error=error,
-        failed_input=failed_input,
-    )
-    return render_template_string(TEMPLATE, **ctx), status_code
-
-
-def _memory_proposal_count(path: Path, *, conversation_id: str | None = None) -> int:
-    if not path.exists():
-        return 0
-    count = 0
-    for line in path.read_text().splitlines():
-        if not line.strip():
-            continue
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if conversation_id is None or row.get("conversation_id") == conversation_id:
-            count += 1
-    return count
-
-
-def _safe_conversation_id(conversation_id: str) -> str:
-    safe = "".join(ch if ch.isalnum() or ch in {"_", "-", "."} else "_" for ch in conversation_id).strip("._")
-    return safe or "conversation"
 
 
 def _base_context():
