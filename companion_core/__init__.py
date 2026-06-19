@@ -10,6 +10,11 @@ from .dialogue import (
     load_dialogue_context,
     parse_dialogue_output,
 )
+from .m7_dialogue_freeze import (
+    M7DialogueFreezeResult,
+    run_m7_dialogue_freeze_check,
+    write_m7_dialogue_freeze_report,
+)
 from .m7_memory_gate import (
     M7MemoryProposalGateResult,
     run_m7_memory_proposal_gate,
@@ -86,6 +91,7 @@ __all__ = [
     "LifeLoopRunner",
     "GroundingEvaluation",
     "GroundedOutputRepairer",
+    "M7DialogueFreezeResult",
     "M7MemoryProposalGateResult",
     "MemoryEvaluation",
     "OllamaClient",
@@ -104,7 +110,9 @@ __all__ = [
     "load_dialogue_context",
     "parse_dialogue_output",
     "check_dialogue_transcript",
+    "run_m7_dialogue_freeze_check",
     "run_m7_memory_proposal_gate",
+    "write_m7_dialogue_freeze_report",
     "write_m7_memory_proposal_report",
     "create_llm_client",
     "build_trial_summary",

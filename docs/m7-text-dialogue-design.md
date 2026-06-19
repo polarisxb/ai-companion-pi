@@ -1,6 +1,6 @@
 # M7 Text Dialogue Design
 
-Status: M7.2/M7.3 CLI implementation in progress after M6.7 final freeze
+Status: M7.6 dialogue hardening freeze implemented after M6.7 final freeze
 Last updated: 2026-06-19
 
 Related implementation review: `docs/m7-1-text-dialogue-review.md`
@@ -447,6 +447,8 @@ Recommendation values:
 
 ### M7.6 Dialogue Hardening Freeze
 
+Status: implemented as a read-only freeze gate in `companion_core/m7_dialogue_freeze.py` and `scripts/run_m7_dialogue_freeze.py`.
+
 Goal: freeze the text dialogue path before voice, Signal, or scheduler work
 continues.
 
@@ -462,11 +464,20 @@ Acceptance:
   proposal-only.
 - Existing M6.7 final-freeze evidence remains valid.
 
+Expected command:
+
+```bash
+python3 scripts/run_m7_dialogue_freeze.py \
+  --companion-home /home/polaris/digital_life
+```
+
 Expected report:
 
 ```text
 life-loop/m7_dialogue_freeze_report.json
 ```
+
+The gate only reads M6.7 and M7 reports, conversation transcripts/events, memory proposal evidence, and dashboard route source. It does not create a provider client, does not run wake logic, does not mutate scheduler/cron/timer/service state, does not add `/life` write routes, and does not accept or promote proposed memory.
 
 Recommendation values:
 
@@ -538,7 +549,7 @@ For M7.6:
 
 ```bash
 .venv/bin/python -m pytest
-.venv/bin/python scripts/run_m6_final_freeze.py \
+.venv/bin/python scripts/run_m7_dialogue_freeze.py \
   --companion-home /home/polaris/digital_life \
   --no-write-report
 ```
@@ -564,3 +575,10 @@ The gate does not accept proposals, does not change proposal state, does not cal
 ## M7.5 Dashboard Chat
 
 The Window dashboard exposes `/chat` and `/chat/send` for user-initiated text dialogue. The route reuses `DialogueRunner`; it is not a separate provider path. The page shows transcript rows, composer, provider, memory mode, conversation id/transcript path, and memory proposal count. Failed form submissions preserve the submitted input in the response; JSON clients receive an `ok: false` error contract with the original input.
+
+
+## M7.6 Dialogue Freeze Gate
+
+`companion_core.m7_dialogue_freeze.run_m7_dialogue_freeze_check` is the final read-only M7 text-dialogue hardening gate. It inspects the current M6.7 freeze report, the M7 text dialogue report, replay-valid conversation transcripts, the current M7 memory proposal gate result, dashboard `/chat` source evidence, and dialogue evidence for secret/raw-provider-payload leaks.
+
+The CLI wrapper writes `life-loop/m7_dialogue_freeze_report.json`; the gate itself performs no runtime mutations and reports `provider_calls=0`. A passing report recommends `m7_text_dialogue_frozen` and records boundary flags for no wake cycle, no scheduler mutation, no raw provider payload storage, and no semantic-shadow authority promotion. `/life` now displays M7 text dialogue, memory proposal, and dialogue freeze evidence while preserving the GET-only dashboard contract.

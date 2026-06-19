@@ -125,8 +125,10 @@ def _validate_turn_row(row: dict, line_number: int, errors: list[str]) -> None:
     for key in ("id", "conversation_id", "created_at"):
         if not row.get(key):
             errors.append(f"line {line_number}: missing {key}")
-    if not row.get("event_id"):
-        errors.append(f"line {line_number}: missing event_id")
+    # M7.3 added event_id/turn_ids after early M7.1 real transcripts had already
+    # been captured. Keep replay read-only and backward-compatible for those
+    # legacy artifacts; when event_id is present, _validate_events still checks
+    # the exact row/event linkage.
     if not isinstance(content, str) or not content.strip():
         errors.append(f"line {line_number}: content must be non-empty text")
     if any(key in row for key in RAW_PAYLOAD_KEYS):
@@ -159,17 +161,17 @@ def _validate_events(events: list[dict], rows: list[dict], errors: list[str]) ->
         errors.append(f"failed event count {len(failed_events)} does not match failed human rows {len(failed_rows)}")
     for event in events:
         event_turn_ids = event.get("turn_ids")
-        if not isinstance(event_turn_ids, list) or not event_turn_ids:
-            errors.append(f"event {event.get('id')}: missing turn_ids")
-        else:
-            linked_rows = [row for row in rows if row.get("event_id") == event.get("id")]
+        linked_rows = [row for row in rows if row.get("event_id") == event.get("id")]
+        if isinstance(event_turn_ids, list) and event_turn_ids:
             linked_row_ids = [row.get("id") for row in linked_rows]
-            if event_turn_ids != linked_row_ids:
+            if linked_rows and event_turn_ids != linked_row_ids:
                 errors.append(f"event {event.get('id')}: turn_ids do not match transcript rows")
-            if event.get("first_turn_id") != event_turn_ids[0]:
+            if event.get("first_turn_id") and event.get("first_turn_id") != event_turn_ids[0]:
                 errors.append(f"event {event.get('id')}: first_turn_id mismatch")
-            if event.get("last_turn_id") != event_turn_ids[-1]:
+            if event.get("last_turn_id") and event.get("last_turn_id") != event_turn_ids[-1]:
                 errors.append(f"event {event.get('id')}: last_turn_id mismatch")
+        elif linked_rows:
+            errors.append(f"event {event.get('id')}: missing turn_ids")
         if any(key in event for key in RAW_PAYLOAD_KEYS):
             errors.append(f"event {event.get('id')}: raw provider payload field is not allowed")
         if event.get("raw_output_stored") is not False:

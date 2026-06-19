@@ -381,7 +381,7 @@ sensitive, relationship-defining, or ambiguous content remains proposal-only.
 Completed turns always write transcripts, and current companion state updates
 only when the companion explicitly emits mood/status. M7 must not run wake
 cycles from chat, edit scheduler state, promote semantic shadow authority, or
-store raw provider payloads by default. The M7.4 gate writes only `life-loop/m7_memory_proposal_report.json`; M7.5 chat writes only dialogue transcripts/events through `DialogueRunner` and does not add `/life` write routes.
+store raw provider payloads by default. The M7.4 gate writes only `life-loop/m7_memory_proposal_report.json`; M7.5 chat writes only dialogue transcripts/events through `DialogueRunner` and does not add `/life` write routes. M7.6 adds `companion_core/m7_dialogue_freeze.py` and `scripts/run_m7_dialogue_freeze.py` as a read-only freeze gate; the CLI writes `life-loop/m7_dialogue_freeze_report.json` with recommendation `m7_text_dialogue_frozen` when M6.7 and M7.1-M7.5 evidence still satisfy the dialogue boundaries.
 
 For the full real-provider trial path, see `docs/m3-real-trial.md`.
 
@@ -402,3 +402,8 @@ For the full real-provider trial path, see `docs/m3-real-trial.md`.
 ## M7 memory proposal boundary
 
 M7 dialogue memory proposals remain proposal-only until a future explicit acceptance workflow exists. `scripts/run_m7_memory_proposal_gate.py` reports whether proposal records carry `conversation_id` and `source_turn_id`, remain separate from accepted memory, and are not prompt-authoritative. This gate is read-only and does not mutate wake, scheduler, provider, `/life`, or semantic-shadow authority.
+
+
+## M7 dialogue freeze boundary
+
+M7.6 freezes text dialogue before voice, Signal, or scheduler work resumes. `scripts/run_m7_dialogue_freeze.py` inspects existing reports, transcript replay checks, memory proposal gate evidence, and dashboard chat route evidence. It does not call the provider, run wake cycles, write scheduler/cron/timer/service state, add `/life` write routes, store raw provider payloads, accept proposed memory, or promote semantic-shadow authority. `/life` displays the resulting `life-loop/m7_dialogue_freeze_report.json` as read-only evidence.

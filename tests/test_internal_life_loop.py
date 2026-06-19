@@ -7018,3 +7018,37 @@ def test_dashboard_chat_send_error_preserves_input(tmp_path, monkeypatch):
     assert b"keep this text" in response.data
     assert b"I could not send that chat turn yet" in response.data
     assert not (tmp_path / "life-loop" / "wake_events.jsonl").exists()
+
+
+def test_life_dashboard_shows_m7_dialogue_freeze_evidence(tmp_path, monkeypatch):
+    write_minimal_context(tmp_path)
+    life_loop = tmp_path / "life-loop"
+    life_loop.mkdir(parents=True, exist_ok=True)
+    (life_loop / "m7_dialogue_freeze_report.json").write_text(json.dumps({
+        "ok": True,
+        "milestone": "M7.6",
+        "recommendation": "m7_text_dialogue_frozen",
+        "saved_at": "2026-06-19T00:00:00",
+        "stop_reasons": [],
+        "profile": {
+            "name": "M7.6 dialogue hardening freeze",
+            "provider_generation_requested": False,
+            "scheduler_mutation_allowed": False,
+            "semantic_shadow_authoritative": False,
+        },
+        "final_freeze": {"frozen": True, "readonly": True},
+        "stages": [{"name": "m7_dialogue_boundaries", "status": "pass"}],
+    }))
+    window = load_window_module(tmp_path, monkeypatch)
+    client = window.app.test_client()
+
+    response = client.get("/life")
+
+    assert response.status_code == 200
+    assert b"M7 Text Dialogue" in response.data
+    assert b"m7_text_dialogue_frozen" in response.data
+    assert b"m7_frozen=True" in response.data
+    assert b"provider_generation_requested=False" in response.data
+    assert b"scheduler_mutation_allowed=False" in response.data
+    assert b"semantic_shadow_authoritative=False" in response.data
+    assert client.post("/life").status_code in {404, 405}

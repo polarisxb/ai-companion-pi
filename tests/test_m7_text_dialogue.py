@@ -383,3 +383,87 @@ def test_m7_memory_proposal_gate_rejects_prompt_authoritative_proposal(tmp_path)
     assert gate.ok is False
     assert gate.recommendation == "inspect"
     assert any("prompt-authoritative" in error for error in gate.errors)
+
+
+def prepare_m7_freeze_fixture(home: Path):
+    write_dialogue_context(home)
+    paths = CompanionPaths(home)
+    result = DialogueRunner(paths, llm_client=StaticDialogueLLM("""我在这里，边界保持清楚。
+===DIALOGUE_METADATA===
+{"memory_proposals": [{"content": "The human is checking the M7 freeze boundary.", "reason": "freeze evidence"}]}
+"""), memory_store=JsonMemoryStore(paths.memory_store)).run_turn(
+        "hello freeze check",
+        provider="fake",
+    )
+    from companion_core import run_m7_memory_proposal_gate, write_m7_memory_proposal_report
+
+    memory_gate = run_m7_memory_proposal_gate(paths)
+    write_m7_memory_proposal_report(paths, memory_gate.to_dict())
+    return paths, result
+
+
+def test_m7_dialogue_freeze_gate_reports_frozen_without_runtime_side_effects(tmp_path):
+    from companion_core import run_m7_dialogue_freeze_check, write_m7_dialogue_freeze_report
+
+    paths, result = prepare_m7_freeze_fixture(tmp_path)
+    before_wake = (paths.life_loop_dir / "wake_events.jsonl").read_text() if (paths.life_loop_dir / "wake_events.jsonl").exists() else None
+
+    freeze = run_m7_dialogue_freeze_check(paths)
+
+    assert freeze.ok is True
+    report = freeze.to_dict()
+    assert report["recommendation"] == "m7_text_dialogue_frozen"
+    assert report["provider_calls"] == 0
+    assert report["profile"]["readonly_gate"] is True
+    assert report["profile"]["provider_generation_requested"] is False
+    assert report["profile"]["scheduler_mutation_allowed"] is False
+    assert report["profile"]["semantic_shadow_authoritative"] is False
+    assert report["evidence"]["m7_3_replay_checks_pass"] is True
+    assert report["evidence"]["m7_5_dashboard_chat_implemented"] is True
+    assert report["boundaries"] == {
+        "wake_cycle_run": False,
+        "wake_events_written": False,
+        "scheduler_mutated": False,
+        "raw_provider_payload_stored": False,
+        "semantic_shadow_authority_promoted": False,
+    }
+    assert not (paths.life_loop_dir / "m7_dialogue_freeze_report.json").exists()
+    report_path = write_m7_dialogue_freeze_report(paths, report)
+    assert report_path.name == "m7_dialogue_freeze_report.json"
+    assert json.loads(report_path.read_text())["recommendation"] == "m7_text_dialogue_frozen"
+    after_wake = (paths.life_loop_dir / "wake_events.jsonl").read_text() if (paths.life_loop_dir / "wake_events.jsonl").exists() else None
+    assert after_wake == before_wake
+    assert result.transcript_path.exists()
+
+
+def test_m7_dialogue_freeze_gate_fails_on_raw_payload_or_secret_leak(tmp_path):
+    from companion_core import run_m7_dialogue_freeze_check
+
+    paths, result = prepare_m7_freeze_fixture(tmp_path)
+    rows = read_jsonl(result.transcript_path)
+    rows[1]["raw_provider_payload"] = {"secret": "payload"}
+    result.transcript_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n")
+
+    freeze = run_m7_dialogue_freeze_check(paths)
+
+    assert freeze.ok is False
+    assert freeze.recommendation == "inspect"
+    assert "m7_dialogue_replay" in freeze.to_dict()["stop_reasons"]
+    assert "m7_secret_and_payload_scan" in freeze.to_dict()["stop_reasons"]
+
+
+def test_m7_dialogue_freeze_cli_writes_report(tmp_path):
+    prepare_m7_freeze_fixture(tmp_path)
+    script = Path(__file__).resolve().parents[1] / "scripts" / "run_m7_dialogue_freeze.py"
+
+    completed = subprocess.run(
+        [sys.executable, str(script), "--companion-home", str(tmp_path)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["recommendation"] == "m7_text_dialogue_frozen"
+    assert (tmp_path / "life-loop" / "m7_dialogue_freeze_report.json").exists()

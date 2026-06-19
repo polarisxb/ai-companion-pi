@@ -946,6 +946,34 @@ def _m6_field_pilot_lines(
     return lines
 
 
+def _m7_dialogue_lines(text_report, memory_report, freeze_report):
+    lines = ["M7 Text Dialogue"]
+    if not text_report and not memory_report and not freeze_report:
+        lines.append("No M7 dialogue report captured.")
+        return lines
+    if text_report:
+        lines.extend(_report_lines("M7 Text Dialogue", text_report))
+        lines.append("raw_provider_payload_stored=" + escape(str(text_report.get("raw_provider_payload_stored"))))
+    if memory_report:
+        lines.extend(_report_lines("M7 Memory Proposal Gate", memory_report))
+        counts = memory_report.get("counts") if isinstance(memory_report.get("counts"), dict) else {}
+        authority = memory_report.get("prompt_authority_status") if isinstance(memory_report.get("prompt_authority_status"), dict) else {}
+        lines.append("proposal_memory=" + escape(str(counts.get("proposal_memory", 0))))
+        lines.append("proposal_prompt_authoritative=" + escape(str(authority.get("proposal_prompt_authoritative_count", 0))))
+    if freeze_report:
+        lines.extend(_report_lines("M7 Dialogue Freeze", freeze_report))
+        final_freeze = freeze_report.get("final_freeze") if isinstance(freeze_report.get("final_freeze"), dict) else {}
+        profile = freeze_report.get("profile") if isinstance(freeze_report.get("profile"), dict) else {}
+        lines.append("m7_frozen=" + escape(str(final_freeze.get("frozen"))))
+        lines.append("readonly=" + escape(str(final_freeze.get("readonly"))))
+        lines.append("provider_generation_requested=" + escape(str(profile.get("provider_generation_requested"))))
+        lines.append("scheduler_mutation_allowed=" + escape(str(profile.get("scheduler_mutation_allowed"))))
+        lines.append("semantic_shadow_authoritative=" + escape(str(profile.get("semantic_shadow_authoritative"))))
+        for reason in freeze_report.get("stop_reasons", []) or []:
+            lines.append("stop_reason=" + escape(str(reason)))
+    return lines
+
+
 def _near_status_lines():
     lines = ["Near-status TTL"]
     capsule = _load_json(COMPANION_HOME / "life-loop" / "context_capsule.json", default={}) or {}
@@ -981,6 +1009,9 @@ def render_life_dashboard():
     m6_recovery = _report("m6_recovery_drill_report.json")
     m6_scheduler = _report("m6_scheduler_readiness_report.json")
     m6_final_freeze = _report("m6_final_freeze_report.json")
+    m7_text_dialogue = _report("m7_text_dialogue_report.json")
+    m7_memory_proposal = _report("m7_memory_proposal_report.json")
+    m7_dialogue_freeze = _report("m7_dialogue_freeze_report.json")
 
     sections = [
         ("Internal Life Loop", _event_life_lines(latest)),
@@ -1001,6 +1032,11 @@ def render_life_dashboard():
             m6_recovery,
             m6_scheduler,
             m6_final_freeze,
+        )),
+        ("M7 Text Dialogue", _m7_dialogue_lines(
+            m7_text_dialogue,
+            m7_memory_proposal,
+            m7_dialogue_freeze,
         )),
         ("Near-status TTL", _near_status_lines()),
     ]

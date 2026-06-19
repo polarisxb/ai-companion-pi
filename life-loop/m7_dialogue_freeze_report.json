@@ -1,0 +1,187 @@
+{
+  "boundaries": {
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false
+  },
+  "errors": [],
+  "evidence": {
+    "m6_7_final_freeze_still_ready": true,
+    "m7_1_cli_dialogue_ready": true,
+    "m7_2_interactive_cli_implemented": true,
+    "m7_3_replay_checks_pass": true,
+    "m7_4_memory_gate_ready": true,
+    "m7_5_dashboard_chat_implemented": true
+  },
+  "final_freeze": {
+    "frozen": true,
+    "next_stage": "M8",
+    "readonly": true,
+    "voice_signal_scheduler_handoff_allowed_after_freeze": true
+  },
+  "milestone": "M7.6",
+  "next_commands": {
+    "m7_dialogue_freeze": "python3 scripts/run_m7_dialogue_freeze.py --companion-home /home/polaris/digital_life",
+    "m8_handoff": "requires m7_text_dialogue_frozen"
+  },
+  "ok": true,
+  "profile": {
+    "cron_replacement": false,
+    "life_write_route_allowed": false,
+    "memory_proposal_acceptance_allowed": false,
+    "name": "M7.6 dialogue hardening freeze",
+    "provider_generation_requested": false,
+    "raw_provider_payload_storage_allowed": false,
+    "readonly_gate": true,
+    "scheduler_mutation_allowed": false,
+    "semantic_shadow_authoritative": false,
+    "service_mutation_allowed": false,
+    "timer_installation": false,
+    "wake_cycle_run": false,
+    "writes_report_only": true
+  },
+  "provider_calls": 0,
+  "recommendation": "m7_text_dialogue_frozen",
+  "replay_checks": [
+    {
+      "errors": [],
+      "events_checked": 1,
+      "ok": true,
+      "provider_calls": 0,
+      "recommendation": "m7_dialogue_transcript_ready",
+      "rows_checked": 2,
+      "transcript": "conversations/conv_20260619_162649_329583_1335ac.jsonl"
+    },
+    {
+      "errors": [],
+      "events_checked": 1,
+      "ok": true,
+      "provider_calls": 0,
+      "recommendation": "m7_dialogue_transcript_ready",
+      "rows_checked": 2,
+      "transcript": "conversations/conv_20260619_162703_171807_11b5a9.jsonl"
+    },
+    {
+      "errors": [],
+      "events_checked": 1,
+      "ok": true,
+      "provider_calls": 0,
+      "recommendation": "m7_dialogue_transcript_ready",
+      "rows_checked": 2,
+      "transcript": "conversations/conv_20260619_162714_008906_468d43.jsonl"
+    }
+  ],
+  "saved_at": "2026-06-19T17:54:46.772461",
+  "schema_version": 1,
+  "source_reports": {
+    "m6_final_freeze": {
+      "exists": true,
+      "ok": true,
+      "path": "life-loop/m6_final_freeze_report.json",
+      "recommendation": "m6_frozen_ready_for_scheduler_handoff",
+      "saved_at": "2026-06-19T15:11:15.214300"
+    },
+    "m7_memory_proposal_current": {
+      "ok": true,
+      "recommendation": "m7_memory_proposals_ready",
+      "saved_at": "2026-06-19T17:54:46.722497"
+    },
+    "m7_text_dialogue": {
+      "exists": true,
+      "ok": true,
+      "path": "life-loop/m7_text_dialogue_report.json",
+      "recommendation": "m7_cli_dialogue_ready",
+      "saved_at": "2026-06-19T16:27:17.820166"
+    }
+  },
+  "stages": [
+    {
+      "message": "M6.7 final freeze remains ready",
+      "name": "m6_final_freeze",
+      "status": "pass"
+    },
+    {
+      "message": "M7.1 dialogue evidence is ready",
+      "name": "m7_text_dialogue_report",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "events_checked": 1,
+        "rows_checked": 2,
+        "transcript": "conversations/conv_20260619_162649_329583_1335ac.jsonl"
+      },
+      "message": "conversations/conv_20260619_162649_329583_1335ac.jsonl replay ready",
+      "name": "m7_dialogue_replay",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "events_checked": 1,
+        "rows_checked": 2,
+        "transcript": "conversations/conv_20260619_162703_171807_11b5a9.jsonl"
+      },
+      "message": "conversations/conv_20260619_162703_171807_11b5a9.jsonl replay ready",
+      "name": "m7_dialogue_replay",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "events_checked": 1,
+        "rows_checked": 2,
+        "transcript": "conversations/conv_20260619_162714_008906_468d43.jsonl"
+      },
+      "message": "conversations/conv_20260619_162714_008906_468d43.jsonl replay ready",
+      "name": "m7_dialogue_replay",
+      "status": "pass"
+    },
+    {
+      "message": "M7.4 memory proposal gate remains ready",
+      "name": "m7_memory_proposal_gate_current",
+      "status": "pass"
+    },
+    {
+      "message": "M7.5 dashboard chat route evidence is present",
+      "name": "m7_dashboard_chat",
+      "status": "pass"
+    },
+    {
+      "message": "no secret-like strings or raw provider payload keys in dialogue evidence",
+      "name": "m7_secret_and_payload_scan",
+      "status": "pass"
+    },
+    {
+      "message": "dialogue events preserve no-wake/no-scheduler/no-raw-payload/no-semantic-authority boundaries",
+      "name": "m7_dialogue_boundaries",
+      "status": "pass"
+    },
+    {
+      "message": "dialogue/chat sources contain no scheduler mutation commands",
+      "name": "m7_scheduler_static_boundary",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "cron_replacement": false,
+        "life_write_route_allowed": false,
+        "memory_proposal_acceptance_allowed": false,
+        "name": "M7.6 dialogue hardening freeze",
+        "provider_generation_requested": false,
+        "raw_provider_payload_storage_allowed": false,
+        "readonly_gate": true,
+        "scheduler_mutation_allowed": false,
+        "semantic_shadow_authoritative": false,
+        "service_mutation_allowed": false,
+        "timer_installation": false,
+        "wake_cycle_run": false,
+        "writes_report_only": true
+      },
+      "message": "freeze gate performs read-only inspection; only CLI/report writer emits m7_dialogue_freeze_report.json",
+      "name": "m7_freeze_readonly_profile",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}
