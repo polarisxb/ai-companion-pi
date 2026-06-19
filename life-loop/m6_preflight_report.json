@@ -5,8 +5,10 @@
   "companion_home": "/home/polaris/digital_life",
   "pi_presence": {
     "required": false,
-    "detected": false,
-    "evidence": [],
+    "detected": true,
+    "evidence": [
+      "Raspberry Pi 5 Model B Rev 1.0"
+    ],
     "claim": "local_preflight_only"
   },
   "profile": {
@@ -53,8 +55,8 @@
   "field_pilot": {
     "deployment_package": {
       "loaded": true,
-      "required_repository_path_count": 31,
-      "runtime_artifact_count": 22,
+      "required_repository_path_count": 36,
+      "runtime_artifact_count": 27,
       "exclude_count": 15
     },
     "manual_wake": {
@@ -245,6 +247,21 @@
             "message": "scripts/run_m5_final_freeze.py is present"
           },
           {
+            "path": "scripts/run_m6_pi_observation_check.py",
+            "ok": true,
+            "message": "scripts/run_m6_pi_observation_check.py is present"
+          },
+          {
+            "path": "scripts/run_m6_recovery_drill.py",
+            "ok": true,
+            "message": "scripts/run_m6_recovery_drill.py is present"
+          },
+          {
+            "path": "scripts/run_m6_scheduler_readiness.py",
+            "ok": true,
+            "message": "scripts/run_m6_scheduler_readiness.py is present"
+          },
+          {
             "path": "scripts/replay_wake_output.py",
             "ok": true,
             "message": "scripts/replay_wake_output.py is present"
@@ -310,6 +327,16 @@
             "message": "docs/m6-pi-field-pilot-design.md is present"
           },
           {
+            "path": "docs/m6-pi-recovery-drill-design.md",
+            "ok": true,
+            "message": "docs/m6-pi-recovery-drill-design.md is present"
+          },
+          {
+            "path": "docs/m6-pi-scheduler-readiness-design.md",
+            "ok": true,
+            "message": "docs/m6-pi-scheduler-readiness-design.md is present"
+          },
+          {
             "path": "docs/m6-pi-migration-checklist.md",
             "ok": true,
             "message": "docs/m6-pi-migration-checklist.md is present"
@@ -360,6 +387,11 @@
           "life-loop/m5_quality_release_report.json",
           "life-loop/m5_final_freeze_report.json",
           "life-loop/m6_migration_manifest.json",
+          "life-loop/m6_preflight_report.json",
+          "life-loop/m6_pi_manual_wake_report.json",
+          "life-loop/m6_pi_observation_report.json",
+          "life-loop/m6_recovery_drill_report.json",
+          "life-loop/m6_scheduler_readiness_report.json",
           "life-loop/context_capsule.json",
           "life-loop/companion_state.json",
           "life-loop/wake_events.jsonl",
@@ -531,7 +563,7 @@
       "details": {
         "ok": true,
         "message": "semantic shadow authority is isolated",
-        "main_memory_count": 49,
+        "main_memory_count": 3,
         "shadow_memory_count": 0,
         "main_store": "memory-server/memory_store.json",
         "shadow_store": "life-loop/semantic_shadow/memory_store.json",
@@ -551,16 +583,16 @@
     },
     {
       "name": "platform_identity",
-      "status": "warning",
+      "status": "passed",
       "ok": true,
       "required": false,
-      "message": "Raspberry Pi platform was not detected; M6.2 is local-only",
+      "message": "Raspberry Pi platform detected",
       "details": {
         "system": "Linux",
-        "machine": "x86_64",
-        "python": "3.14.5",
-        "device_tree_model": null,
-        "raspberry_pi_detected": false,
+        "machine": "aarch64",
+        "python": "3.14.4",
+        "device_tree_model": "Raspberry Pi 5 Model B Rev 1.0",
+        "raspberry_pi_detected": true,
         "required_for_m6_2": false
       }
     }
@@ -573,5 +605,5 @@
     "m6_3_manual_wake_real_pi_only": "python3 scripts/run_m6_pi_manual_wake_trial.py --companion-home /home/polaris/digital_life --confirm-real-pi-wake",
     "m5_final_freeze_no_write": "python3 scripts/run_m5_final_freeze.py --companion-home /home/polaris/digital_life --no-write-report"
   },
-  "saved_at": "2026-06-18T15:40:55.027109"
+  "saved_at": "2026-06-19T13:43:14.518586"
 }

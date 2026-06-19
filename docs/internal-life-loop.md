@@ -354,19 +354,47 @@ M6.3 adds a guarded manual-wake entry in
 `scripts/run_m6_pi_manual_wake_trial.py`; the entry requires the M6.2 preflight
 report, explicit `--confirm-real-pi-wake`, Raspberry Pi platform identity, and
 hash-only output storage before delegating to the frozen M4 wake-trial wrapper.
-The guarded entry is implementation readiness only. The real M6.3 trial remains
-pending until it is run on the actual Pi with the explicit manual command.
+On the Pi, the confirmed M6.3 trial produced
+`recommendation=continue_pi_observation`.
+M6.4 adds real-Pi observation in `companion_core/m6_observation.py` and
+`scripts/run_m6_pi_observation_check.py`; the current report returns
+`recommendation=stable_pi_field_observed`.
+M6.5 adds non-destructive backup and restore-sandbox verification in
+`companion_core/m6_recovery.py` and `scripts/run_m6_recovery_drill.py`; the
+current report returns `recommendation=rollback_recovery_ready`.
+M6.6 adds scheduler handoff readiness in `companion_core/m6_scheduler.py` and
+`scripts/run_m6_scheduler_readiness.py`; the current report returns
+`recommendation=ready_for_scheduler_handoff` without mutating scheduler state.
+M6.7 adds the final read-only Pi field-pilot freeze in
+`companion_core/m6_final_freeze.py` and `scripts/run_m6_final_freeze.py`; the
+current report returns `recommendation=m6_frozen_ready_for_scheduler_handoff`
+with scheduler mutation flags false and rollback evidence present.
+
+M7 is the text dialogue milestone after M6.7 final freeze. Its design starts in
+`docs/m7-text-dialogue-design.md` and the product/UI source of truth is
+`DESIGN.md`. M7 prioritizes direct human-to-companion text dialogue over
+scheduler automation. It adds a user-initiated dialogue engine, conversation
+transcripts, dialogue event metadata, memory proposals as proposals only, and a
+later dashboard `/chat` page. The confirmed M7 memory boundary allows automatic
+memory only for explicit low-risk user-stated facts/preferences; inferred,
+sensitive, relationship-defining, or ambiguous content remains proposal-only.
+Completed turns always write transcripts, and current companion state updates
+only when the companion explicitly emits mood/status. M7 must not run wake
+cycles from chat, edit scheduler state, promote semantic shadow authority, or
+store raw provider payloads by default.
 
 For the full real-provider trial path, see `docs/m3-real-trial.md`.
 
 ## Expansion Plan
 
-1. Execute M6 Pi field pilot without reopening M3/M4/M5 frozen contracts.
-2. Keep M5.7 final-freeze evidence available until M6.7 final freeze completes.
-3. Revisit cron handoff only through M6.6 scheduler readiness; do not replace
-   cron or install timers as part of M6.
-4. Add optional Signal delivery as an output adapter only after the Pi field
-   pilot is frozen and scheduler handoff is explicitly approved.
+1. Execute M7 text dialogue without reopening M3-M6 frozen contracts.
+2. Build CLI one-turn chat first, then interactive transcript, memory proposal
+   gate, dashboard `/chat`, and M7 dialogue freeze.
+3. Revisit scheduler handoff after the human can already talk to the companion;
+   do not replace cron or install timers as part of M7 dialogue work.
+4. Add optional Signal delivery as an output/input adapter only after text
+   dialogue is frozen and scheduler handoff is explicitly approved.
 5. Add voice, hardware/body adapters, and broader product surfaces only after
-   the internal companion loop is stable, observable, recoverable, and frozen on
+   the internal companion loop is stable, observable, recoverable, frozen on the
+   Pi, and reachable through text dialogue.
    the Pi.

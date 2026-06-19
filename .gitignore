@@ -12,6 +12,12 @@ scripts/substack_config.local.sh
 # Memory data (personal)
 memory_store.json
 memory_embeddings.npy
+memory-server/*.lock
+
+# Codex/OMX local state
+.omx/
+.codex/
+.agents/
 
 # Journals (personal)
 journals/*.md
@@ -29,8 +35,18 @@ messageboard/messages.json
 messageboard/files/*
 !messageboard/files/.gitkeep
 
+# Requests/tasks runtime state
+requests/requests.json
+tasks/task_queue.json
+tasks/task_config.json
+tasks/logs/
+
+# Local backups
+backups/
+
 # Window (personal state)
 window/status.json
+window/*.log
 window/content/*
 !window/content/.gitkeep
 

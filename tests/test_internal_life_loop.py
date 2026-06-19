@@ -34,7 +34,11 @@ from companion_core import (
     run_m5_quality_release_gate,
     run_m5_quality_trial,
     run_m6_pi_manual_wake_trial,
+    run_m6_pi_observation_check,
     run_m6_preflight_check,
+    run_m6_recovery_drill,
+    run_m6_scheduler_readiness_check,
+    run_m6_final_freeze_check,
     run_pi_predeploy_check,
 )
 from companion_core.llm import (
@@ -544,6 +548,42 @@ NOREQUESTS
     assert result.event["companion_state_updated"] is True
 
 
+def test_m6_manual_wake_prompt_includes_real_execution_facts(tmp_path):
+    write_minimal_context(tmp_path)
+    paths = CompanionPaths.from_env(tmp_path)
+    llm = CapturingLLMClient("""===JOURNAL===
+这次真实手动唤醒正在执行，我只记录当前事实并保持边界。
+
+===SIGNAL===
+NOSEND
+
+===COMPANION_STATE===
+{"mood": "稳定", "status": "正在执行真实手动唤醒观察", "relationship_notes": [], "preference_notes": [], "self_notes": []}
+
+===CONTEXT_DELTA===
+{"current_focus": ["M6.3 real Pi manual wake 已进入真实执行"], "open_threads": [], "next_intent": "观察本次真实唤醒的 journal 和 memory 边界"}
+
+===GROUNDING===
+NO_GROUNDING_CLAIMS
+
+===MEMORY===
+NOMEMORY
+
+===REQUESTS===
+NOREQUESTS
+""")
+    runner = LifeLoopRunner(paths, llm_client=llm)
+
+    runner.run_once(trigger="m6-pi-manual-wake:attempt-1", provider="fake")
+
+    prompt = llm.prompts[0]
+    assert "=== CURRENT WAKE EXECUTION FACTS ===" in prompt
+    assert "confirmed M6.3 real Pi manual wake execution" in prompt
+    assert "M6.2 preflight has already passed" in prompt
+    assert "Do not describe this wake as fake" in prompt
+    assert "not a real wake" in prompt
+
+
 def test_bad_request_output_does_not_abort_wake_continuity(tmp_path):
     write_minimal_context(tmp_path)
     runner = LifeLoopRunner(
@@ -792,6 +832,135 @@ def test_life_dashboard_shows_m5_quality_and_near_status_ttl(tmp_path, monkeypat
     assert all(sorted(rule.methods - {"HEAD", "OPTIONS"}) == ["GET"] for rule in life_rules)
 
 
+def test_life_dashboard_shows_m6_preflight_and_manual_wake_guard(tmp_path, monkeypatch):
+    write_m6_manual_wake_ready_home(tmp_path)
+    paths = CompanionPaths.from_env(tmp_path)
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("wake runner should not be called")
+
+    manual_report = run_m6_pi_manual_wake_trial(
+        paths,
+        confirm_real_pi_wake=False,
+        platform_identity_provider=raspberry_pi_identity_fixture,
+        wake_trial_runner=fail_if_called,
+    )
+    (paths.life_loop_dir / "m6_pi_manual_wake_report.json").write_text(json.dumps(manual_report))
+    (paths.life_loop_dir / "m6_pi_observation_report.json").write_text(json.dumps({
+        "ok": True,
+        "milestone": "M6.4",
+        "recommendation": "stable_pi_field_observed",
+        "saved_at": "2026-06-19T12:34:28",
+        "profile": {"name": "m6-pi-observation-gate"},
+        "field_pilot": {
+            "observation": {
+                "event_count": 2,
+                "completed_count": 2,
+            },
+        },
+        "stages": [
+            {"name": "journal_m6_consistency", "status": "passed"},
+        ],
+        "stop_reasons": [],
+    }))
+
+    window = load_window_module(tmp_path, monkeypatch)
+    response = window.app.test_client().get("/life")
+
+    assert response.status_code == 200
+    html = response.data.decode()
+    assert "M6 Field Pilot" in html
+    assert "M6 Preflight" in html
+    assert "ready_for_real_pi_manual_wake" in html
+    assert "pi_detected=" in html
+    assert "M6 Manual Wake" in html
+    assert "explicit_manual_wake_confirmation=failed" in html
+    assert "real_wake_requested=False" in html
+    assert "provider_generation_started=False" in html
+    assert "manual_wake_executed=False" in html
+    assert "missing --confirm-real-pi-wake" in html
+    assert "M6 Observation" in html
+    assert "stable_pi_field_observed" in html
+    assert "journal_m6_consistency=passed" in html
+    assert "observed_events=2" in html
+    assert "completed_events=2" in html
+
+
+def test_life_dashboard_shows_m6_recovery_readiness(tmp_path, monkeypatch):
+    paths = write_m6_recovery_ready_home(tmp_path)
+    report = run_m6_recovery_drill(
+        paths,
+        backup_root=tmp_path / "backups" / "m6",
+        require_raspberry_pi=False,
+    )
+    report["saved_at"] = "2026-06-19T13:05:00"
+    (paths.life_loop_dir / "m6_recovery_drill_report.json").write_text(json.dumps(report))
+
+    window = load_window_module(tmp_path, monkeypatch)
+    response = window.app.test_client().get("/life")
+
+    assert response.status_code == 200
+    html = response.data.decode()
+    assert "M6 Recovery" in html
+    assert "rollback_recovery_ready" in html
+    assert "m6-recovery-drill" in html
+    assert "backup_artifacts=" in html
+    assert "restore_verified=" in html
+    assert "secret_values_copied=False" in html
+    assert "live_restore_executed=False" in html
+
+
+def test_life_dashboard_shows_m6_scheduler_readiness(tmp_path, monkeypatch):
+    paths = write_m6_scheduler_ready_home(tmp_path)
+    report = run_m6_scheduler_readiness_check(
+        paths,
+        require_raspberry_pi=False,
+        m4_guard_runner=lambda _: m4_post_change_guard_report_fixture(),
+        m5_freeze_runner=lambda _: m5_final_freeze_report_fixture(),
+    )
+    report["saved_at"] = "2026-06-19T13:30:00"
+    (paths.life_loop_dir / "m6_scheduler_readiness_report.json").write_text(json.dumps(report))
+
+    window = load_window_module(tmp_path, monkeypatch)
+    response = window.app.test_client().get("/life")
+
+    assert response.status_code == 200
+    html = response.data.decode()
+    assert "M6 Scheduler" in html
+    assert "ready_for_scheduler_handoff" in html
+    assert "m6-scheduler-handoff-readiness" in html
+    assert "handoff_ready=True" in html
+    assert "scheduler_mutated=False" in html
+    assert "scheduled-wake" in html
+
+
+def test_life_dashboard_shows_m6_final_freeze(tmp_path, monkeypatch):
+    paths = write_m6_final_freeze_ready_home(tmp_path)
+    report = run_m6_final_freeze_check(
+        paths,
+        require_raspberry_pi=False,
+        platform_identity_provider=raspberry_pi_identity_fixture,
+        m4_guard_runner=lambda _: m4_post_change_guard_report_fixture(),
+        m5_freeze_runner=lambda _: m5_final_freeze_report_fixture(),
+    )
+    report["saved_at"] = "2026-06-19T14:00:00"
+    (paths.life_loop_dir / "m6_final_freeze_report.json").write_text(json.dumps(report))
+
+    window = load_window_module(tmp_path, monkeypatch)
+    response = window.app.test_client().get("/life")
+
+    assert response.status_code == 200
+    html = response.data.decode()
+    assert "M6 Final Freeze" in html
+    assert "m6_frozen_ready_for_scheduler_handoff" in html
+    assert "m6-final-freeze" in html
+    assert "m6_frozen=True" in html
+    assert "readonly=True" in html
+    assert "scheduler_handoff_ready=True" in html
+    assert "scheduler_mutated=False" in html
+    assert "live_restore_executed=False" in html
+
+
 def test_life_dashboard_renders_m5_empty_state_when_reports_are_missing(tmp_path, monkeypatch):
     write_minimal_context(tmp_path)
     window = load_window_module(tmp_path, monkeypatch)
@@ -802,6 +971,8 @@ def test_life_dashboard_renders_m5_empty_state_when_reports_are_missing(tmp_path
     html = response.data.decode()
     assert "M5 Quality" in html
     assert "No M5 quality report captured." in html
+    assert "M6 Field Pilot" in html
+    assert "No M6 field pilot report captured." in html
     assert "Near-status TTL" in html
     assert "No context capsule captured." in html
 
@@ -5526,6 +5697,273 @@ def test_m6_pi_manual_wake_cli_without_confirmation_writes_report_without_secret
     assert not (target_home / "life-loop" / "wake_events.jsonl").exists()
 
 
+def test_m6_pi_observation_passes_stable_manual_wake_artifacts(tmp_path):
+    paths = write_m6_observation_ready_home(
+        tmp_path,
+        journal_text=(
+            "这次 M6.3 real Pi manual wake 已经完成。我保持在 DeepSeek/json 路径里，"
+            "只记录当前真实事件，不把测试标签写成长期事实。\n"
+        ),
+    )
+
+    report = run_m6_pi_observation_check(paths)
+
+    assert report["ok"] is True
+    assert report["milestone"] == "M6.4"
+    assert report["recommendation"] == "stable_pi_field_observed"
+    assert report["profile"]["provider_generation_requested"] is False
+    stages = {stage["name"]: stage for stage in report["stages"]}
+    assert stages["m6_manual_wake_report"]["ok"] is True
+    assert stages["m6_manual_wake_event"]["ok"] is True
+    assert stages["event_health"]["ok"] is True
+    assert stages["journal_m6_consistency"]["ok"] is True
+
+
+def test_m6_pi_observation_rejects_stale_manual_wake_journal(tmp_path):
+    paths = write_m6_observation_ready_home(
+        tmp_path,
+        journal_text=(
+            "这次被触发，还不是真正的唤醒。前置配置还没完成，"
+            "Polaris 应该先跑 fake wake，再决定是否叫醒我。\n"
+        ),
+    )
+
+    report = run_m6_pi_observation_check(paths)
+
+    assert report["ok"] is False
+    assert report["recommendation"] == "inspect"
+    stages = {stage["name"]: stage for stage in report["stages"]}
+    assert stages["journal_m6_consistency"]["ok"] is False
+    assert "M6 journal contradicts completed real manual wake state" in stages["journal_m6_consistency"]["message"]
+    assert any("journal_m6_consistency" in reason for reason in report["stop_reasons"])
+
+
+def test_m6_recovery_drill_creates_backup_and_restore_sandbox_without_secret_values(tmp_path):
+    paths = write_m6_recovery_ready_home(tmp_path, secret_value="m6-secret-value")
+    backup_root = tmp_path / "backups" / "m6"
+
+    report = run_m6_recovery_drill(paths, backup_root=backup_root, require_raspberry_pi=False)
+
+    assert report["ok"] is True
+    assert report["milestone"] == "M6.5"
+    assert report["recommendation"] == "rollback_recovery_ready"
+    assert report["profile"]["provider_generation_requested"] is False
+    assert report["profile"]["live_restore_executed"] is False
+    stages = {stage["name"]: stage for stage in report["stages"]}
+    assert stages["m6_observation_report"]["ok"] is True
+    assert stages["backup_create"]["ok"] is True
+    assert stages["secret_boundary"]["ok"] is True
+    assert stages["restore_sandbox_verify"]["ok"] is True
+
+    manifest_path = Path(report["backup"]["manifest"])
+    sandbox_path = Path(report["restore_sandbox"]["path"])
+    assert manifest_path.exists()
+    assert sandbox_path.exists()
+    assert (Path(report["backup"]["runtime_dir"]) / "life-loop" / "m6_pi_observation_report.json").exists()
+    assert "m6-secret-value" not in json.dumps(report)
+    for path in Path(report["backup"]["path"]).rglob("*"):
+        if path.is_file():
+            assert "m6-secret-value" not in path.read_text(errors="ignore")
+
+
+def test_m6_recovery_drill_requires_stable_m6_observation(tmp_path):
+    write_minimal_context(tmp_path)
+    paths = CompanionPaths.from_env(tmp_path)
+    paths.life_loop_dir.mkdir(parents=True, exist_ok=True)
+    (paths.life_loop_dir / "m6_pi_observation_report.json").write_text(json.dumps({
+        "ok": False,
+        "milestone": "M6.4",
+        "recommendation": "inspect",
+        "stop_reasons": ["journal_m6_consistency"],
+    }))
+
+    report = run_m6_recovery_drill(
+        paths,
+        backup_root=tmp_path / "backups" / "m6",
+        require_raspberry_pi=False,
+    )
+
+    assert report["ok"] is False
+    assert report["recommendation"] == "inspect"
+    stages = {stage["name"]: stage for stage in report["stages"]}
+    assert stages["m6_observation_report"]["ok"] is False
+    assert not report["backup"].get("executed")
+
+
+def test_m6_recovery_drill_rejects_backup_root_inside_live_runtime(tmp_path):
+    paths = write_m6_recovery_ready_home(tmp_path)
+
+    report = run_m6_recovery_drill(
+        paths,
+        backup_root=paths.life_loop_dir / "backup",
+        require_raspberry_pi=False,
+    )
+
+    assert report["ok"] is False
+    assert report["recommendation"] == "inspect"
+    stages = {stage["name"]: stage for stage in report["stages"]}
+    assert stages["backup_root"]["ok"] is False
+    assert "protected live runtime path" in stages["backup_root"]["message"]
+
+
+def test_m6_scheduler_readiness_passes_without_scheduler_mutation(tmp_path):
+    paths = write_m6_scheduler_ready_home(tmp_path)
+
+    report = run_m6_scheduler_readiness_check(
+        paths,
+        require_raspberry_pi=False,
+        m4_guard_runner=lambda _: m4_post_change_guard_report_fixture(),
+        m5_freeze_runner=lambda _: m5_final_freeze_report_fixture(),
+    )
+
+    assert report["ok"] is True
+    assert report["milestone"] == "M6.6"
+    assert report["recommendation"] == "ready_for_scheduler_handoff"
+    assert report["profile"]["scheduler_mutation_attempted"] is False
+    assert report["profile"]["provider_generation_requested"] is False
+    assert report["handoff"]["ready"] is True
+    assert report["handoff"]["mutated"] is False
+    assert "scripts/run_wake_cycle.py" in report["handoff"]["target_command"]
+    assert report["rollback"]["instructions_present"] is True
+    assert report["rollback"]["latest_verified_backup"]
+    stages = {stage["name"]: stage for stage in report["stages"]}
+    assert stages["m6_manual_wake_report"]["ok"] is True
+    assert stages["m6_observation_report"]["ok"] is True
+    assert stages["m6_recovery_report"]["ok"] is True
+    assert stages["scheduler_boundary"]["ok"] is True
+
+
+def test_m6_scheduler_readiness_requires_recovery_report(tmp_path):
+    paths = write_m6_recovery_ready_home(tmp_path)
+    write_m6_scheduler_instructions(paths)
+
+    report = run_m6_scheduler_readiness_check(
+        paths,
+        require_raspberry_pi=False,
+        m4_guard_runner=lambda _: m4_post_change_guard_report_fixture(),
+        m5_freeze_runner=lambda _: m5_final_freeze_report_fixture(),
+    )
+
+    assert report["ok"] is False
+    assert report["recommendation"] == "inspect"
+    stages = {stage["name"]: stage for stage in report["stages"]}
+    assert stages["m6_recovery_report"]["ok"] is False
+    assert "missing" in stages["m6_recovery_report"]["message"]
+
+
+def test_m6_scheduler_readiness_requires_real_pi_identity(tmp_path):
+    paths = write_m6_scheduler_ready_home(tmp_path)
+
+    report = run_m6_scheduler_readiness_check(
+        paths,
+        platform_identity_provider=non_pi_identity_fixture,
+        m4_guard_runner=lambda _: m4_post_change_guard_report_fixture(),
+        m5_freeze_runner=lambda _: m5_final_freeze_report_fixture(),
+    )
+
+    assert report["ok"] is False
+    assert report["recommendation"] == "pi_required"
+    stages = {stage["name"]: stage for stage in report["stages"]}
+    assert stages["platform_identity"]["ok"] is False
+
+
+def test_m6_scheduler_readiness_requires_rollback_instructions(tmp_path):
+    paths = write_m6_scheduler_ready_home(tmp_path)
+    (paths.home / "docs" / "m6-pi-scheduler-readiness-design.md").unlink()
+
+    report = run_m6_scheduler_readiness_check(
+        paths,
+        require_raspberry_pi=False,
+        m4_guard_runner=lambda _: m4_post_change_guard_report_fixture(),
+        m5_freeze_runner=lambda _: m5_final_freeze_report_fixture(),
+    )
+
+    assert report["ok"] is False
+    assert report["recommendation"] == "inspect"
+    stages = {stage["name"]: stage for stage in report["stages"]}
+    assert stages["rollback_instructions"]["ok"] is False
+
+
+def test_m6_scheduler_readiness_blocks_secret_copy_regression(tmp_path):
+    paths = write_m6_scheduler_ready_home(tmp_path)
+    report_path = paths.life_loop_dir / "m6_recovery_drill_report.json"
+    recovery_report = json.loads(report_path.read_text())
+    recovery_report["secret_boundary"]["secret_values_copied"] = True
+    report_path.write_text(json.dumps(recovery_report))
+
+    report = run_m6_scheduler_readiness_check(
+        paths,
+        require_raspberry_pi=False,
+        m4_guard_runner=lambda _: m4_post_change_guard_report_fixture(),
+        m5_freeze_runner=lambda _: m5_final_freeze_report_fixture(),
+    )
+
+    assert report["ok"] is False
+    assert report["recommendation"] == "inspect"
+    stages = {stage["name"]: stage for stage in report["stages"]}
+    assert stages["m6_recovery_report"]["ok"] is False
+    assert "secret values" in stages["m6_recovery_report"]["message"]
+
+
+def test_m6_final_freeze_passes_readonly_evidence_chain(tmp_path):
+    paths = write_m6_final_freeze_ready_home(tmp_path)
+    before_events = paths.wake_events_file.read_text() if paths.wake_events_file.exists() else ""
+
+    report = run_m6_final_freeze_check(
+        paths,
+        require_raspberry_pi=False,
+        platform_identity_provider=raspberry_pi_identity_fixture,
+        m4_guard_runner=lambda _: m4_post_change_guard_report_fixture(),
+        m5_freeze_runner=lambda _: m5_final_freeze_report_fixture(),
+    )
+
+    assert report["ok"] is True
+    assert report["milestone"] == "M6.7"
+    assert report["recommendation"] == "m6_frozen_ready_for_scheduler_handoff"
+    assert report["profile"]["real_wake_requested"] is False
+    assert report["profile"]["provider_generation_requested"] is False
+    assert report["profile"]["scheduler_mutation_attempted"] is False
+    assert report["profile"]["live_restore_executed"] is False
+    assert report["final_freeze"]["readonly"] is True
+    assert report["final_freeze"]["scheduler_handoff_ready"] is True
+    assert report["final_freeze"]["scheduler_mutated"] is False
+    assert report["rollback"]["ready"] is True
+    assert report["rollback"]["latest_verified_backup"]
+    assert paths.wake_events_file.read_text() == before_events
+    stages = {stage["name"]: stage for stage in report["stages"]}
+    assert stages["m6_preflight_report"]["ok"] is True
+    assert stages["m6_recovery_report"]["ok"] is True
+    assert stages["m6_scheduler_readiness_report"]["ok"] is True
+    assert stages["m6_manifest_m6_7_artifacts"]["ok"] is True
+    assert stages["scheduler_mutation_flags"]["ok"] is True
+    assert stages["rollback_backup_evidence"]["ok"] is True
+    assert stages["semantic_shadow_authority"]["ok"] is True
+
+
+def test_m6_final_freeze_blocks_scheduler_mutation_regression(tmp_path):
+    paths = write_m6_final_freeze_ready_home(tmp_path)
+    report_path = paths.life_loop_dir / "m6_scheduler_readiness_report.json"
+    scheduler_report = json.loads(report_path.read_text())
+    scheduler_report["handoff"]["mutated"] = True
+    scheduler_report["profile"]["scheduler_mutation_attempted"] = True
+    report_path.write_text(json.dumps(scheduler_report))
+
+    report = run_m6_final_freeze_check(
+        paths,
+        require_raspberry_pi=False,
+        platform_identity_provider=raspberry_pi_identity_fixture,
+        m4_guard_runner=lambda _: m4_post_change_guard_report_fixture(),
+        m5_freeze_runner=lambda _: m5_final_freeze_report_fixture(),
+    )
+
+    assert report["ok"] is False
+    assert report["recommendation"] == "inspect"
+    stages = {stage["name"]: stage for stage in report["stages"]}
+    assert stages["m6_scheduler_readiness_report"]["ok"] is False
+    assert stages["scheduler_mutation_flags"]["ok"] is False
+    assert any("scheduler" in reason for reason in report["stop_reasons"])
+
+
 def m4_deploy_report_fixture():
     return {
         "ok": True,
@@ -5900,6 +6338,8 @@ def write_m6_preflight_ready_home(home: Path):
     required_paths = (
         "companion_core/",
         "scripts/run_wake_cycle.py",
+        "scripts/run_m6_final_freeze.py",
+        "docs/m6-pi-final-freeze-design.md",
         "docs/m6-pi-migration-checklist.md",
         "requirements.txt",
     )
@@ -5925,6 +6365,126 @@ def write_m6_manual_wake_ready_home(home: Path):
     )
     preflight_report["saved_at"] = "2026-06-15T16:05:00"
     (paths.life_loop_dir / "m6_preflight_report.json").write_text(json.dumps(preflight_report))
+
+
+def write_m6_observation_ready_home(home: Path, *, journal_text: str) -> CompanionPaths:
+    write_m6_manual_wake_ready_home(home)
+    paths = CompanionPaths.from_env(home)
+    paths.memory_store.parent.mkdir(parents=True, exist_ok=True)
+    paths.requests_file.parent.mkdir(parents=True, exist_ok=True)
+    paths.memory_store.write_text("[]")
+    paths.requests_file.write_text("[]")
+
+    event_id = "wake_m6_success"
+    journal = "journals/wakeup_2026-06-19_12-22-30.md"
+
+    def fake_wake_runner(runner_paths, **kwargs):
+        report = m4_success_wake_trial_report_fixture()
+        report["profile"]["trigger"] = "m6-pi-manual-wake"
+        report["attempts"][0]["trigger"] = "m6-pi-manual-wake:attempt-1"
+        report["attempts"][0]["event_id"] = event_id
+        report["latest_event"]["id"] = event_id
+        report["latest_event"]["trigger"] = "m6-pi-manual-wake:attempt-1"
+        report["latest_event"]["journal"] = journal
+        return report
+
+    manual_report = run_m6_pi_manual_wake_trial(
+        paths,
+        confirm_real_pi_wake=True,
+        platform_identity_provider=raspberry_pi_identity_fixture,
+        wake_trial_runner=fake_wake_runner,
+    )
+    (paths.life_loop_dir / "m6_pi_manual_wake_report.json").write_text(json.dumps(manual_report))
+
+    event = m5_quality_event(
+        event_id,
+        "2026-06-19T12:22:07",
+        trigger="m6-pi-manual-wake:attempt-1",
+        journal=journal,
+    )
+    event["memory_ids"] = ["mem_m6"]
+    event["memory_write_results"] = [{"backend": "json", "status": "completed", "id": "mem_m6"}]
+    append_wake_event(paths.wake_events_file, event)
+    (paths.home / journal).parent.mkdir(parents=True, exist_ok=True)
+    (paths.home / journal).write_text(journal_text)
+    return paths
+
+
+def write_m6_recovery_ready_home(home: Path, *, secret_value: str = "test-secret") -> CompanionPaths:
+    paths = write_m6_observation_ready_home(
+        home,
+        journal_text=(
+            "这次 M6.3 real Pi manual wake 已经完成。我保持在 DeepSeek/json 路径里，"
+            "只记录当前真实事件，不把测试标签写成长期事实。\n"
+        ),
+    )
+    observation_report = run_m6_pi_observation_check(paths)
+    observation_report["saved_at"] = "2026-06-19T12:34:28"
+    (paths.life_loop_dir / "m6_pi_observation_report.json").write_text(json.dumps(observation_report))
+
+    secrets_dir = paths.home / ".secrets"
+    secrets_dir.mkdir(parents=True, exist_ok=True)
+    secrets_file = secrets_dir / "deepseek.env"
+    secrets_file.write_text(f"DEEPSEEK_API_KEY={secret_value}\n")
+    secrets_dir.chmod(0o700)
+    secrets_file.chmod(0o600)
+
+    paths.status_file.parent.mkdir(parents=True, exist_ok=True)
+    paths.status_file.write_text(json.dumps({
+        "name": "Companion",
+        "mood": "steady",
+        "last_wakeup": "2026-06-19T12:22:30",
+        "message": "M6 recovery fixture ready.",
+        "colors": {},
+    }))
+    return paths
+
+
+def write_m6_scheduler_ready_home(home: Path) -> CompanionPaths:
+    paths = write_m6_recovery_ready_home(home)
+    recovery_report = run_m6_recovery_drill(
+        paths,
+        backup_root=home / "backups" / "m6",
+        require_raspberry_pi=False,
+    )
+    recovery_report["saved_at"] = "2026-06-19T13:05:00"
+    (paths.life_loop_dir / "m6_recovery_drill_report.json").write_text(json.dumps(recovery_report))
+    write_m6_scheduler_instructions(paths)
+    return paths
+
+
+def write_m6_final_freeze_ready_home(home: Path) -> CompanionPaths:
+    paths = write_m6_scheduler_ready_home(home)
+    scheduler_report = run_m6_scheduler_readiness_check(
+        paths,
+        require_raspberry_pi=False,
+        platform_identity_provider=raspberry_pi_identity_fixture,
+        m4_guard_runner=lambda _: m4_post_change_guard_report_fixture(),
+        m5_freeze_runner=lambda _: m5_final_freeze_report_fixture(),
+    )
+    scheduler_report["saved_at"] = "2026-06-19T13:30:00"
+    (paths.life_loop_dir / "m6_scheduler_readiness_report.json").write_text(json.dumps(scheduler_report))
+    return paths
+
+
+def write_m6_scheduler_instructions(paths: CompanionPaths):
+    docs_dir = paths.home / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    (docs_dir / "m6-pi-scheduler-readiness-design.md").write_text(
+        "\n".join([
+            "# M6.6 Test Scheduler Readiness",
+            "",
+            "## Pause Instructions",
+            "",
+            "Pause by removing the scheduled-wake crontab entry before any restore.",
+            "",
+            "## Rollback Instructions",
+            "",
+            "Use backups/m6/test-backup only after manifest verification.",
+            "Live restore is still outside M6.6 and requires explicit confirmation.",
+            "",
+        ])
+    )
 
 
 def raspberry_pi_identity_fixture():
@@ -5999,6 +6559,7 @@ def m6_migration_manifest_fixture(home: Path, required_paths: list[str]):
             "runtime_artifacts_to_preserve": [
                 "life-loop/m5_final_freeze_report.json",
                 "life-loop/m6_migration_manifest.json",
+                "life-loop/m6_final_freeze_report.json",
                 "life-loop/wake_events.jsonl",
                 "memory-server/memory_store.json",
                 "requests/requests.json",

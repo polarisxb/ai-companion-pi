@@ -1,0 +1,253 @@
+{
+  "ok": true,
+  "milestone": "M6.6",
+  "recommendation": "ready_for_scheduler_handoff",
+  "companion_home": "/home/polaris/digital_life",
+  "pi_presence": {
+    "required": true,
+    "detected": true,
+    "evidence": [
+      "Raspberry Pi 5 Model B Rev 1.0"
+    ],
+    "claim": "real_pi_scheduler_handoff_readiness"
+  },
+  "profile": {
+    "name": "m6-scheduler-handoff-readiness",
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "cron_replacement": false,
+    "timer_installation": false,
+    "service_enablement": false,
+    "crontab_edit_allowed": false,
+    "scheduler_mutation_allowed": false,
+    "scheduler_mutation_attempted": false,
+    "semantic_shadow_authoritative": false,
+    "real_wake_requested": false,
+    "provider_generation_requested": false,
+    "raw_output_storage_required": "hash_only",
+    "dashboard_write_allowed": false,
+    "system_config_mutation_allowed": false,
+    "signal_voice_hardware_activation_allowed": false,
+    "live_restore_requested": false,
+    "live_restore_executed": false
+  },
+  "source_reports": {
+    "m6_pi_manual_wake": {
+      "path": "life-loop/m6_pi_manual_wake_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M6.3",
+      "recommendation": "continue_pi_observation",
+      "stop_reasons": [],
+      "saved_at": "2026-06-19T12:33:30.176002"
+    },
+    "m6_pi_observation": {
+      "path": "life-loop/m6_pi_observation_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M6.4",
+      "recommendation": "stable_pi_field_observed",
+      "stop_reasons": [],
+      "saved_at": "2026-06-19T12:57:42.367401"
+    },
+    "m6_recovery_drill": {
+      "path": "life-loop/m6_recovery_drill_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M6.5",
+      "recommendation": "rollback_recovery_ready",
+      "stop_reasons": [],
+      "saved_at": "2026-06-19T12:59:58.586693"
+    },
+    "m4_post_change_guard_current": {
+      "loaded": true,
+      "ok": true,
+      "milestone": "M4.7",
+      "recommendation": "m4_still_deployable",
+      "stop_reasons": [],
+      "saved_at": null
+    },
+    "m5_final_freeze_current": {
+      "loaded": true,
+      "ok": true,
+      "milestone": "M5.7",
+      "recommendation": "m5_frozen_ready_for_m6",
+      "stop_reasons": [],
+      "saved_at": null
+    }
+  },
+  "handoff": {
+    "ready": true,
+    "mutated": false,
+    "target_command": "cd /home/polaris/digital_life && .venv/bin/python scripts/run_wake_cycle.py --companion-home /home/polaris/digital_life --provider deepseek --memory-mode json --trigger scheduled-wake",
+    "target_script": "scripts/run_wake_cycle.py",
+    "recommended_trigger": "scheduled-wake",
+    "next_stage": "M6.7"
+  },
+  "rollback": {
+    "instructions_present": true,
+    "instructions_path": "docs/m6-pi-scheduler-readiness-design.md",
+    "latest_verified_backup": "backups/m6/20260619-125958",
+    "live_restore_executed": false
+  },
+  "field_pilot": {
+    "manual_wake": {
+      "ready": true,
+      "next_stage": "M6.4"
+    },
+    "observation": {
+      "ready": true,
+      "next_stage": "M6.5"
+    },
+    "recovery": {
+      "ready": true,
+      "next_stage": "M6.6"
+    },
+    "scheduler_readiness": {
+      "requested": true,
+      "ready": true,
+      "mutated": false,
+      "next_stage": "M6.7"
+    }
+  },
+  "stages": [
+    {
+      "name": "m6_manual_wake_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.3 real Pi manual wake is ready",
+      "details": {
+        "path": "life-loop/m6_pi_manual_wake_report.json",
+        "loaded": true,
+        "ok": true,
+        "milestone": "M6.3",
+        "recommendation": "continue_pi_observation",
+        "stop_reasons": [],
+        "saved_at": "2026-06-19T12:33:30.176002"
+      }
+    },
+    {
+      "name": "m6_observation_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.4 observation is stable",
+      "details": {
+        "path": "life-loop/m6_pi_observation_report.json",
+        "loaded": true,
+        "ok": true,
+        "milestone": "M6.4",
+        "recommendation": "stable_pi_field_observed",
+        "stop_reasons": [],
+        "saved_at": "2026-06-19T12:57:42.367401"
+      }
+    },
+    {
+      "name": "m6_recovery_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.5 recovery readiness is ready",
+      "details": {
+        "path": "life-loop/m6_recovery_drill_report.json",
+        "loaded": true,
+        "ok": true,
+        "milestone": "M6.5",
+        "recommendation": "rollback_recovery_ready",
+        "stop_reasons": [],
+        "saved_at": "2026-06-19T12:59:58.586693"
+      }
+    },
+    {
+      "name": "platform_identity",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "Raspberry Pi platform detected",
+      "details": {
+        "system": "Linux",
+        "machine": "aarch64",
+        "python": "3.14.4",
+        "device_tree_model": "Raspberry Pi 5 Model B Rev 1.0",
+        "raspberry_pi_detected": true
+      }
+    },
+    {
+      "name": "handoff_target",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "scheduler handoff target command is available",
+      "details": {
+        "target_script": "scripts/run_wake_cycle.py",
+        "target_command": "cd /home/polaris/digital_life && .venv/bin/python scripts/run_wake_cycle.py --companion-home /home/polaris/digital_life --provider deepseek --memory-mode json --trigger scheduled-wake",
+        "mutated": false
+      }
+    },
+    {
+      "name": "rollback_instructions",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "operator-visible pause and rollback instructions are present",
+      "details": {
+        "path": "docs/m6-pi-scheduler-readiness-design.md",
+        "missing_markers": []
+      }
+    },
+    {
+      "name": "scheduler_boundary",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.6 produces readiness only and does not mutate scheduler state",
+      "details": {
+        "cron_replacement": false,
+        "timer_installation": false,
+        "service_enablement": false,
+        "crontab_edit_allowed": false,
+        "scheduler_mutation_allowed": false,
+        "scheduler_mutation_attempted": false
+      }
+    },
+    {
+      "name": "m4_post_change_guard_current",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "current M4 post-change guard remains deployable",
+      "details": {
+        "loaded": true,
+        "ok": true,
+        "milestone": "M4.7",
+        "recommendation": "m4_still_deployable",
+        "stop_reasons": [],
+        "saved_at": null
+      }
+    },
+    {
+      "name": "m5_final_freeze_current",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "current M5.7 final freeze remains ready for M6",
+      "details": {
+        "loaded": true,
+        "ok": true,
+        "milestone": "M5.7",
+        "recommendation": "m5_frozen_ready_for_m6",
+        "stop_reasons": [],
+        "saved_at": null
+      }
+    }
+  ],
+  "stop_reasons": [],
+  "pending_reasons": [],
+  "next_commands": {
+    "m6_scheduler_readiness": "python3 scripts/run_m6_scheduler_readiness.py --companion-home /home/polaris/digital_life",
+    "scheduler_handoff_target": "cd /home/polaris/digital_life && .venv/bin/python scripts/run_wake_cycle.py --companion-home /home/polaris/digital_life --provider deepseek --memory-mode json --trigger scheduled-wake",
+    "m6_final_freeze_later": "requires ready_for_scheduler_handoff"
+  },
+  "saved_at": "2026-06-19T13:43:25.497119"
+}

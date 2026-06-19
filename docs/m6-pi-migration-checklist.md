@@ -54,6 +54,10 @@ frozen life loop:
 - `scripts/run_m5_quality_trial.py`
 - `scripts/run_m5_quality_release_gate.py`
 - `scripts/run_m5_final_freeze.py`
+- `scripts/run_m6_pi_observation_check.py`
+- `scripts/run_m6_recovery_drill.py`
+- `scripts/run_m6_scheduler_readiness.py`
+- `scripts/run_m6_final_freeze.py`
 - `scripts/replay_wake_output.py`
 - `scripts/run_replay_regression.py`
 - `scripts/start_window.sh`
@@ -67,6 +71,9 @@ frozen life loop:
 - `docs/m4-pi-runbook.md`
 - `docs/m5-companion-quality-design.md`
 - `docs/m6-pi-field-pilot-design.md`
+- `docs/m6-pi-recovery-drill-design.md`
+- `docs/m6-pi-scheduler-readiness-design.md`
+- `docs/m6-pi-final-freeze-design.md`
 - `docs/m6-pi-migration-checklist.md`
 - `requirements.txt`
 - `requirements-dev.txt`
@@ -92,6 +99,12 @@ The Pi CompanionHome must preserve these runtime artifacts when they exist:
 - `life-loop/m5_quality_release_report.json`
 - `life-loop/m5_final_freeze_report.json`
 - `life-loop/m6_migration_manifest.json`
+- `life-loop/m6_preflight_report.json`
+- `life-loop/m6_pi_manual_wake_report.json`
+- `life-loop/m6_pi_observation_report.json`
+- `life-loop/m6_recovery_drill_report.json`
+- `life-loop/m6_scheduler_readiness_report.json`
+- `life-loop/m6_final_freeze_report.json`
 - `life-loop/context_capsule.json`
 - `life-loop/companion_state.json`
 - `life-loop/wake_events.jsonl`
@@ -205,6 +218,7 @@ It records:
 - network and scheduler boundary
 - source report snapshots
 - M5.7 evidence carry-forward
+- M6.7 final-freeze script and report carry-forward
 - stage results and stop reasons
 
 Expected result:

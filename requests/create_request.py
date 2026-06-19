@@ -21,6 +21,13 @@ import sys
 import argparse
 from datetime import datetime, timedelta
 import fcntl
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from companion_core.requests import save_requests as save_shared_requests
 
 COMPANION_HOME = os.environ.get("COMPANION_HOME", "/media/YOUR_USERNAME/CompanionHome")
 REQUESTS_FILE = os.path.join(COMPANION_HOME, "requests", "requests.json")
@@ -43,8 +50,7 @@ def save_requests(requests):
     lock_fd = open(LOCK_FILE, "w")
     try:
         fcntl.flock(lock_fd, fcntl.LOCK_EX)
-        with open(REQUESTS_FILE, "w") as f:
-            json.dump(requests, f, indent=2)
+        save_shared_requests(Path(REQUESTS_FILE), requests)
     finally:
         fcntl.flock(lock_fd, fcntl.LOCK_UN)
         lock_fd.close()

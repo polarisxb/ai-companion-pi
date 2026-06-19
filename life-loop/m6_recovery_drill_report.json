@@ -1,0 +1,209 @@
+{
+  "ok": true,
+  "milestone": "M6.5",
+  "recommendation": "rollback_recovery_ready",
+  "companion_home": "/home/polaris/digital_life",
+  "pi_presence": {
+    "required": true,
+    "detected": true,
+    "evidence": [
+      "Raspberry Pi 5 Model B Rev 1.0"
+    ],
+    "claim": "real_pi_recovery_drill"
+  },
+  "profile": {
+    "name": "m6-recovery-drill",
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "cron_replacement": false,
+    "timer_installation": false,
+    "scheduler_mutation_allowed": false,
+    "semantic_shadow_authoritative": false,
+    "real_wake_requested": false,
+    "provider_generation_requested": false,
+    "raw_output_storage_required": "hash_only",
+    "dashboard_write_allowed": false,
+    "system_config_mutation_allowed": false,
+    "signal_voice_hardware_activation_allowed": false,
+    "live_restore_requested": false,
+    "live_restore_executed": false
+  },
+  "source_reports": {
+    "m6_pi_observation": {
+      "path": "life-loop/m6_pi_observation_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M6.4",
+      "recommendation": "stable_pi_field_observed",
+      "stop_reasons": [],
+      "saved_at": "2026-06-19T12:57:42.367401"
+    }
+  },
+  "backup": {
+    "requested": true,
+    "executed": true,
+    "path": "/home/polaris/digital_life/backups/m6/20260619-125958",
+    "runtime_dir": "/home/polaris/digital_life/backups/m6/20260619-125958/runtime",
+    "manifest": "/home/polaris/digital_life/backups/m6/20260619-125958/manifest.json",
+    "artifact_count": 28,
+    "byte_count": 151238
+  },
+  "restore_sandbox": {
+    "requested": true,
+    "executed": true,
+    "path": "/home/polaris/digital_life/backups/m6/20260619-125958/restore-sandbox",
+    "verified_artifact_count": 28,
+    "checksum_mismatch_count": 0,
+    "invalid_json_count": 0,
+    "mismatches": [],
+    "invalid_json": []
+  },
+  "secret_boundary": {
+    "metadata_only": true,
+    "secret_values_copied": false,
+    "entries": [
+      {
+        "path": ".secrets/deepseek.env",
+        "present": true,
+        "mode": "-rw-------",
+        "size": 53,
+        "key_names": [
+          "DEEPSEEK_API_KEY"
+        ]
+      }
+    ]
+  },
+  "field_pilot": {
+    "manual_wake": {
+      "requested": false,
+      "next_stage": "M6.4"
+    },
+    "observation": {
+      "requested": false,
+      "next_stage": "M6.5"
+    },
+    "recovery": {
+      "requested": true,
+      "executed": true,
+      "next_stage": "M6.6"
+    },
+    "scheduler_readiness": {
+      "mutated": false,
+      "readiness_stage": "M6.6"
+    }
+  },
+  "stages": [
+    {
+      "name": "m6_observation_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.4 observation report is stable",
+      "details": {
+        "path": "life-loop/m6_pi_observation_report.json",
+        "loaded": true,
+        "ok": true,
+        "milestone": "M6.4",
+        "recommendation": "stable_pi_field_observed",
+        "stop_reasons": [],
+        "saved_at": "2026-06-19T12:57:42.367401"
+      }
+    },
+    {
+      "name": "platform_identity",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "Raspberry Pi platform detected",
+      "details": {
+        "system": "Linux",
+        "machine": "aarch64",
+        "python": "3.14.4",
+        "device_tree_model": "Raspberry Pi 5 Model B Rev 1.0",
+        "raspberry_pi_detected": true
+      }
+    },
+    {
+      "name": "backup_root",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "backup root is writable and outside protected live runtime paths",
+      "details": {
+        "path": "/home/polaris/digital_life/backups/m6"
+      }
+    },
+    {
+      "name": "raw_output_boundary",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "no raw model output files are present",
+      "details": {
+        "raw_output_files": []
+      }
+    },
+    {
+      "name": "backup_create",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "backup package created",
+      "details": {
+        "requested": true,
+        "executed": true,
+        "path": "/home/polaris/digital_life/backups/m6/20260619-125958",
+        "runtime_dir": "/home/polaris/digital_life/backups/m6/20260619-125958/runtime",
+        "manifest": "/home/polaris/digital_life/backups/m6/20260619-125958/manifest.json",
+        "artifact_count": 28,
+        "byte_count": 151238
+      }
+    },
+    {
+      "name": "secret_boundary",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "secret metadata recorded without values",
+      "details": {
+        "metadata_only": true,
+        "secret_values_copied": false,
+        "entries": [
+          {
+            "path": ".secrets/deepseek.env",
+            "present": true,
+            "mode": "-rw-------",
+            "size": 53,
+            "key_names": [
+              "DEEPSEEK_API_KEY"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "restore_sandbox_verify",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "restore sandbox verified",
+      "details": {
+        "requested": true,
+        "executed": true,
+        "path": "/home/polaris/digital_life/backups/m6/20260619-125958/restore-sandbox",
+        "verified_artifact_count": 28,
+        "checksum_mismatch_count": 0,
+        "invalid_json_count": 0,
+        "mismatches": [],
+        "invalid_json": []
+      }
+    }
+  ],
+  "stop_reasons": [],
+  "pending_reasons": [],
+  "next_commands": {
+    "m6_recovery_drill": "python3 scripts/run_m6_recovery_drill.py --companion-home /home/polaris/digital_life --backup-root /home/polaris/digital_life/backups/m6",
+    "m6_scheduler_readiness_later": "requires rollback_recovery_ready"
+  },
+  "saved_at": "2026-06-19T12:59:58.586693"
+}

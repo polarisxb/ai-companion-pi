@@ -16,7 +16,9 @@ import json
 import os
 import subprocess
 import fcntl
+import shlex
 from datetime import datetime, timedelta
+from html import escape
 from pathlib import Path
 from flask import Flask, render_template_string, send_file, jsonify, request, redirect, url_for
 from werkzeug.utils import secure_filename
@@ -25,19 +27,32 @@ import sys
 
 app = Flask(__name__)
 
-# Substack pipeline integration
-sys.path.insert(0, str(Path("/media/YOUR_USERNAME/CompanionHome/scripts")))
-from substack_window import substack_bp
-app.register_blueprint(substack_bp)
-
-# Date Night shared viewing experience
-from date_night_window import date_night_bp
-app.register_blueprint(date_night_bp)
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max upload
-
 # === CONFIGURE THESE PATHS ===
-COMPANION_HOME = Path("/media/YOUR_USERNAME/CompanionHome")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+COMPANION_HOME = Path(os.environ.get("COMPANION_HOME", REPO_ROOT)).expanduser().resolve()
 # =============================
+
+SCRIPTS_DIR = COMPANION_HOME / "scripts"
+if SCRIPTS_DIR.exists():
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+
+def register_optional_blueprint(module_name, blueprint_name):
+    """Register optional dashboard extensions without breaking core Window import."""
+    try:
+        module = __import__(module_name, fromlist=[blueprint_name])
+    except ModuleNotFoundError as exc:
+        if exc.name == module_name:
+            return
+        raise
+    blueprint = getattr(module, blueprint_name, None)
+    if blueprint is not None:
+        app.register_blueprint(blueprint)
+
+
+register_optional_blueprint("substack_window", "substack_bp")
+register_optional_blueprint("date_night_window", "date_night_bp")
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max upload
 
 JOURNALS_DIR = COMPANION_HOME / "journals"
 MEMORY_STORE = COMPANION_HOME / "memory-server" / "memory_store.json"
@@ -493,6 +508,420 @@ def get_emergency_cooldown_info(requests_list):
         "hours_remaining": max(0, round(remaining.total_seconds() / 3600, 1)),
         "percent": min(100, round((elapsed.total_seconds() / (24 * 3600)) * 100)),
     }
+
+
+def safe_child_path(base_dir, child_path):
+    """Return a resolved child path only when it stays inside base_dir."""
+    try:
+        base = Path(base_dir).resolve()
+        candidate = (base / child_path).resolve()
+        candidate.relative_to(base)
+    except (OSError, ValueError):
+        return None
+    return candidate
+
+
+def build_test_commands(project_config):
+    commands = project_config.get("test_commands")
+    if commands is None:
+        command = project_config.get("test_command")
+        if not command:
+            return []
+        if not isinstance(command, str):
+            raise ValueError("test_command must be a string")
+        if any(token in command for token in ("&&", "||", ";", "|", "`", "$(", "<", ">")):
+            raise ValueError("unsafe shell syntax in test_command")
+        commands = [shlex.split(command)]
+
+    if not isinstance(commands, list):
+        raise ValueError("test_commands must be a list")
+
+    normalized = []
+    for command in commands:
+        if not isinstance(command, list) or not command or not all(isinstance(part, str) and part for part in command):
+            raise ValueError("test_commands entries must be non-empty string arrays")
+        normalized.append(command)
+    return normalized
+
+
+def _load_json(path, default=None):
+    try:
+        return json.loads(Path(path).read_text())
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return default
+
+
+def _load_wake_events():
+    events_file = COMPANION_HOME / "life-loop" / "wake_events.jsonl"
+    events = []
+    try:
+        for line in events_file.read_text().splitlines():
+            line = line.strip()
+            if line:
+                events.append(json.loads(line))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return []
+    return events
+
+
+def _latest_wake_event():
+    events = _load_wake_events()
+    return events[-1] if events else {}
+
+
+def _report(name):
+    return _load_json(COMPANION_HOME / "life-loop" / name, default={}) or {}
+
+
+def _kv(key, value):
+    return f"{escape(str(key))}={escape(str(value))}"
+
+
+def _event_life_lines(event):
+    if not event:
+        return ["No wake events captured."]
+
+    lines = [
+        escape(str(event.get("id", ""))),
+        escape(str(event.get("status", ""))),
+        escape(str(event.get("trigger", ""))),
+        f"last provider {escape(str(event.get('provider', '')))}",
+    ]
+
+    quality = event.get("quality") if isinstance(event.get("quality"), dict) else {}
+    warnings = quality.get("warnings") if isinstance(quality.get("warnings"), list) else []
+    gate = event.get("quality_gate") if isinstance(event.get("quality_gate"), dict) else {}
+    if warnings or gate:
+        decision = gate.get("decision", "unknown")
+        context = "context ready" if gate.get("context_eligible") else "context blocked"
+        lines.append(f"quality warnings gate={escape(str(decision))} {context}")
+        lines.extend(escape(str(warning)) for warning in warnings)
+
+    grounding = event.get("grounding") if isinstance(event.get("grounding"), dict) else {}
+    if grounding:
+        lines.append(
+            "grounding "
+            + _kv("supported", grounding.get("supported", 0))
+            + " "
+            + _kv("unsupported", grounding.get("unsupported", 0))
+        )
+        lines.extend(escape(str(warning)) for warning in grounding.get("warnings", []) or [])
+
+    repair = event.get("repair") if isinstance(event.get("repair"), dict) else {}
+    if repair:
+        repair_state = "succeeded" if repair.get("succeeded") else "failed" if repair.get("attempted") else "skipped"
+        lines.append(f"repair={repair_state}")
+
+    output_audit = event.get("output_audit") if isinstance(event.get("output_audit"), dict) else {}
+    if output_audit:
+        lines.append("output_audit=" + escape(str(output_audit.get("raw_output_storage", "unknown"))))
+        for key in ("initial", "final"):
+            section = output_audit.get(key) if isinstance(output_audit.get(key), dict) else {}
+            if section.get("content_hash"):
+                lines.append(escape(str(section["content_hash"])))
+
+    memory_policy = event.get("memory_policy") if isinstance(event.get("memory_policy"), dict) else {}
+    if memory_policy:
+        lines.append("memory_policy " + _kv("accepted", memory_policy.get("accepted", 0)))
+
+    shadow = event.get("semantic_shadow") if isinstance(event.get("semantic_shadow"), dict) else {}
+    if shadow:
+        attempted = shadow.get("attempted", 0)
+        succeeded = shadow.get("succeeded", 0)
+        lines.append("semantic shadow")
+        lines.append(f"semantic={escape(str(succeeded))}/{escape(str(attempted))}")
+        lines.append("semantic_shadow " + _kv("enabled", shadow.get("enabled")))
+
+    return lines
+
+
+def _report_lines(title, report):
+    if not report:
+        return [title, "missing"]
+    lines = [title]
+    for key in ("milestone", "recommendation", "saved_at"):
+        if report.get(key) is not None:
+            lines.append(escape(str(report[key])))
+    profile = report.get("profile") if isinstance(report.get("profile"), dict) else {}
+    if profile.get("name"):
+        lines.append(escape(str(profile["name"])))
+    for stage in report.get("stages", []) or []:
+        if isinstance(stage, dict) and stage.get("name"):
+            lines.append(f"{escape(str(stage['name']))}={escape(str(stage.get('status', '')))}")
+    return lines
+
+
+def _m4_wake_lines(report):
+    if not report:
+        return []
+    lines = ["failure audit"]
+    latest = report.get("latest_event") if isinstance(report.get("latest_event"), dict) else {}
+    if latest.get("id"):
+        lines.append("latest_m4_wake=" + escape(str(latest["id"])))
+    audit = report.get("failure_audit") if isinstance(report.get("failure_audit"), dict) else {}
+    if audit.get("category"):
+        lines.append(escape(str(audit["category"])))
+    for attempt in report.get("attempts", []) or []:
+        error = attempt.get("error") if isinstance(attempt, dict) and isinstance(attempt.get("error"), dict) else {}
+        if error.get("message"):
+            lines.append("retry_reason=" + escape(str(error["message"])))
+    return lines
+
+
+def _m5_quality_lines(report):
+    lines = ["M5 Quality"]
+    if not report:
+        lines.append("No M5 quality report captured.")
+        return lines
+    lines.append(escape(str(report.get("recommendation", ""))))
+    sample = report.get("sample") if isinstance(report.get("sample"), dict) else {}
+    if sample:
+        lines.append("accepted")
+        lines.append(_kv("accepted_events", sample.get("accepted_events", 0)))
+    profile = report.get("quality_profile") if isinstance(report.get("quality_profile"), dict) else {}
+    categories = profile.get("warning_categories") if isinstance(profile.get("warning_categories"), dict) else {}
+    lines.append("quality warnings")
+    lines.append("repetition=" + escape(str(categories.get("repeated_self_narrative", 0))))
+    lines.append("anchor=" + escape(str(categories.get("context_anchor", 0))))
+    lines.append("request=" + escape(str(categories.get("request", 0))))
+    for warning in profile.get("quality_warnings", []) or []:
+        lines.append(escape(str(warning)))
+    sources = report.get("source_reports") if isinstance(report.get("source_reports"), dict) else {}
+    guard = sources.get("m4_post_change_guard") if isinstance(sources.get("m4_post_change_guard"), dict) else {}
+    if guard.get("recommendation"):
+        lines.append(escape(str(guard["recommendation"])))
+    return lines
+
+
+def _m6_field_pilot_lines(
+    preflight_report,
+    manual_wake_report,
+    observation_report,
+    recovery_report,
+    scheduler_report,
+    final_freeze_report,
+):
+    lines = ["M6 Field Pilot"]
+    if (
+        not preflight_report
+        and not manual_wake_report
+        and not observation_report
+        and not recovery_report
+        and not scheduler_report
+        and not final_freeze_report
+    ):
+        lines.append("No M6 field pilot report captured.")
+        return lines
+
+    if preflight_report:
+        lines.extend(_report_lines("M6 Preflight", preflight_report))
+        pi_presence = (
+            preflight_report.get("pi_presence")
+            if isinstance(preflight_report.get("pi_presence"), dict)
+            else {}
+        )
+        if pi_presence:
+            lines.append("pi_detected=" + escape(str(pi_presence.get("detected"))))
+
+    if manual_wake_report:
+        lines.extend(_report_lines("M6 Manual Wake", manual_wake_report))
+        profile = (
+            manual_wake_report.get("profile")
+            if isinstance(manual_wake_report.get("profile"), dict)
+            else {}
+        )
+        field_pilot = (
+            manual_wake_report.get("field_pilot")
+            if isinstance(manual_wake_report.get("field_pilot"), dict)
+            else {}
+        )
+        manual_wake = (
+            field_pilot.get("manual_wake")
+            if isinstance(field_pilot.get("manual_wake"), dict)
+            else {}
+        )
+        lines.append("real_wake_requested=" + escape(str(profile.get("real_wake_requested"))))
+        lines.append("provider_generation_started=" + escape(str(profile.get("provider_generation_started"))))
+        if manual_wake:
+            lines.append("manual_wake_executed=" + escape(str(manual_wake.get("executed"))))
+            lines.append("attempt_count=" + escape(str(manual_wake.get("attempt_count", 0))))
+        for reason in manual_wake_report.get("stop_reasons", []) or []:
+            lines.append("stop_reason=" + escape(str(reason)))
+
+    if observation_report:
+        lines.extend(_report_lines("M6 Observation", observation_report))
+        field_pilot = (
+            observation_report.get("field_pilot")
+            if isinstance(observation_report.get("field_pilot"), dict)
+            else {}
+        )
+        observation = (
+            field_pilot.get("observation")
+            if isinstance(field_pilot.get("observation"), dict)
+            else {}
+        )
+        if observation:
+            lines.append("observed_events=" + escape(str(observation.get("event_count", 0))))
+            lines.append("completed_events=" + escape(str(observation.get("completed_count", 0))))
+
+    if recovery_report:
+        lines.extend(_report_lines("M6 Recovery", recovery_report))
+        backup = (
+            recovery_report.get("backup")
+            if isinstance(recovery_report.get("backup"), dict)
+            else {}
+        )
+        restore = (
+            recovery_report.get("restore_sandbox")
+            if isinstance(recovery_report.get("restore_sandbox"), dict)
+            else {}
+        )
+        secret = (
+            recovery_report.get("secret_boundary")
+            if isinstance(recovery_report.get("secret_boundary"), dict)
+            else {}
+        )
+        profile = (
+            recovery_report.get("profile")
+            if isinstance(recovery_report.get("profile"), dict)
+            else {}
+        )
+        if backup:
+            lines.append("backup_artifacts=" + escape(str(backup.get("artifact_count", 0))))
+        if restore:
+            lines.append("restore_verified=" + escape(str(restore.get("verified_artifact_count", 0))))
+            lines.append("restore_mismatches=" + escape(str(restore.get("checksum_mismatch_count", 0))))
+        if secret:
+            lines.append("secret_values_copied=" + escape(str(secret.get("secret_values_copied"))))
+        lines.append("live_restore_executed=" + escape(str(profile.get("live_restore_executed"))))
+
+    if scheduler_report:
+        lines.extend(_report_lines("M6 Scheduler", scheduler_report))
+        handoff = (
+            scheduler_report.get("handoff")
+            if isinstance(scheduler_report.get("handoff"), dict)
+            else {}
+        )
+        rollback = (
+            scheduler_report.get("rollback")
+            if isinstance(scheduler_report.get("rollback"), dict)
+            else {}
+        )
+        profile = (
+            scheduler_report.get("profile")
+            if isinstance(scheduler_report.get("profile"), dict)
+            else {}
+        )
+        if handoff:
+            lines.append("handoff_ready=" + escape(str(handoff.get("ready"))))
+            lines.append("scheduler_mutated=" + escape(str(handoff.get("mutated"))))
+            if handoff.get("recommended_trigger"):
+                lines.append(escape(str(handoff["recommended_trigger"])))
+        if rollback:
+            lines.append("rollback_instructions=" + escape(str(rollback.get("instructions_present"))))
+            if rollback.get("latest_verified_backup"):
+                lines.append(escape(str(rollback["latest_verified_backup"])))
+        lines.append("scheduler_mutation_attempted=" + escape(str(profile.get("scheduler_mutation_attempted"))))
+
+    if final_freeze_report:
+        lines.extend(_report_lines("M6 Final Freeze", final_freeze_report))
+        final_freeze = (
+            final_freeze_report.get("final_freeze")
+            if isinstance(final_freeze_report.get("final_freeze"), dict)
+            else {}
+        )
+        rollback = (
+            final_freeze_report.get("rollback")
+            if isinstance(final_freeze_report.get("rollback"), dict)
+            else {}
+        )
+        profile = (
+            final_freeze_report.get("profile")
+            if isinstance(final_freeze_report.get("profile"), dict)
+            else {}
+        )
+        if final_freeze:
+            lines.append("m6_frozen=" + escape(str(final_freeze.get("frozen"))))
+            lines.append("readonly=" + escape(str(final_freeze.get("readonly"))))
+            lines.append("scheduler_handoff_ready=" + escape(str(final_freeze.get("scheduler_handoff_ready"))))
+            lines.append("scheduler_mutated=" + escape(str(final_freeze.get("scheduler_mutated"))))
+        if rollback:
+            lines.append("rollback_ready=" + escape(str(rollback.get("ready"))))
+            if rollback.get("latest_verified_backup"):
+                lines.append(escape(str(rollback["latest_verified_backup"])))
+        lines.append("provider_generation_requested=" + escape(str(profile.get("provider_generation_requested"))))
+        lines.append("live_restore_executed=" + escape(str(profile.get("live_restore_executed"))))
+
+    return lines
+
+
+def _near_status_lines():
+    lines = ["Near-status TTL"]
+    capsule = _load_json(COMPANION_HOME / "life-loop" / "context_capsule.json", default={}) or {}
+    items = capsule.get("items") if isinstance(capsule.get("items"), list) else []
+    near_items = [
+        item for item in items
+        if isinstance(item, dict) and item.get("field") in ("human_near_status", "human_emotion")
+    ]
+    if not near_items:
+        lines.append("No context capsule captured.")
+        return lines
+    for item in near_items:
+        ttl = item.get("ttl_wakes")
+        readiness = "prompt ready" if item.get("prompt_eligible") and isinstance(ttl, int) and ttl > 0 else "prompt blocked"
+        lines.append(readiness)
+        lines.append(f"{escape(str(item.get('field')))} ttl={escape(str(ttl))}")
+        lines.append(escape(str(item.get("content", ""))))
+    return lines
+
+
+def render_life_dashboard():
+    latest = _latest_wake_event()
+    state = _load_json(COMPANION_HOME / "life-loop" / "companion_state.json", default={}) or {}
+    predeploy = _report("predeploy_report.json")
+    m3_release = _report("m3_release_gate_report.json")
+    m3_freeze = _report("m3_final_freeze_report.json")
+    m4_deploy = _report("m4_deploy_report.json")
+    m4_wake = _report("m4_wake_trial_report.json")
+    m5_quality = _report("m5_quality_report.json")
+    m6_preflight = _report("m6_preflight_report.json")
+    m6_manual_wake = _report("m6_pi_manual_wake_report.json")
+    m6_observation = _report("m6_pi_observation_report.json")
+    m6_recovery = _report("m6_recovery_drill_report.json")
+    m6_scheduler = _report("m6_scheduler_readiness_report.json")
+    m6_final_freeze = _report("m6_final_freeze_report.json")
+
+    sections = [
+        ("Internal Life Loop", _event_life_lines(latest)),
+        ("Companion State", [state.get("mood", ""), state.get("status", "")]),
+        ("Safety Gates", []),
+        ("Pi Predeploy", _report_lines("Pi Predeploy", predeploy)),
+        ("M3/M4 Gates", (
+            _report_lines("M3 Release", m3_release)
+            + _report_lines("M3 Freeze", m3_freeze)
+            + _report_lines("M4 Deploy", m4_deploy)
+            + _m4_wake_lines(m4_wake)
+        )),
+        ("M5 Quality", _m5_quality_lines(m5_quality)),
+        ("M6 Field Pilot", _m6_field_pilot_lines(
+            m6_preflight,
+            m6_manual_wake,
+            m6_observation,
+            m6_recovery,
+            m6_scheduler,
+            m6_final_freeze,
+        )),
+        ("Near-status TTL", _near_status_lines()),
+    ]
+    body = ["<!doctype html><html><body>"]
+    for title, lines in sections:
+        body.append(f"<section><h1>{escape(title)}</h1>")
+        for line in lines:
+            if line is not None and str(line) != "":
+                body.append(f"<p>{line}</p>")
+        body.append("</section>")
+    body.append("</body></html>")
+    return "\n".join(body)
 
 
 # === HTML Template ===
@@ -1109,6 +1538,7 @@ TEMPLATE = """
 
         <div class="nav">
             <a href="/" class="{{ 'active' if page == 'home' }}">home</a>
+            <a href="/life" class="{{ 'active' if page == 'life' }}">life</a>
             <a href="/board" class="{{ 'active' if page == 'board' }}">message board</a>
             <a href="/creations" class="{{ 'active' if page == 'creations' }}">creations</a>
             <a href="/library" class="{{ 'active' if page in ('library', 'reading') }}">library</a>
@@ -1968,8 +2398,8 @@ def serve_content(filename):
 @app.route("/creations/file/<path:filepath>")
 def serve_creation_file(filepath):
     """Serve files from within the creations directory."""
-    full = CREATIONS_DIR / filepath
-    if full.exists() and full.is_file():
+    full = safe_child_path(CREATIONS_DIR, filepath)
+    if full and full.exists() and full.is_file():
         return send_file(full)
     return "Not found", 404
 
@@ -2034,6 +2464,11 @@ def index():
         custom_content=get_custom_content(),
     )
     return render_template_string(TEMPLATE, **ctx)
+
+
+@app.route("/life")
+def life_dashboard():
+    return render_life_dashboard()
 
 
 @app.route("/board")
@@ -2237,26 +2672,39 @@ def task_test(task_id):
         return redirect(url_for("tasks"))
     config = get_task_config()
     proj_config = config.get("projects", {}).get(task["project"], {})
-    test_cmd = proj_config.get("test_command", "")
+    try:
+        test_commands = build_test_commands(proj_config)
+    except ValueError as exc:
+        task["status"] = "test_failed"
+        task["test_result"] = f"FAIL: {exc}"
+        save_task_queue(queue)
+        return redirect(url_for("tasks"))
     test_timeout = config.get("defaults", {}).get("test_timeout_seconds", 30)
-    if not test_cmd:
+    if not test_commands:
         task["status"] = "tested"
         task["tested"] = datetime.now().isoformat()
         task["test_result"] = "PASS: no test command configured, skipped"
         save_task_queue(queue)
         return redirect(url_for("tasks"))
     try:
-        result = subprocess.run(
-            test_cmd, shell=True, cwd=task["project_path"],
-            capture_output=True, text=True, timeout=test_timeout
-        )
-        if result.returncode == 0:
+        outputs = []
+        failed = None
+        for test_cmd in test_commands:
+            result = subprocess.run(
+                test_cmd, cwd=task["project_path"],
+                capture_output=True, text=True, timeout=test_timeout
+            )
+            outputs.append(result.stdout or result.stderr)
+            if result.returncode != 0:
+                failed = result
+                break
+        if failed is None:
             task["status"] = "tested"
             task["tested"] = datetime.now().isoformat()
-            task["test_result"] = f"PASS: {result.stdout[:300]}"
+            task["test_result"] = f"PASS: {' '.join(outputs)[:300]}"
         else:
             task["status"] = "test_failed"
-            task["test_result"] = f"FAIL (exit {result.returncode}): {result.stderr[:300]}"
+            task["test_result"] = f"FAIL (exit {failed.returncode}): {failed.stderr[:300]}"
         save_task_queue(queue)
     except subprocess.TimeoutExpired:
         task["status"] = "test_failed"

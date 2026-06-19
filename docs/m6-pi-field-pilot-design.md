@@ -1,7 +1,7 @@
 # M6 Pi Field Pilot Design
 
-Status: M6.3 guarded manual-wake entry implemented; real Pi trial pending
-Last updated: 2026-06-18
+Status: M6.7 final freeze passed; ready for M7 text dialogue planning
+Last updated: 2026-06-19
 
 ## Decision
 
@@ -198,8 +198,9 @@ Current status: the guarded entry is implemented in
 report, requires `--confirm-real-pi-wake`, requires Raspberry Pi platform
 identity, confirms hash-only raw output storage, and only then delegates to the
 existing M4 wake-trial wrapper. A local run without those gates returns an M6.3
-guard report and must not call DeepSeek or create a wake event. The actual M6.3
-success report remains pending until it is run on the real Pi.
+guard report and must not call DeepSeek or create a wake event. On the real Pi,
+the confirmed M6.3 trial has produced
+`recommendation=continue_pi_observation`.
 
 The trial must preserve the M4/M5 retry discipline:
 
@@ -230,6 +231,13 @@ read-only dashboard state.
 It does not run a wake and does not call DeepSeek. It reads evidence from the
 real Pi CompanionHome and decides whether the pilot remains stable.
 
+Current status: implemented in `companion_core/m6_observation.py` and
+`scripts/run_m6_pi_observation_check.py`. The gate verifies the M6.3 report,
+matching wake event, journal presence, journal consistency with a completed
+real manual wake, event health, hash-only raw output storage, readable runtime
+JSON artifacts, and semantic-shadow authority isolation. The current Pi report
+returns `recommendation=stable_pi_field_observed`.
+
 Expected report:
 
 ```text
@@ -249,6 +257,14 @@ M6.5 proves recoverability for Pi-managed artifacts. The drill should operate
 on an explicit backup target and a documented restore scope. It must not delete
 or overwrite live Pi state without a manually approved drill command and a
 recoverable backup already present.
+
+Current status: implemented and verified on the Pi. The default M6.5 drill is
+captured in `docs/m6-pi-recovery-drill-design.md` and implemented by
+`scripts/run_m6_recovery_drill.py` as a non-destructive backup plus
+restore-sandbox verification; live restore remains out of scope unless a later
+explicit command and confirmation flag are added. The current report is
+`life-loop/m6_recovery_drill_report.json` with
+`recommendation=rollback_recovery_ready`.
 
 The drill should cover at least:
 
@@ -276,6 +292,11 @@ Recommendation values:
 M6.6 only decides whether the frozen wake path is ready to be handed to the
 existing scheduler/cron process. It must not replace cron, install a new timer,
 enable a service, or edit crontab.
+
+Current status: implemented and verified on the Pi. The M6.6 command produces
+`life-loop/m6_scheduler_readiness_report.json` with
+`recommendation=ready_for_scheduler_handoff`, visible handoff/pause/rollback
+commands, and no scheduler mutation.
 
 Readiness should require:
 
@@ -306,6 +327,15 @@ reports and evidence only; it does not run a wake, call DeepSeek, replace cron,
 install timers, edit system configuration, mutate the dashboard, or change
 memory authority.
 
+Current status: implemented in `companion_core/m6_final_freeze.py` and
+`scripts/run_m6_final_freeze.py`. The gate loads M6.2 preflight, M6.5
+recovery, M6.6 scheduler readiness, and the updated M6.1 migration manifest;
+re-runs current M4.7 and M5.7 read-only guards; audits semantic-shadow
+authority; verifies scheduler mutation flags and rollback backup evidence; and
+writes `life-loop/m6_final_freeze_report.json`. It does not run a wake, call a
+provider, edit scheduler state, install services, run live restore, change the
+dashboard write surface, or promote semantic memory authority.
+
 Expected report:
 
 ```text
@@ -315,6 +345,7 @@ life-loop/m6_final_freeze_report.json
 Recommendation values:
 
 - `m6_frozen_ready_for_scheduler_handoff`
+- `pi_required`
 - `inspect`
 
 ## Stage Outcome Semantics
@@ -356,8 +387,9 @@ contract explicit:
   - Recommendations: `stable_pi_field_observed`, `continue_pi_observation`,
     `pi_required`, `inspect`.
   - `stop_reasons`: Pi absent, observation window incomplete with failures,
-    failed/rejected wake, unsupported grounding, write-boundary regression, or
-    missing evidence.
+    failed/rejected wake, unsupported grounding, write-boundary regression,
+    journal contradiction against completed real wake state, raw output
+    retention, or missing evidence.
 - M6.5:
   - `ok=true` when backup, rollback, and recovery drill evidence proves the
     scoped artifacts can be restored without exposing secrets or losing
@@ -377,10 +409,12 @@ contract explicit:
 - M6.7:
   - `ok=true` when required M6 reports pass, M5.7 evidence is preserved, and
     the final freeze performs only read-only evidence validation.
-  - Recommendations: `m6_frozen_ready_for_scheduler_handoff`, `inspect`.
+  - Recommendations: `m6_frozen_ready_for_scheduler_handoff`, `pi_required`,
+    `inspect`.
   - `stop_reasons`: required M6 report missing/not ready, M5.7 evidence
-    missing or regressed, blocking audit anomaly, cron/timer/system mutation,
-    provider call, or authority expansion.
+    missing or regressed, missing M6.7 manifest evidence, missing
+    rollback/backup evidence, blocking audit anomaly, cron/timer/system
+    mutation, provider call, live restore, or authority expansion.
 
 ## Report Schema Draft
 
@@ -524,6 +558,19 @@ non-generative gate discipline after the manual wake trial: observation,
 recovery readiness, scheduler readiness, and final freeze read evidence rather
 than generating new companion output.
 
+For M6.7 final freeze:
+
+```bash
+.venv/bin/python -m pytest tests/test_internal_life_loop.py -q \
+  -k 'm6_final_freeze or m6_scheduler_readiness'
+.venv/bin/python scripts/run_m6_final_freeze.py \
+  --companion-home /home/polaris/digital_life
+```
+
+The M6.7 command must not run a wake, call DeepSeek, edit scheduler/system
+configuration, install timers/services, execute live restore, mutate the
+dashboard write surface, or promote semantic memory authority.
+
 ## M6.0 Acceptance Criteria
 
 - This document exists and is linked from `docs/internal-life-loop.md`.
@@ -578,3 +625,61 @@ than generating new companion output.
 - The guarded local tests use fake wake runners or blocked CLI paths; they do
   not call DeepSeek, run a real wake, edit scheduler/system configuration, or
   create a canonical real-Pi success claim.
+
+## M6.4 Observation Acceptance Criteria
+
+- `companion_core/m6_observation.py` and
+  `scripts/run_m6_pi_observation_check.py` exist.
+- The check does not run a wake, call DeepSeek, edit scheduler/system
+  configuration, or mutate dashboard write surfaces.
+- The report returns `milestone=M6.4` and
+  `recommendation=stable_pi_field_observed` when the latest M6.3 report, its
+  matching wake event, journal, runtime JSON artifacts, hash-only output audit,
+  and semantic-shadow authority are healthy.
+- The report returns `recommendation=inspect` when a completed real manual wake
+  journal contradicts the M6.3 state by claiming preflight/configuration is
+  still pending or the wake was not real.
+
+## M6.5 Recovery Acceptance Criteria
+
+- `companion_core/m6_recovery.py` and `scripts/run_m6_recovery_drill.py` exist.
+- The drill creates a backup package and verifies restore in a sandbox.
+- The report returns `milestone=M6.5`,
+  `recommendation=rollback_recovery_ready`, and `stop_reasons=[]` when
+  backup/restore checks pass on the Pi.
+- The drill records `.secrets/` metadata only and does not copy secret values.
+- The default drill does not run a wake, call DeepSeek, edit scheduler/system
+  configuration, mutate dashboard write surfaces, or execute live restore.
+
+## M6.6 Scheduler Readiness Acceptance Criteria
+
+- `companion_core/m6_scheduler.py` and
+  `scripts/run_m6_scheduler_readiness.py` exist.
+- The check loads M6.3, M6.4, and M6.5 evidence and re-runs current M4.7 and
+  M5.7 guards.
+- The report returns `milestone=M6.6`,
+  `recommendation=ready_for_scheduler_handoff`, and `stop_reasons=[]` when the
+  field pilot is ready for scheduler handoff.
+- The report records the target scheduled-wake command, rollback instructions,
+  latest verified backup, and `scheduler_mutated=false`.
+- The check does not edit cron/crontab, install timers, enable services, run a
+  wake, call DeepSeek, mutate dashboard write surfaces, or execute live
+  restore.
+
+## M6.7 Final Freeze Acceptance Criteria
+
+- `companion_core/m6_final_freeze.py` and
+  `scripts/run_m6_final_freeze.py` exist.
+- `docs/m6-pi-final-freeze-design.md` defines the final freeze boundary.
+- `life-loop/m6_migration_manifest.json` includes
+  `scripts/run_m6_final_freeze.py`, `docs/m6-pi-final-freeze-design.md`, and
+  `life-loop/m6_final_freeze_report.json` in the evidence chain.
+- The check loads M6.2, M6.5, and M6.6 reports, re-runs current M4.7 and M5.7
+  read-only guards, audits semantic shadow authority, verifies scheduler
+  mutation flags are false, and verifies rollback/backup evidence exists.
+- The report returns `milestone=M6.7`,
+  `recommendation=m6_frozen_ready_for_scheduler_handoff`, and
+  `stop_reasons=[]` on the real Pi.
+- The check does not run a wake, call DeepSeek, edit cron/crontab, install
+  timers, enable services, execute live restore, mutate dashboard write
+  surfaces, or promote semantic memory authority.

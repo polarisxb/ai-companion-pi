@@ -218,7 +218,7 @@
       "details": {
         "ok": true,
         "message": "semantic shadow authority is isolated",
-        "main_memory_count": 47,
+        "main_memory_count": 3,
         "shadow_memory_count": 0,
         "main_store": "memory-server/memory_store.json",
         "shadow_store": "life-loop/semantic_shadow/memory_store.json",
@@ -367,16 +367,16 @@
     },
     {
       "name": "platform_identity",
-      "status": "warning",
+      "status": "passed",
       "ok": true,
       "required": false,
-      "message": "Raspberry Pi platform was not detected; this is advisory unless --require-raspberry-pi is set",
+      "message": "Raspberry Pi platform detected",
       "details": {
         "system": "Linux",
-        "machine": "x86_64",
-        "python": "3.14.5",
-        "device_tree_model": null,
-        "raspberry_pi_detected": false,
+        "machine": "aarch64",
+        "python": "3.14.4",
+        "device_tree_model": "Raspberry Pi 5 Model B Rev 1.0",
+        "raspberry_pi_detected": true,
         "require_raspberry_pi": false
       }
     }
@@ -387,5 +387,5 @@
     "wake_trial": "python3 scripts/run_m4_wake_trial.py --companion-home /home/polaris/digital_life --timeout 300",
     "runtime_validation": "python3 scripts/run_m4_runtime_validation.py --companion-home /home/polaris/digital_life"
   },
-  "saved_at": "2026-06-14T20:38:05.372424"
+  "saved_at": "2026-06-19T12:36:50.696865"
 }

@@ -46,5 +46,5 @@
     "post_change_guard": "python3 scripts/run_m4_post_change_guard.py --companion-home /home/polaris/digital_life",
     "full_tests": "python3 -m pytest"
   },
-  "saved_at": "2026-06-15T12:04:38.602768"
+  "saved_at": "2026-06-19T12:37:02.620242"
 }

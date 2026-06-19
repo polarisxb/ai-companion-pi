@@ -1,0 +1,479 @@
+{
+  "ok": true,
+  "milestone": "M6.7",
+  "recommendation": "m6_frozen_ready_for_scheduler_handoff",
+  "companion_home": "/home/polaris/digital_life",
+  "pi_presence": {
+    "required": true,
+    "detected": true,
+    "evidence": [
+      "Raspberry Pi 5 Model B Rev 1.0"
+    ],
+    "claim": "real_pi_m6_final_freeze"
+  },
+  "profile": {
+    "name": "m6-final-freeze",
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "cron_replacement": false,
+    "timer_installation": false,
+    "service_enablement": false,
+    "crontab_edit_allowed": false,
+    "scheduler_mutation_allowed": false,
+    "scheduler_mutation_attempted": false,
+    "scheduler_handoff_performed": false,
+    "semantic_shadow_authoritative": false,
+    "real_wake_requested": false,
+    "provider_generation_requested": false,
+    "raw_output_storage_required": "hash_only",
+    "dashboard_write_allowed": false,
+    "system_config_mutation_allowed": false,
+    "signal_voice_hardware_activation_allowed": false,
+    "live_restore_requested": false,
+    "live_restore_executed": false
+  },
+  "source_reports": {
+    "m6_migration_manifest": {
+      "loaded": true,
+      "ok": true,
+      "milestone": "M6.1",
+      "recommendation": "migration_manifest_ready",
+      "stop_reasons": [],
+      "saved_at": "2026-06-15T15:42:54+08:00",
+      "path": "life-loop/m6_migration_manifest.json"
+    },
+    "m6_preflight": {
+      "loaded": true,
+      "ok": true,
+      "milestone": "M6.2",
+      "recommendation": "ready_for_real_pi_manual_wake",
+      "stop_reasons": [],
+      "saved_at": "2026-06-19T13:43:14.518586",
+      "path": "life-loop/m6_preflight_report.json"
+    },
+    "m6_recovery_drill": {
+      "loaded": true,
+      "ok": true,
+      "milestone": "M6.5",
+      "recommendation": "rollback_recovery_ready",
+      "stop_reasons": [],
+      "saved_at": "2026-06-19T12:59:58.586693",
+      "path": "life-loop/m6_recovery_drill_report.json"
+    },
+    "m6_scheduler_readiness": {
+      "loaded": true,
+      "ok": true,
+      "milestone": "M6.6",
+      "recommendation": "ready_for_scheduler_handoff",
+      "stop_reasons": [],
+      "saved_at": "2026-06-19T13:43:25.497119",
+      "path": "life-loop/m6_scheduler_readiness_report.json"
+    },
+    "m4_post_change_guard_current": {
+      "loaded": true,
+      "ok": true,
+      "milestone": "M4.7",
+      "recommendation": "m4_still_deployable",
+      "stop_reasons": [],
+      "saved_at": null
+    },
+    "m5_final_freeze_current": {
+      "loaded": true,
+      "ok": true,
+      "milestone": "M5.7",
+      "recommendation": "m5_frozen_ready_for_m6",
+      "stop_reasons": [],
+      "saved_at": null
+    }
+  },
+  "final_freeze": {
+    "frozen": true,
+    "readonly": true,
+    "scheduler_handoff_ready": true,
+    "scheduler_mutated": false,
+    "scheduler_mutation_attempted": false,
+    "target_command": "cd /home/polaris/digital_life && .venv/bin/python scripts/run_wake_cycle.py --companion-home /home/polaris/digital_life --provider deepseek --memory-mode json --trigger scheduled-wake",
+    "next_stage": "M7"
+  },
+  "handoff": {
+    "ready": true,
+    "mutated": false,
+    "target_command": "cd /home/polaris/digital_life && .venv/bin/python scripts/run_wake_cycle.py --companion-home /home/polaris/digital_life --provider deepseek --memory-mode json --trigger scheduled-wake",
+    "recommended_trigger": "scheduled-wake"
+  },
+  "rollback": {
+    "ready": true,
+    "instructions_present": true,
+    "latest_verified_backup": "backups/m6/20260619-125958",
+    "live_restore_executed": false
+  },
+  "field_pilot": {
+    "preflight": {
+      "ready": true,
+      "source_stage": "M6.2"
+    },
+    "recovery": {
+      "ready": true,
+      "source_stage": "M6.5"
+    },
+    "scheduler_readiness": {
+      "ready": true,
+      "mutated": false,
+      "source_stage": "M6.6"
+    },
+    "final_freeze": {
+      "requested": true,
+      "ready": true,
+      "next_stage": "M7"
+    }
+  },
+  "stages": [
+    {
+      "name": "m6_preflight_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.2 preflight is ready",
+      "details": {
+        "loaded": true,
+        "ok": true,
+        "milestone": "M6.2",
+        "recommendation": "ready_for_real_pi_manual_wake",
+        "stop_reasons": [],
+        "saved_at": "2026-06-19T13:43:14.518586",
+        "path": "life-loop/m6_preflight_report.json"
+      }
+    },
+    {
+      "name": "m6_recovery_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.5 recovery evidence is ready",
+      "details": {
+        "loaded": true,
+        "ok": true,
+        "milestone": "M6.5",
+        "recommendation": "rollback_recovery_ready",
+        "stop_reasons": [],
+        "saved_at": "2026-06-19T12:59:58.586693",
+        "path": "life-loop/m6_recovery_drill_report.json"
+      }
+    },
+    {
+      "name": "m6_scheduler_readiness_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.6 scheduler handoff evidence is ready",
+      "details": {
+        "loaded": true,
+        "ok": true,
+        "milestone": "M6.6",
+        "recommendation": "ready_for_scheduler_handoff",
+        "stop_reasons": [],
+        "saved_at": "2026-06-19T13:43:25.497119",
+        "path": "life-loop/m6_scheduler_readiness_report.json"
+      }
+    },
+    {
+      "name": "m6_manifest_m6_7_artifacts",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.1 manifest carries M6.7 script, design, and report evidence",
+      "details": {
+        "path": "life-loop/m6_migration_manifest.json",
+        "required_repository_paths": [
+          "scripts/run_m6_final_freeze.py",
+          "docs/m6-pi-final-freeze-design.md"
+        ],
+        "runtime_artifacts_to_preserve": [
+          "life-loop/m6_final_freeze_report.json"
+        ]
+      }
+    },
+    {
+      "name": "platform_identity",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "Raspberry Pi platform detected",
+      "details": {
+        "system": "Linux",
+        "machine": "aarch64",
+        "python": "3.14.4",
+        "device_tree_model": "Raspberry Pi 5 Model B Rev 1.0",
+        "raspberry_pi_detected": true
+      }
+    },
+    {
+      "name": "final_freeze_readonly_boundary",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.7 reads evidence only and does not mutate runtime authority or scheduler state",
+      "details": {
+        "name": "m6-final-freeze",
+        "provider": "deepseek",
+        "memory_mode": "json",
+        "cron_replacement": false,
+        "timer_installation": false,
+        "service_enablement": false,
+        "crontab_edit_allowed": false,
+        "scheduler_mutation_allowed": false,
+        "scheduler_mutation_attempted": false,
+        "scheduler_handoff_performed": false,
+        "semantic_shadow_authoritative": false,
+        "real_wake_requested": false,
+        "provider_generation_requested": false,
+        "raw_output_storage_required": "hash_only",
+        "dashboard_write_allowed": false,
+        "system_config_mutation_allowed": false,
+        "signal_voice_hardware_activation_allowed": false,
+        "live_restore_requested": false,
+        "live_restore_executed": false
+      }
+    },
+    {
+      "name": "scheduler_mutation_flags",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "scheduler, service, dashboard, provider, restore, and authority mutation flags are false",
+      "details": {
+        "flags": [
+          {
+            "report": "M6.2",
+            "field": "profile.cron_replacement",
+            "value": false
+          },
+          {
+            "report": "M6.2",
+            "field": "profile.timer_installation",
+            "value": false
+          },
+          {
+            "report": "M6.2",
+            "field": "profile.scheduler_mutation_allowed",
+            "value": false
+          },
+          {
+            "report": "M6.2",
+            "field": "profile.dashboard_write_allowed",
+            "value": false
+          },
+          {
+            "report": "M6.2",
+            "field": "profile.system_config_mutation_allowed",
+            "value": false
+          },
+          {
+            "report": "M6.2",
+            "field": "profile.semantic_shadow_authoritative",
+            "value": false
+          },
+          {
+            "report": "M6.2",
+            "field": "profile.provider_generation_requested",
+            "value": false
+          },
+          {
+            "report": "M6.2",
+            "field": "field_pilot.scheduler_readiness.mutated",
+            "value": false
+          },
+          {
+            "report": "M6.5",
+            "field": "profile.cron_replacement",
+            "value": false
+          },
+          {
+            "report": "M6.5",
+            "field": "profile.timer_installation",
+            "value": false
+          },
+          {
+            "report": "M6.5",
+            "field": "profile.scheduler_mutation_allowed",
+            "value": false
+          },
+          {
+            "report": "M6.5",
+            "field": "profile.dashboard_write_allowed",
+            "value": false
+          },
+          {
+            "report": "M6.5",
+            "field": "profile.system_config_mutation_allowed",
+            "value": false
+          },
+          {
+            "report": "M6.5",
+            "field": "profile.semantic_shadow_authoritative",
+            "value": false
+          },
+          {
+            "report": "M6.5",
+            "field": "profile.provider_generation_requested",
+            "value": false
+          },
+          {
+            "report": "M6.5",
+            "field": "profile.live_restore_requested",
+            "value": false
+          },
+          {
+            "report": "M6.5",
+            "field": "profile.live_restore_executed",
+            "value": false
+          },
+          {
+            "report": "M6.5",
+            "field": "field_pilot.scheduler_readiness.mutated",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "profile.cron_replacement",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "profile.timer_installation",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "profile.service_enablement",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "profile.crontab_edit_allowed",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "profile.scheduler_mutation_allowed",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "profile.scheduler_mutation_attempted",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "profile.dashboard_write_allowed",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "profile.system_config_mutation_allowed",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "profile.semantic_shadow_authoritative",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "profile.provider_generation_requested",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "profile.live_restore_requested",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "profile.live_restore_executed",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "handoff.mutated",
+            "value": false
+          },
+          {
+            "report": "M6.6",
+            "field": "field_pilot.scheduler_readiness.mutated",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "rollback_backup_evidence",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "rollback backup and restore evidence exists",
+      "details": {
+        "backup_path": "backups/m6/20260619-125958",
+        "manifest_path": "backups/m6/20260619-125958/manifest.json",
+        "latest_verified_backup": "backups/m6/20260619-125958",
+        "verified_artifact_count": 28,
+        "checksum_mismatch_count": 0,
+        "invalid_json_count": 0
+      }
+    },
+    {
+      "name": "semantic_shadow_authority",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "semantic shadow authority is isolated",
+      "details": {
+        "ok": true,
+        "message": "semantic shadow authority is isolated",
+        "main_memory_count": 3,
+        "shadow_memory_count": 0,
+        "main_store": "memory-server/memory_store.json",
+        "shadow_store": "life-loop/semantic_shadow/memory_store.json",
+        "problems": []
+      }
+    },
+    {
+      "name": "m4_post_change_guard_current",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "current M4 post-change guard remains deployable",
+      "details": {
+        "loaded": true,
+        "ok": true,
+        "milestone": "M4.7",
+        "recommendation": "m4_still_deployable",
+        "stop_reasons": [],
+        "saved_at": null
+      }
+    },
+    {
+      "name": "m5_final_freeze_current",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "current M5.7 final freeze remains ready for scheduler handoff",
+      "details": {
+        "loaded": true,
+        "ok": true,
+        "milestone": "M5.7",
+        "recommendation": "m5_frozen_ready_for_m6",
+        "stop_reasons": [],
+        "saved_at": null
+      }
+    }
+  ],
+  "stop_reasons": [],
+  "pending_reasons": [],
+  "next_commands": {
+    "m6_final_freeze": "python3 scripts/run_m6_final_freeze.py --companion-home /home/polaris/digital_life",
+    "scheduler_handoff_target": "cd /home/polaris/digital_life && .venv/bin/python scripts/run_wake_cycle.py --companion-home /home/polaris/digital_life --provider deepseek --memory-mode json --trigger scheduled-wake",
+    "m7_scheduler_pilot_later": "requires m6_frozen_ready_for_scheduler_handoff"
+  },
+  "saved_at": "2026-06-19T15:11:15.214300"
+}

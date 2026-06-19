@@ -240,9 +240,13 @@ class LifeLoopRunner:
         companion_state = _render_companion_state_for_prompt(context.companion_state)
         context_capsule = render_context_capsule(context.context_capsule)
         grounding_ledger = render_grounding_ledger(context)
+        trigger_guidance = _render_trigger_guidance(trigger)
         return f"""You are an autonomous AI companion.
 
 Trigger: {trigger}
+
+=== CURRENT WAKE EXECUTION FACTS ===
+{trigger_guidance}
 
 === WHO YOU ARE ===
 {context.who_companion}
@@ -440,6 +444,18 @@ Optional request blocks with English field keys type/title/body/priority and Sim
                 "message": str(error),
             }
         return event
+
+
+def _render_trigger_guidance(trigger: str) -> str:
+    if str(trigger).startswith("m6-pi-manual-wake"):
+        return "\n".join([
+            "This trigger is a confirmed M6.3 real Pi manual wake execution on the Raspberry Pi.",
+            "M6.2 preflight has already passed before this wake was allowed to run.",
+            "Do not describe this wake as fake, pending preflight, pending dependency setup, or not a real wake.",
+            "If you mention the operational state, say the real manual wake is being executed under explicit operator confirmation.",
+            "Continue to preserve boundaries: no cron, no timers, no Signal, no voice/camera/sensors/hardware activation, no dashboard writes, no raw model output storage.",
+        ])
+    return "(no special trigger execution facts)"
 
 
 def load_recent_raw_journals_for_quality(paths: CompanionPaths, limit: int = 3) -> list[tuple[str, str]]:

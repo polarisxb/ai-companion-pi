@@ -52,6 +52,20 @@ The companion's outbound communication channel. Shows active requests (pending, 
 
 See [requests-system-design.md](requests-system-design.md) for the full request system documentation.
 
+### Chat (Planned M7)
+
+The planned M7 chat page is the human's live text dialogue channel with the
+companion. It is distinct from the Message Board, which stores notes for the
+next wakeup, and distinct from Requests, which are structured companion asks.
+
+The first chat implementation should prove the M7 dialogue engine through CLI
+first. The dashboard page should reuse that engine after the API is stable and
+may follow a human-provided UI design. It should write conversation
+transcripts, not wake events, and show a transcript, composer, compact
+companion state/provider metadata, error/retry states, and memory proposals
+when present. See [m7-text-dialogue-design.md](m7-text-dialogue-design.md) and
+the repository `DESIGN.md`.
+
 ## Setup
 
 The setup script handles installation, but manually:

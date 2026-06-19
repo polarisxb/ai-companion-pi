@@ -1,0 +1,207 @@
+{
+  "ok": true,
+  "milestone": "M6.4",
+  "recommendation": "stable_pi_field_observed",
+  "companion_home": "/home/polaris/digital_life",
+  "profile": {
+    "name": "m6-pi-observation-gate",
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "cron_replacement": false,
+    "timer_installation": false,
+    "scheduler_mutation_allowed": false,
+    "semantic_shadow_authoritative": false,
+    "real_wake_requested": false,
+    "provider_generation_requested": false,
+    "raw_output_storage_required": "hash_only",
+    "dashboard_write_allowed": false,
+    "system_config_mutation_allowed": false,
+    "signal_voice_hardware_activation_allowed": false,
+    "trigger_prefix": "m6-pi-manual-wake",
+    "min_completed_events": 1
+  },
+  "source_reports": {
+    "m6_pi_manual_wake": {
+      "path": "life-loop/m6_pi_manual_wake_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M6.3",
+      "recommendation": "continue_pi_observation",
+      "stop_reasons": [],
+      "saved_at": "2026-06-19T12:33:30.176002"
+    }
+  },
+  "field_pilot": {
+    "manual_wake": {
+      "observed": true,
+      "event_id": "wake_20260619_123313_014186_d8dd2d83",
+      "journal": "journals/wakeup_2026-06-19_12-33-30-170563.md"
+    },
+    "observation": {
+      "requested": true,
+      "event_count": 2,
+      "completed_count": 2,
+      "next_stage": "M6.5"
+    },
+    "recovery": {
+      "requested": false,
+      "next_stage": "M6.5"
+    },
+    "scheduler_readiness": {
+      "mutated": false,
+      "readiness_stage": "M6.6"
+    }
+  },
+  "stages": [
+    {
+      "name": "m6_manual_wake_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.3 real Pi manual wake report is ready",
+      "details": {
+        "path": "life-loop/m6_pi_manual_wake_report.json",
+        "loaded": true,
+        "ok": true,
+        "milestone": "M6.3",
+        "recommendation": "continue_pi_observation",
+        "stop_reasons": [],
+        "saved_at": "2026-06-19T12:33:30.176002"
+      }
+    },
+    {
+      "name": "platform_identity",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.3 report was produced on a Raspberry Pi",
+      "details": {
+        "required": true,
+        "detected": true,
+        "evidence": [
+          "Raspberry Pi 5 Model B Rev 1.0"
+        ],
+        "claim": "real_pi_manual_wake_trial"
+      }
+    },
+    {
+      "name": "observation_scope",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6 wake events found in observation scope",
+      "details": {
+        "trigger_prefix": "m6-pi-manual-wake",
+        "event_count": 2,
+        "completed_count": 2,
+        "min_completed_events": 1
+      }
+    },
+    {
+      "name": "m6_manual_wake_event",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.3 delegate event is present in wake_events",
+      "details": {
+        "report_event": {
+          "id": "wake_20260619_123313_014186_d8dd2d83",
+          "trigger": "m6-pi-manual-wake:attempt-1",
+          "status": "completed",
+          "provider": "deepseek",
+          "memory_backend": "json",
+          "started_at": "2026-06-19T12:33:13.014186",
+          "completed_at": "2026-06-19T12:33:30.175426",
+          "journal": "journals/wakeup_2026-06-19_12-33-30-170563.md"
+        },
+        "observed_event": {
+          "id": "wake_20260619_123313_014186_d8dd2d83",
+          "trigger": "m6-pi-manual-wake:attempt-1",
+          "status": "completed",
+          "journal": "journals/wakeup_2026-06-19_12-33-30-170563.md"
+        }
+      }
+    },
+    {
+      "name": "event_health",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6 wake event health is clean",
+      "details": {
+        "failures": []
+      }
+    },
+    {
+      "name": "journal_presence",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6 journal exists",
+      "details": {
+        "journal": "journals/wakeup_2026-06-19_12-33-30-170563.md",
+        "exists": true,
+        "size": 1149
+      }
+    },
+    {
+      "name": "journal_m6_consistency",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6 journal is consistent with a completed real manual wake",
+      "details": {
+        "contradiction_patterns": [],
+        "journal": "journals/wakeup_2026-06-19_12-33-30-170563.md"
+      }
+    },
+    {
+      "name": "runtime_json_artifacts",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "runtime JSON artifacts are readable",
+      "details": {
+        "memory_store": {
+          "path": "memory-server/memory_store.json",
+          "valid_json": true
+        },
+        "requests_file": {
+          "path": "requests/requests.json",
+          "valid_json": true
+        },
+        "companion_state": {
+          "path": "life-loop/companion_state.json",
+          "valid_json": true
+        },
+        "context_capsule": {
+          "path": "life-loop/context_capsule.json",
+          "valid_json": true
+        }
+      }
+    },
+    {
+      "name": "semantic_shadow_authority",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "semantic shadow authority is isolated",
+      "details": {
+        "ok": true,
+        "message": "semantic shadow authority is isolated",
+        "main_memory_count": 3,
+        "shadow_memory_count": 0,
+        "main_store": "memory-server/memory_store.json",
+        "shadow_store": "life-loop/semantic_shadow/memory_store.json",
+        "problems": []
+      }
+    }
+  ],
+  "stop_reasons": [],
+  "pending_reasons": [],
+  "next_commands": {
+    "m6_observation": "python3 scripts/run_m6_pi_observation_check.py --companion-home /home/polaris/digital_life",
+    "m6_recovery_later": "requires stable M6.4 observation report"
+  },
+  "saved_at": "2026-06-19T12:57:42.367401"
+}

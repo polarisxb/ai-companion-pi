@@ -1,0 +1,180 @@
+{
+  "ok": true,
+  "milestone": "M6.3",
+  "recommendation": "continue_pi_observation",
+  "companion_home": "/home/polaris/digital_life",
+  "pi_presence": {
+    "required": true,
+    "detected": true,
+    "evidence": [
+      "Raspberry Pi 5 Model B Rev 1.0"
+    ],
+    "claim": "real_pi_manual_wake_trial"
+  },
+  "profile": {
+    "name": "m6-real-pi-manual-wake-trial",
+    "provider": "deepseek",
+    "memory_mode": "json",
+    "trigger": "m6-pi-manual-wake",
+    "cron_replacement": false,
+    "timer_installation": false,
+    "scheduler_mutation_allowed": false,
+    "semantic_shadow_authoritative": false,
+    "real_wake_requested": true,
+    "provider_generation_requested": true,
+    "provider_generation_started": true,
+    "raw_output_storage_required": "hash_only",
+    "dashboard_write_allowed": false,
+    "system_config_mutation_allowed": false,
+    "signal_voice_hardware_activation_allowed": false
+  },
+  "source_reports": {
+    "m6_preflight": {
+      "path": "life-loop/m6_preflight_report.json",
+      "loaded": true,
+      "ok": true,
+      "milestone": "M6.2",
+      "recommendation": "ready_for_real_pi_manual_wake",
+      "stop_reasons": [],
+      "saved_at": "2026-06-19T12:33:04.427507"
+    },
+    "m4_manual_wake_delegate": {
+      "loaded": true,
+      "ok": true,
+      "milestone": "M4.3",
+      "recommendation": "continue_runtime_validation",
+      "stop_reasons": [],
+      "saved_at": null
+    }
+  },
+  "field_pilot": {
+    "manual_wake": {
+      "requested": true,
+      "executed": true,
+      "trigger": "m6-pi-manual-wake",
+      "attempt_count": 1,
+      "next_stage": "M6.4"
+    },
+    "observation": {
+      "requested": false,
+      "next_stage": "M6.4"
+    },
+    "recovery": {
+      "requested": false,
+      "next_stage": "M6.5"
+    },
+    "scheduler_readiness": {
+      "mutated": false,
+      "readiness_stage": "M6.6"
+    }
+  },
+  "stages": [
+    {
+      "name": "m6_preflight_report",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.2 preflight is ready for real Pi manual wake",
+      "details": {
+        "path": "life-loop/m6_preflight_report.json",
+        "loaded": true,
+        "ok": true,
+        "milestone": "M6.2",
+        "recommendation": "ready_for_real_pi_manual_wake",
+        "stop_reasons": [],
+        "saved_at": "2026-06-19T12:33:04.427507"
+      }
+    },
+    {
+      "name": "explicit_manual_wake_confirmation",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "operator explicitly confirmed M6.3 real Pi manual wake",
+      "details": {
+        "confirm_real_pi_wake": true
+      }
+    },
+    {
+      "name": "platform_identity",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "Raspberry Pi platform detected",
+      "details": {
+        "system": "Linux",
+        "machine": "aarch64",
+        "python": "3.14.4",
+        "device_tree_model": "Raspberry Pi 5 Model B Rev 1.0",
+        "raspberry_pi_detected": true
+      }
+    },
+    {
+      "name": "m6_manual_wake_profile",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.3 profile preserves frozen DeepSeek/json authority boundaries",
+      "details": {
+        "provider": "deepseek",
+        "memory_mode": "json",
+        "trigger": "m6-pi-manual-wake",
+        "cron_replacement": false,
+        "timer_installation": false,
+        "scheduler_mutation_allowed": false,
+        "semantic_shadow_authoritative": false,
+        "real_wake_requested": true,
+        "raw_output_storage_required": "hash_only",
+        "dashboard_write_allowed": false,
+        "system_config_mutation_allowed": false
+      }
+    },
+    {
+      "name": "raw_output_storage",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "raw model output storage is hash-only",
+      "details": {
+        "raw_output_storage": "hash_only"
+      }
+    },
+    {
+      "name": "m4_wake_trial_delegate",
+      "status": "passed",
+      "ok": true,
+      "required": true,
+      "message": "M6.3 delegate wake completed within M4/M5 authority boundaries",
+      "details": {
+        "ok": true,
+        "milestone": "M4.3",
+        "recommendation": "continue_runtime_validation",
+        "attempt_count": 1,
+        "latest_event": {
+          "id": "wake_20260619_123313_014186_d8dd2d83",
+          "trigger": "m6-pi-manual-wake:attempt-1",
+          "status": "completed",
+          "provider": "deepseek",
+          "memory_backend": "json",
+          "started_at": "2026-06-19T12:33:13.014186",
+          "completed_at": "2026-06-19T12:33:30.175426",
+          "journal": "journals/wakeup_2026-06-19_12-33-30-170563.md"
+        },
+        "failure_audit": {
+          "category": "none",
+          "retryable": false,
+          "reason": ""
+        },
+        "stop_reasons": []
+      }
+    }
+  ],
+  "stop_reasons": [],
+  "pending_reasons": [],
+  "next_commands": {
+    "m6_preflight": "python3 scripts/run_m6_preflight.py --companion-home /home/polaris/digital_life",
+    "m6_pi_manual_wake_real_pi_only": "python3 scripts/run_m6_pi_manual_wake_trial.py --companion-home /home/polaris/digital_life --confirm-real-pi-wake",
+    "m6_4_observation_later": "requires successful M6.3 real Pi manual wake report"
+  },
+  "saved_at": "2026-06-19T12:33:30.176002"
+}

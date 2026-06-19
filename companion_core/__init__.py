@@ -37,7 +37,11 @@ from .m5_freeze import run_m5_final_freeze
 from .m5_release import run_m5_quality_release_gate
 from .m5_trial import run_m5_quality_trial
 from .m6_manual_wake import run_m6_pi_manual_wake_trial
+from .m6_observation import run_m6_pi_observation_check
 from .m6_preflight import run_m6_preflight_check
+from .m6_recovery import run_m6_recovery_drill
+from .m6_scheduler import run_m6_scheduler_readiness_check
+from .m6_final_freeze import run_m6_final_freeze_check
 from .observation import run_m4_observation_check
 from .wake_trial import classify_wake_trial_failure, run_m4_wake_trial
 from .semantic_shadow import SemanticShadowWriter
@@ -90,7 +94,11 @@ __all__ = [
     "run_m5_quality_release_gate",
     "run_m5_quality_trial",
     "run_m6_pi_manual_wake_trial",
+    "run_m6_pi_observation_check",
     "run_m6_preflight_check",
+    "run_m6_recovery_drill",
+    "run_m6_scheduler_readiness_check",
+    "run_m6_final_freeze_check",
     "run_m4_observation_check",
     "run_m4_wake_trial",
     "classify_wake_trial_failure",
