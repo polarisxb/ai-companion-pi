@@ -46,6 +46,7 @@ from .m6_final_freeze import run_m6_final_freeze_check
 from .observation import run_m4_observation_check
 from .wake_trial import classify_wake_trial_failure, run_m4_wake_trial
 from .semantic_shadow import SemanticShadowWriter
+from .dialogue import DialogueRunner, DialogueTurnResult
 from .secrets import load_local_secrets
 from .trial_summary import build_trial_summary
 
@@ -80,6 +81,8 @@ __all__ = [
     "ReplayResult",
     "ReplayRunner",
     "SemanticShadowWriter",
+    "DialogueRunner",
+    "DialogueTurnResult",
     "append_wake_event",
     "check_llm_provider",
     "check_runtime_readiness",
