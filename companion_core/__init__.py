@@ -10,6 +10,7 @@ from .dialogue import (
     load_dialogue_context,
     parse_dialogue_output,
 )
+from .dialogue_replay import DialogueReplayCheckResult, check_dialogue_transcript
 from .memory import JsonMemoryStore, SemanticFirstMemoryStore
 from .llm import (
     ClaudeCliClient,
@@ -71,6 +72,7 @@ __all__ = [
     "DialogueEngine",
     "DialogueResult",
     "DialogueRunner",
+    "DialogueReplayCheckResult",
     "DialogueTurnResult",
     "FakeLLMClient",
     "HttpLLMError",
@@ -96,6 +98,7 @@ __all__ = [
     "build_memory_proposals",
     "load_dialogue_context",
     "parse_dialogue_output",
+    "check_dialogue_transcript",
     "create_llm_client",
     "build_trial_summary",
     "load_wake_events",

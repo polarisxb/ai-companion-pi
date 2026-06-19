@@ -1,6 +1,6 @@
 # M7 Text Dialogue Design
 
-Status: planned after M6.7 final freeze
+Status: M7.2/M7.3 CLI implementation in progress after M6.7 final freeze
 Last updated: 2026-06-19
 
 Related implementation review: `docs/m7-1-text-dialogue-review.md`
@@ -318,13 +318,30 @@ Recommendation values:
 
 Goal: support a continuous local text session.
 
+Implementation:
+
+```bash
+.venv/bin/python scripts/chat_with_companion.py \
+  --companion-home /home/polaris/digital_life \
+  --provider deepseek \
+  --memory-mode json \
+  --interactive
+```
+
+The REPL keeps one conversation id for the process, accepts `exit`/`quit`, and
+keeps failed input available for `/retry`. Interactive mode routes otherwise
+auto-accepted memories to proposal records so a local back-and-forth session
+does not silently commit long-term memory without a later explicit gate.
+Failed provider turns are recorded as failed human rows only and are filtered
+out of subsequent prompt context unless the human retries or re-enters them.
+
 Acceptance:
 
 - Keeps recent turns in process-local short context.
 - Appends each turn to the active transcript.
 - Handles `exit`/`quit` cleanly.
 - Preserves failed human input for retry.
-- Does not automatically commit memory.
+- Does not automatically commit memory in REPL mode.
 
 Recommendation values:
 
@@ -334,6 +351,20 @@ Recommendation values:
 ### M7.3 Transcript And Replay Check
 
 Goal: make dialogue inspectable and replayable enough to debug.
+
+Implementation:
+
+```bash
+.venv/bin/python scripts/dialogue_replay_check.py \
+  --companion-home /home/polaris/digital_life \
+  conversations/<conversation>.jsonl \
+  --json
+```
+
+The check is read-only and does not load provider clients or secrets. It parses
+transcript JSONL and dialogue events, validates hashes, role ordering, event
+linkage, failed-turn shape, raw-payload absence, and the no-wake/scheduler/
+semantic-authority boundaries.
 
 Acceptance:
 
