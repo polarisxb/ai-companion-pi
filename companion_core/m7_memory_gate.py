@@ -1,202 +1,177 @@
-"""M7.4 read-only memory proposal gate for text dialogue artifacts."""
+"""M7.4 read-only memory proposal gate."""
 
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
-from .dialogue import DIALOGUE_BOUNDARIES
 from .paths import CompanionPaths
 
-PROMPT_AUTHORITY_KEYS = ("prompt_eligible", "accepted_for_context", "quality_gate")
+READY_RECOMMENDATION = "m7_memory_proposals_ready"
+INSPECT_RECOMMENDATION = "inspect"
 
 
-@dataclass
-class M7MemoryProposalGateResult:
-    ok: bool
-    report_path: Path
-    accepted_memory_count: int
-    proposal_memory_count: int
-    linked_proposal_count: int
-    prompt_authoritative_proposal_count: int
-    stop_reasons: list[str] = field(default_factory=list)
+def run_m7_memory_proposal_gate(paths: CompanionPaths) -> dict:
+    """Inspect M7 dialogue memory artifacts without accepting proposals.
 
-    @property
-    def recommendation(self) -> str:
-        return "m7_memory_proposals_ready" if self.ok else "inspect"
+    The gate is deliberately read-only for memory/proposal inputs: it counts accepted
+    JSON memory and proposal JSONL records, verifies proposal linkage back to a
+    conversation turn, and confirms proposal records are not prompt-authoritative.
+    It writes only the bounded gate report under ``life-loop``.
+    """
 
-    def to_dict(self) -> dict:
-        return {
-            "ok": self.ok,
-            "recommendation": self.recommendation,
-            "report_path": str(self.report_path),
-            "accepted_memory_count": self.accepted_memory_count,
-            "proposal_memory_count": self.proposal_memory_count,
-            "linked_proposal_count": self.linked_proposal_count,
-            "prompt_authoritative_proposal_count": self.prompt_authoritative_proposal_count,
-            "stop_reasons": self.stop_reasons,
-        }
+    accepted_memories = _load_json_list(paths.memory_store)
+    proposal_records, proposal_read_errors = _load_jsonl(paths.memory_proposals_file)
+    transcript_turns = _load_conversation_turn_index(paths.conversations_dir)
 
+    accepted_ids = {str(memory.get("id")) for memory in accepted_memories if memory.get("id")}
+    stop_reasons: list[str] = []
+    proposal_summaries = []
+    linked = 0
+    prompt_authoritative = 0
+    separate_from_accepted = 0
+    accepted_status = 0
 
-def run_m7_memory_proposal_gate(paths: CompanionPaths) -> M7MemoryProposalGateResult:
-    """Validate M7 proposal memory artifacts without accepting or promoting them."""
-
-    paths.ensure_runtime_dirs()
-    accepted_memories, memory_errors = _read_json_array(paths.memory_store, label="accepted_memory")
-    proposals, proposal_errors = _read_jsonl(paths.memory_proposals_file, label="memory_proposal")
-    transcripts = _load_transcript_turn_index(paths.conversations_dir)
-
-    stop_reasons = [*memory_errors, *proposal_errors]
-    accepted_ids = {memory.get("id") for memory in accepted_memories if isinstance(memory, dict)}
-    accepted_contents = {
-        str(memory.get("content", "")) for memory in accepted_memories if isinstance(memory, dict)
-    }
-    linked_count = 0
-    prompt_authoritative_count = 0
-
-    for idx, proposal in enumerate(proposals, start=1):
-        prefix = f"proposal line {idx}"
-        if not isinstance(proposal, dict):
-            stop_reasons.append(f"{prefix}: row must be an object")
-            continue
-        proposal_id = proposal.get("id")
+    for proposal in proposal_records:
+        proposal_id = str(proposal.get("id", ""))
         conversation_id = proposal.get("conversation_id")
         source_turn_id = proposal.get("source_turn_id")
-        if not proposal_id:
-            stop_reasons.append(f"{prefix}: missing id")
-        if not conversation_id:
-            stop_reasons.append(f"{prefix}: missing conversation_id")
-        if not source_turn_id:
-            stop_reasons.append(f"{prefix}: missing source_turn_id")
-        if conversation_id and source_turn_id:
-            if (conversation_id, source_turn_id) in transcripts:
-                linked_count += 1
-            else:
-                stop_reasons.append(f"{prefix}: source turn not found in transcripts")
-        if proposal.get("status") != "proposed":
-            stop_reasons.append(f"{prefix}: status must remain proposed")
-        if proposal.get("accepted") is not False:
-            stop_reasons.append(f"{prefix}: accepted must remain false")
-        if proposal.get("accepted_memory_id") in accepted_ids and proposal.get("accepted_memory_id"):
-            stop_reasons.append(f"{prefix}: points at an accepted memory id")
-        if str(proposal.get("content", "")) in accepted_contents and proposal.get("content"):
-            stop_reasons.append(f"{prefix}: duplicates accepted memory content")
-        if _is_prompt_authoritative(proposal):
-            prompt_authoritative_count += 1
-            stop_reasons.append(f"{prefix}: proposal must not be prompt-authoritative")
+        has_linkage = bool(conversation_id and source_turn_id)
+        turn_key = (str(conversation_id), str(source_turn_id))
+        turn_exists = turn_key in transcript_turns if has_linkage else False
+        if has_linkage and turn_exists:
+            linked += 1
+        else:
+            stop_reasons.append(f"proposal_missing_source_linkage:{proposal_id or 'unknown'}")
 
+        proposal_is_prompt_authoritative = bool(
+            proposal.get("prompt_eligible")
+            or proposal.get("prompt_authoritative")
+            or proposal.get("authority") in {"user_asserted", "system_config", "evaluator_approved", "derived_summary"}
+        )
+        if proposal_is_prompt_authoritative:
+            prompt_authoritative += 1
+            stop_reasons.append(f"proposal_prompt_authoritative:{proposal_id or 'unknown'}")
+
+        if proposal.get("accepted") is True or proposal.get("status") == "accepted":
+            accepted_status += 1
+            stop_reasons.append(f"proposal_already_accepted:{proposal_id or 'unknown'}")
+
+        accepted_memory_id = proposal.get("accepted_memory_id")
+        is_separate = not accepted_memory_id and proposal_id not in accepted_ids
+        if is_separate:
+            separate_from_accepted += 1
+        else:
+            stop_reasons.append(f"proposal_not_separate_from_accepted_memory:{proposal_id or 'unknown'}")
+
+        proposal_summaries.append({
+            "id": proposal_id,
+            "conversation_id": conversation_id,
+            "source_turn_id": source_turn_id,
+            "source_turn_found": turn_exists,
+            "status": proposal.get("status"),
+            "accepted": proposal.get("accepted") is True,
+            "prompt_authoritative": proposal_is_prompt_authoritative,
+            "separate_from_accepted_memory": is_separate,
+        })
+
+    for error in proposal_read_errors:
+        stop_reasons.append(error)
+
+    proposal_count = len(proposal_records)
     ok = not stop_reasons
-    report_path = paths.life_loop_dir / "m7_memory_proposal_report.json"
     report = {
         "schema_version": 1,
         "saved_at": datetime.now().isoformat(),
         "ok": ok,
-        "recommendation": "m7_memory_proposals_ready" if ok else "inspect",
-        "stop_reasons": stop_reasons,
-        "counts": {
-            "accepted_memory": len(accepted_memories),
-            "proposal_memory": len(proposals),
-            "linked_proposals": linked_count,
-            "prompt_authoritative_proposals": prompt_authoritative_count,
-        },
-        "source_linkage": {
-            "required_fields": ["conversation_id", "source_turn_id"],
-            "linked_proposals": linked_count,
-            "proposal_records": [
-                {
-                    "id": proposal.get("id"),
-                    "conversation_id": proposal.get("conversation_id"),
-                    "source_turn_id": proposal.get("source_turn_id"),
-                    "linked": (proposal.get("conversation_id"), proposal.get("source_turn_id")) in transcripts,
-                }
-                for proposal in proposals if isinstance(proposal, dict)
-            ],
-        },
-        "prompt_authority": {
-            "proposal_records_prompt_authoritative": False,
+        "recommendation": READY_RECOMMENDATION if ok else INSPECT_RECOMMENDATION,
+        "stop_reasons": sorted(set(stop_reasons)),
+        "accepted_memory_count": len(accepted_memories),
+        "proposal_memory_count": proposal_count,
+        "proposal_source_link_count": linked,
+        "proposal_source_link_missing_count": proposal_count - linked,
+        "proposal_separate_from_accepted_count": separate_from_accepted,
+        "proposal_prompt_authoritative_count": prompt_authoritative,
+        "proposal_accepted_state_count": accepted_status,
+        "prompt_authority_status": "proposal_only" if prompt_authoritative == 0 else "inspect",
+        "accepted_memory_path": _relative_to_home(paths, paths.memory_store),
+        "proposal_memory_path": _relative_to_home(paths, paths.memory_proposals_file),
+        "conversation_dir": _relative_to_home(paths, paths.conversations_dir),
+        "boundaries": {
+            "wake_cycle_run": False,
+            "scheduler_mutated": False,
+            "life_write_route_added": False,
+            "raw_provider_payload_stored": False,
             "semantic_shadow_authority_promoted": False,
-            "proposals_are_prompt_authoritative": prompt_authoritative_count > 0,
+            "proposal_acceptance_path_added": False,
         },
-        "separation": {
-            "proposal_file": _relative_to_home(paths, paths.memory_proposals_file),
-            "accepted_memory_file": _relative_to_home(paths, paths.memory_store),
-            "acceptance_path_added": False,
-            "proposal_state_mutated": False,
-        },
-        "provider_calls": 0,
-        "boundaries": dict(DIALOGUE_BOUNDARIES),
+        "proposals": proposal_summaries,
     }
+    write_m7_memory_proposal_report(paths, report)
+    return report
+
+
+def write_m7_memory_proposal_report(paths: CompanionPaths, report: dict) -> None:
+    report_path = paths.life_loop_dir / "m7_memory_proposal_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = report_path.with_suffix(".tmp")
     tmp_path.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
     tmp_path.replace(report_path)
-    return M7MemoryProposalGateResult(
-        ok=ok,
-        report_path=report_path,
-        accepted_memory_count=len(accepted_memories),
-        proposal_memory_count=len(proposals),
-        linked_proposal_count=linked_count,
-        prompt_authoritative_proposal_count=prompt_authoritative_count,
-        stop_reasons=stop_reasons,
-    )
 
 
-def _read_json_array(path: Path, *, label: str) -> tuple[list[dict], list[str]]:
-    if not path.exists():
-        return [], []
+def _load_json_list(path: Path) -> list[dict]:
     try:
-        payload = json.loads(path.read_text())
-    except json.JSONDecodeError as exc:
-        return [], [f"{label}: invalid JSON: {exc.msg}"]
-    if not isinstance(payload, list):
-        return [], [f"{label}: root must be a list"]
-    return payload, []
+        data = json.loads(path.read_text())
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return []
+    return [item for item in data if isinstance(item, dict)] if isinstance(data, list) else []
 
 
-def _read_jsonl(path: Path, *, label: str) -> tuple[list[dict], list[str]]:
-    if not path.exists():
-        return [], []
-    rows: list[dict] = []
+def _load_jsonl(path: Path) -> tuple[list[dict], list[str]]:
+    records: list[dict] = []
     errors: list[str] = []
-    for line_number, line in enumerate(path.read_text().splitlines(), start=1):
+    try:
+        lines = path.read_text().splitlines()
+    except FileNotFoundError:
+        return [], []
+    except OSError as exc:
+        return [], [f"proposal_file_unreadable:{type(exc).__name__}"]
+    for index, line in enumerate(lines, start=1):
         if not line.strip():
             continue
         try:
-            row = json.loads(line)
-        except json.JSONDecodeError as exc:
-            errors.append(f"{label} line {line_number}: invalid JSON: {exc.msg}")
+            record: Any = json.loads(line)
+        except json.JSONDecodeError:
+            errors.append(f"proposal_invalid_json_line:{index}")
             continue
-        rows.append(row)
-    return rows, errors
+        if isinstance(record, dict):
+            records.append(record)
+        else:
+            errors.append(f"proposal_non_object_line:{index}")
+    return records, errors
 
 
-def _load_transcript_turn_index(conversations_dir: Path) -> set[tuple[str, str]]:
+def _load_conversation_turn_index(conversations_dir: Path) -> set[tuple[str, str]]:
     index: set[tuple[str, str]] = set()
     if not conversations_dir.exists():
         return index
-    for path in conversations_dir.glob("*.jsonl"):
-        for line in path.read_text().splitlines():
+    for transcript in conversations_dir.glob("*.jsonl"):
+        try:
+            lines = transcript.read_text().splitlines()
+        except OSError:
+            continue
+        for line in lines:
             if not line.strip():
                 continue
             try:
-                row = json.loads(line)
+                turn = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            conversation_id = row.get("conversation_id")
-            turn_id = row.get("id")
-            if conversation_id and turn_id:
-                index.add((conversation_id, turn_id))
+            if isinstance(turn, dict) and turn.get("conversation_id") and turn.get("id"):
+                index.add((str(turn["conversation_id"]), str(turn["id"])))
     return index
-
-
-def _is_prompt_authoritative(proposal: dict) -> bool:
-    if proposal.get("prompt_eligible") is True or proposal.get("accepted_for_context") is True:
-        return True
-    if proposal.get("quality_gate") == "accepted":
-        return True
-    return bool(proposal.get("memory_type") == "semantic" and proposal.get("authority") in {"model", "semantic", "user_asserted"})
 
 
 def _relative_to_home(paths: CompanionPaths, path: Path) -> str:

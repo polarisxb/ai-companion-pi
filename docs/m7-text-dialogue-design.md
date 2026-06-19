@@ -388,6 +388,8 @@ Recommendation values:
 
 ### M7.4 Memory Proposal Gate
 
+Status: implemented as a read-only report gate in `companion_core/m7_memory_gate.py` and `scripts/run_m7_memory_proposal_gate.py`.
+
 Goal: let dialogue form memory without silently changing broad authority.
 
 Acceptance:
@@ -398,6 +400,8 @@ Acceptance:
 - Proposals include source conversation and turn ids.
 - No proposal enters prompt context until an explicit later accept path exists.
 - `/life` or a report can show proposal counts.
+- The gate writes `life-loop/m7_memory_proposal_report.json` with accepted-memory counts, proposal counts, source conversation/turn linkage, proposal-only prompt-authority status, stop reasons, and boundary flags.
+- The gate does not approve, accept, or promote proposals; proposed memories remain outside prompt authority until a later explicit acceptance workflow exists.
 
 Recommendation values:
 
@@ -405,6 +409,8 @@ Recommendation values:
 - `inspect`
 
 ### M7.5 Dashboard Chat Page
+
+Status: implemented in Companion Window with `GET /chat` and `POST /chat/send` on top of `DialogueRunner`.
 
 Goal: add the text dialogue surface to Companion Window.
 
@@ -431,6 +437,8 @@ Acceptance:
 - Does not add write routes to `/life`.
 - Keeps message board and requests separate from chat.
 - Works on desktop and phone PWA widths.
+- `POST /chat/send` supports JSON API callers and rendered form submissions, returns structured JSON when requested, and preserves failed input in error responses for retry.
+- The route displays transcript rows, composer, provider, memory mode, conversation id, companion status, and proposal count without adding write routes under `/life`.
 
 Recommendation values:
 

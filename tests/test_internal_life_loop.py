@@ -6971,3 +6971,34 @@ def test_m7_chat_cli_one_turn_outputs_reply_json_without_provider_payload(tmp_pa
     events = (tmp_path / "life-loop" / "conversation_events.jsonl").read_text()
     assert "human-text-chat" in events
     assert not (tmp_path / "life-loop" / "wake_events.jsonl").exists()
+
+
+def test_m7_dashboard_chat_route_is_separate_from_life_and_preserves_input(tmp_path, monkeypatch):
+    write_minimal_context(tmp_path)
+    (tmp_path / "life-loop").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "life-loop" / "m6_final_freeze_report.json").write_text(json.dumps({
+        "ok": True,
+        "recommendation": "m6_frozen_ready_for_scheduler_handoff",
+    }))
+    window = load_window_module(tmp_path, monkeypatch)
+
+    class BrokenChatLLM:
+        def generate(self, prompt, context):
+            raise RuntimeError("chat provider unavailable")
+
+    monkeypatch.setattr(window, "create_llm_client", lambda *args, **kwargs: BrokenChatLLM())
+    client = window.app.test_client()
+    get_response = client.get("/chat")
+    post_response = client.post("/chat/send", data={"message": "keep this draft", "provider": "fake"})
+
+    assert get_response.status_code == 200
+    assert post_response.status_code == 500
+    html = post_response.data.decode()
+    assert "keep this draft" in html
+    assert "chat provider unavailable" in html
+    life_rules = [rule for rule in window.app.url_map.iter_rules() if rule.rule == "/life"]
+    assert life_rules
+    assert all(sorted(rule.methods - {"HEAD", "OPTIONS"}) == ["GET"] for rule in life_rules)
+    assert any(rule.rule == "/chat" for rule in window.app.url_map.iter_rules())
+    assert any(rule.rule == "/chat/send" and "POST" in rule.methods for rule in window.app.url_map.iter_rules())
+    assert not (tmp_path / "life-loop" / "wake_events.jsonl").exists()

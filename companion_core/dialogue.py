@@ -587,6 +587,8 @@ def _memory_proposal(*, conversation_id: str, source_turn_id: str, content: str,
         "content": content,
         "reason": reason,
         "accepted": status == "auto_accepted",
+        "prompt_eligible": status == "auto_accepted",
+        "prompt_authoritative": status == "auto_accepted",
         "created_at": now,
     }
 

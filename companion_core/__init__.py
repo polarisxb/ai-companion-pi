@@ -13,6 +13,7 @@ from .dialogue import (
 from .m7_memory_gate import M7MemoryProposalGateResult, run_m7_memory_proposal_gate
 
 from .dialogue_replay import DialogueReplayCheckResult, check_dialogue_transcript
+from .m7_memory_gate import run_m7_memory_proposal_gate
 from .memory import JsonMemoryStore, SemanticFirstMemoryStore
 from .llm import (
     ClaudeCliClient,

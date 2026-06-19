@@ -374,14 +374,14 @@ M7 is the text dialogue milestone after M6.7 final freeze. Its design starts in
 `docs/m7-text-dialogue-design.md` and the product/UI source of truth is
 `DESIGN.md`. M7 prioritizes direct human-to-companion text dialogue over
 scheduler automation. It adds a user-initiated dialogue engine, conversation
-transcripts, dialogue event metadata, memory proposals as proposals only, and a
-later dashboard `/chat` page. The confirmed M7 memory boundary allows automatic
+transcripts, dialogue event metadata, memory proposals as proposals only, a
+read-only M7.4 memory proposal gate report, and the dashboard `/chat` page/API. The confirmed M7 memory boundary allows automatic
 memory only for explicit low-risk user-stated facts/preferences; inferred,
 sensitive, relationship-defining, or ambiguous content remains proposal-only.
 Completed turns always write transcripts, and current companion state updates
 only when the companion explicitly emits mood/status. M7 must not run wake
 cycles from chat, edit scheduler state, promote semantic shadow authority, or
-store raw provider payloads by default.
+store raw provider payloads by default. The M7.4 gate writes only `life-loop/m7_memory_proposal_report.json`; M7.5 chat writes only dialogue transcripts/events through `DialogueRunner` and does not add `/life` write routes.
 
 For the full real-provider trial path, see `docs/m3-real-trial.md`.
 

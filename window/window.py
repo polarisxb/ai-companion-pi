@@ -25,26 +25,21 @@ from werkzeug.utils import secure_filename
 import markdown
 import sys
 
-from companion_core import (
-    CompanionPaths,
-    DialogueRunner,
-    JsonMemoryStore,
-    SemanticFirstMemoryStore,
-    create_llm_client,
-    load_local_secrets,
-)
-from companion_core.dialogue import _clean_visible_text, load_transcript_turns
-
-app = Flask(__name__)
-
 # === CONFIGURE THESE PATHS ===
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 COMPANION_HOME = Path(os.environ.get("COMPANION_HOME", REPO_ROOT)).expanduser().resolve()
 # =============================
 
 SCRIPTS_DIR = COMPANION_HOME / "scripts"
 if SCRIPTS_DIR.exists():
     sys.path.insert(0, str(SCRIPTS_DIR))
+
+from companion_core import CompanionPaths, DialogueRunner, JsonMemoryStore, SemanticFirstMemoryStore, create_llm_client, load_local_secrets
+from companion_core.dialogue import _clean_visible_text, load_transcript_turns
+
+app = Flask(__name__)
 
 
 def register_optional_blueprint(module_name, blueprint_name):
@@ -83,15 +78,15 @@ TASK_QUEUE = TASKS_DIR / "task_queue.json"
 TASK_CONFIG = TASKS_DIR / "task_config.json"
 TASK_LOCK = "/tmp/task_queue.lock"
 REQUESTS_FILE = COMPANION_HOME / "requests" / "requests.json"
-CHAT_DEFAULT_PROVIDER = os.environ.get("COMPANION_LLM_PROVIDER", "deepseek")
-CHAT_DEFAULT_MEMORY_MODE = os.environ.get("COMPANION_MEMORY_MODE", "json")
+CONVERSATIONS_DIR = COMPANION_HOME / "conversations"
+MEMORY_PROPOSALS_FILE = COMPANION_HOME / "life-loop" / "memory_proposals.jsonl"
 
 # Ensure all directories exist
 for d in [WINDOW_DIR, CUSTOM_CONTENT, MESSAGEBOARD_DIR, MESSAGEBOARD_FILES,
           CREATIONS_DIR, KEEPSAKES_DIR,
           CREATIONS_DIR / "code", CREATIONS_DIR / "art",
           CREATIONS_DIR / "writing", CREATIONS_DIR / "experiments",
-          TASKS_DIR, TASKS_DIR / "logs",
+          TASKS_DIR, TASKS_DIR / "logs", CONVERSATIONS_DIR,
           COMPANION_HOME / "requests", COMPANION_HOME / "requests" / "archive"]:
     d.mkdir(parents=True, exist_ok=True)
 
@@ -496,6 +491,54 @@ def save_requests_file(requests_list):
     finally:
         fcntl.flock(lock_fd, fcntl.LOCK_UN)
         lock_fd.close()
+
+
+def get_chat_transcripts():
+    if not CONVERSATIONS_DIR.exists():
+        return []
+    return sorted(CONVERSATIONS_DIR.glob("*.jsonl"), key=lambda path: path.stat().st_mtime, reverse=True)
+
+
+def get_chat_turns(conversation_id=None):
+    transcript_path = None
+    if conversation_id:
+        safe_id = "".join(ch if ch.isalnum() or ch in {"_", "-", "."} else "_" for ch in conversation_id).strip("._")
+        candidate = CONVERSATIONS_DIR / f"{safe_id}.jsonl"
+        if candidate.exists():
+            transcript_path = candidate
+    if transcript_path is None:
+        transcripts = get_chat_transcripts()
+        transcript_path = transcripts[0] if transcripts else None
+    if transcript_path is None:
+        return [], conversation_id or ""
+    turns = load_transcript_turns(transcript_path, include_failed=True)
+    active_conversation_id = conversation_id or (turns[-1].get("conversation_id") if turns else transcript_path.stem)
+    return turns, active_conversation_id
+
+
+def get_memory_proposal_count():
+    try:
+        return sum(1 for line in MEMORY_PROPOSALS_FILE.read_text().splitlines() if line.strip())
+    except (FileNotFoundError, OSError):
+        return 0
+
+
+def _chat_context(conversation_id=None, error=None, failed_input="", provider=None, memory_mode=None):
+    ctx = _base_context()
+    provider = provider or os.environ.get("COMPANION_LLM_PROVIDER", "deepseek")
+    memory_mode = memory_mode or os.environ.get("COMPANION_MEMORY_MODE", "json")
+    turns, active_conversation_id = get_chat_turns(conversation_id)
+    ctx.update(
+        page="chat",
+        chat_turns=turns,
+        chat_error=error,
+        failed_input=failed_input,
+        conversation_id=active_conversation_id,
+        provider=provider,
+        memory_mode=memory_mode,
+        memory_proposal_count=get_memory_proposal_count(),
+    )
+    return ctx
 
 
 def get_emergency_cooldown_info(requests_list):
@@ -1094,6 +1137,24 @@ TEMPLATE = """
         .board-empty { text-align: center; padding: 30px; color: var(--text-dim);
                        font-style: italic; font-size: 0.9em; }
 
+        /* ── M7 chat ── */
+        .chat-layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; align-items: start; }
+        .chat-transcript { display: flex; flex-direction: column; gap: 12px; }
+        .chat-turn { padding: 14px 16px; border-radius: 12px; background: var(--bg-deep); border: 1px solid var(--border); }
+        .chat-turn.assistant { border-color: rgba(74,111,165,0.45); }
+        .chat-turn.failed { border-color: var(--accent-red); }
+        .chat-role { font-family: 'IBM Plex Mono', monospace; font-size: 0.68em; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; }
+        .chat-content { color: var(--text-secondary); white-space: pre-wrap; font-size: 0.94em; }
+        .chat-meta { margin-top: 6px; color: var(--text-dim); font-size: 0.72em; font-family: 'IBM Plex Mono', monospace; }
+        .chat-composer textarea { width: 100%; min-height: 118px; padding: 15px; background: var(--bg-deep); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-family: 'DM Sans', sans-serif; font-size: 0.95em; resize: vertical; }
+        .chat-composer textarea:focus { outline: none; border-color: var(--accent-blue); }
+        .chat-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+        .chat-row input, .chat-row select { background: var(--bg-deep); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+        .chat-strip { display: grid; gap: 8px; }
+        .chat-strip div { padding: 10px; background: var(--bg-deep); border-radius: 8px; color: var(--text-secondary); font-size: 0.82em; }
+        .chat-error { border: 1px solid var(--accent-red); color: var(--accent-red); background: rgba(160,84,84,0.08); border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+        .chat-empty { color: var(--text-dim); font-style: italic; padding: 24px 0; text-align: center; }
+
         /* ─────────────────────────────────────────
            KEEPSAKES — 5-slot horizontal exhibition
         ───────────────────────────────────────── */
@@ -1521,6 +1582,7 @@ TEMPLATE = """
             .status-bar { gap: 15px; }
             .stats-grid { grid-template-columns: 1fr 1fr; }
             .nav { gap: 4px; flex-wrap: wrap; }
+            .chat-layout { grid-template-columns: 1fr; }
             .nav a { padding: 6px 10px; font-size: 0.7em; }
             .task-form .form-row { flex-direction: column; align-items: stretch; }
             .req-meta { flex-wrap: wrap; gap: 8px; }
@@ -1631,50 +1693,59 @@ TEMPLATE = """
             </div>
 
         {% elif page == 'chat' %}
-            <div class="card">
-                <div class="card-title">Companion Chat</div>
-                <div class="chat-meta-grid">
-                    <div class="chat-pill">provider<span>{{ chat_provider }}</span></div>
-                    <div class="chat-pill">memory mode<span>{{ chat_memory_mode }}</span></div>
-                    <div class="chat-pill">conversation<span>{{ chat_conversation_id or 'new conversation' }}</span></div>
-                    <div class="chat-pill">memory proposals<span>{{ chat_memory_proposal_count }}</span></div>
-                </div>
-                {% if chat_error %}
-                <div class="chat-error">
-                    {{ chat_error }}
-                    {% if chat_failed_input %}<br><strong>preserved input:</strong> {{ chat_failed_input }}{% endif %}
-                </div>
-                {% endif %}
-                <div class="chat-transcript">
-                    {% if chat_transcript %}
-                        {% for turn in chat_transcript %}
-                        <div class="chat-row chat-row-{{ turn.role }} {{ 'chat-row-failed' if turn.status == 'failed' }}">
-                            <div class="chat-role">{{ turn.role }}{% if turn.status == 'failed' %} · failed{% endif %}</div>
-                            <div class="chat-content">{{ turn.content }}</div>
+            {% if chat_error %}
+            <div class="chat-error">{{ chat_error }}</div>
+            {% endif %}
+            <div class="chat-layout">
+                <div>
+                    <div class="card">
+                        <div class="card-title">Text Chat</div>
+                        <div class="chat-transcript">
+                            {% if chat_turns %}
+                                {% for turn in chat_turns %}
+                                <div class="chat-turn {{ turn.role }} {{ 'failed' if turn.status == 'failed' }}">
+                                    <div class="chat-role">{{ turn.role }}{% if turn.status == 'failed' %} · failed{% endif %}</div>
+                                    <div class="chat-content">{{ turn.content }}</div>
+                                    <div class="chat-meta">{{ turn.created_at[:19].replace('T', ' ') if turn.created_at else '' }}</div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="chat-empty">Start a conversation without waking the scheduler.</div>
+                            {% endif %}
                         </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="board-empty">No transcript yet. Start a user-initiated text chat below.</div>
-                    {% endif %}
-                </div>
-                <form class="chat-form" action="/chat/send" method="POST">
-                    <input type="hidden" name="conversation_id" value="{{ chat_conversation_id or '' }}">
-                    <textarea name="message" placeholder="Type to Companion...">{{ chat_failed_input }}</textarea>
-                    <div class="chat-options">
-                        <select name="provider">
-                            {% for provider in chat_supported_providers %}
-                            <option value="{{ provider }}" {{ 'selected' if provider == chat_provider }}>{{ provider }}</option>
-                            {% endfor %}
-                        </select>
-                        <select name="memory_mode">
-                            <option value="json" {{ 'selected' if chat_memory_mode == 'json' }}>json memory</option>
-                            <option value="dual" {{ 'selected' if chat_memory_mode == 'dual' }}>dual memory</option>
-                        </select>
-                        <button type="submit" class="btn">Send</button>
                     </div>
-                </form>
+                    <div class="card">
+                        <div class="card-title">Composer</div>
+                        <form class="chat-composer" action="/chat/send" method="POST">
+                            <textarea name="message" placeholder="write to Companion...">{{ failed_input or '' }}</textarea>
+                            <div class="chat-row">
+                                <input name="conversation_id" placeholder="conversation id" value="{{ conversation_id or '' }}">
+                                <select name="provider">
+                                    {% for option in chat_providers %}
+                                    <option value="{{ option }}" {{ 'selected' if option == provider }}>{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select name="memory_mode">
+                                    <option value="json" {{ 'selected' if memory_mode == 'json' }}>json memory</option>
+                                    <option value="dual" {{ 'selected' if memory_mode == 'dual' }}>dual memory</option>
+                                </select>
+                                <button type="submit" class="btn">Send</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <aside class="card">
+                    <div class="card-title">State</div>
+                    <div class="chat-strip">
+                        <div><strong>mood</strong><br>{{ status.mood | default('') }}</div>
+                        <div><strong>status</strong><br>{{ status.status | default(status.message | default('')) }}</div>
+                        <div><strong>provider</strong><br>{{ provider }}</div>
+                        <div><strong>memory mode</strong><br>{{ memory_mode }}</div>
+                        <div><strong>conversation</strong><br>{{ conversation_id or 'new conversation' }}</div>
+                        <div><strong>memory proposals</strong><br>{{ memory_proposal_count }}</div>
+                    </div>
+                </aside>
             </div>
-
 
         {% elif page == 'board' %}
             <div class="card">
@@ -2606,10 +2677,9 @@ def _base_context():
         projects={}, default_project="", active_task=None,
         pending_tasks=[], task_history=[],
         active=[], history=[], cooldown={}, total=0,
-        chat_provider=CHAT_DEFAULT_PROVIDER, chat_memory_mode=CHAT_DEFAULT_MEMORY_MODE,
-        chat_conversation_id="", chat_transcript=[], chat_memory_proposal_count=0,
-        chat_error="", chat_failed_input="",
-        chat_supported_providers=("fake", "claude-cli", "openai-compatible", "ollama", "deepseek"),
+        chat_turns=[], chat_error=None, failed_input="", conversation_id="",
+        provider=os.environ.get("COMPANION_LLM_PROVIDER", "deepseek"), memory_mode=os.environ.get("COMPANION_MEMORY_MODE", "json"),
+        memory_proposal_count=0, chat_providers=["deepseek", "claude-cli", "openai-compatible", "ollama", "fake"],
     )
 
 
@@ -2634,9 +2704,9 @@ def life_dashboard():
 @app.route("/chat")
 def chat_page():
     ctx = _chat_context(
-        conversation_id=request.args.get("conversation_id") or "",
-        provider=request.args.get("provider") or CHAT_DEFAULT_PROVIDER,
-        memory_mode=request.args.get("memory_mode") or CHAT_DEFAULT_MEMORY_MODE,
+        conversation_id=request.args.get("conversation_id") or None,
+        error=request.args.get("error") or None,
+        failed_input=request.args.get("failed_input") or "",
     )
     return render_template_string(TEMPLATE, **ctx)
 
@@ -2648,53 +2718,55 @@ def chat_send():
     payload = payload or {}
     human_text = str(payload.get("message") or payload.get("text") or "").strip()
     conversation_id = str(payload.get("conversation_id") or "").strip() or None
-    provider = str(payload.get("provider") or CHAT_DEFAULT_PROVIDER).strip()
-    memory_mode = str(payload.get("memory_mode") or CHAT_DEFAULT_MEMORY_MODE).strip()
+    provider = str(payload.get("provider") or os.environ.get("COMPANION_LLM_PROVIDER", "deepseek")).strip()
+    memory_mode = str(payload.get("memory_mode") or os.environ.get("COMPANION_MEMORY_MODE", "json")).strip() or "json"
     if not human_text:
-        return _chat_error_response(
-            error="message must not be empty",
-            failed_input=human_text,
-            conversation_id=conversation_id,
-            provider=provider,
-            memory_mode=memory_mode,
-            wants_json=wants_json,
-            status_code=400,
-        )
+        error = "message must not be empty"
+        if wants_json:
+            return jsonify({"ok": False, "error": error, "failed_input": human_text}), 400
+        ctx = _chat_context(conversation_id=conversation_id, error=error, failed_input=human_text, provider=provider, memory_mode=memory_mode)
+        return render_template_string(TEMPLATE, **ctx), 400
+
+    paths = CompanionPaths.from_env(COMPANION_HOME)
+    paths.ensure_runtime_dirs()
+    load_local_secrets(paths)
     try:
-        result = _build_chat_runner(provider=provider, memory_mode=memory_mode).run_turn(
+        llm_client = create_llm_client(
+            provider,
+            model=os.environ.get("COMPANION_LLM_MODEL"),
+            base_url=os.environ.get("COMPANION_LLM_BASE_URL"),
+            api_key_env=os.environ.get("COMPANION_LLM_API_KEY_ENV", "COMPANION_LLM_API_KEY"),
+        )
+        memory_store = (
+            SemanticFirstMemoryStore(paths.memory_store)
+            if memory_mode == "dual"
+            else JsonMemoryStore(paths.memory_store)
+        )
+        result = DialogueRunner(paths, llm_client=llm_client, memory_store=memory_store).run_turn(
             human_text,
             conversation_id=conversation_id,
             provider=provider,
             memory_mode=memory_mode,
-            auto_memory=False,
         )
-    except Exception as exc:  # noqa: BLE001 - preserve failed input for UI/API callers.
-        return _chat_error_response(
-            error=f"{type(exc).__name__}: {_clean_visible_text(str(exc))}",
-            failed_input=human_text,
-            conversation_id=conversation_id,
-            provider=provider,
-            memory_mode=memory_mode,
-            wants_json=wants_json,
-            status_code=400,
-        )
+    except Exception as exc:  # noqa: BLE001 - preserve failed input for retry without leaking secrets.
+        error = f"{type(exc).__name__}: {_clean_visible_text(str(exc))}"
+        if wants_json:
+            return jsonify({"ok": False, "error": error, "failed_input": _clean_visible_text(human_text), "conversation_id": conversation_id}), 500
+        ctx = _chat_context(conversation_id=conversation_id, error=error, failed_input=_clean_visible_text(human_text), provider=provider, memory_mode=memory_mode)
+        return render_template_string(TEMPLATE, **ctx), 500
+
     response = {
         "ok": True,
         "conversation_id": result.conversation_id,
         "reply": result.reply,
         "transcript": str(result.transcript_path),
-        "event": result.event["id"],
-        "memory_proposal_count": len(result.memory_proposals),
+        "event": result.event.get("id"),
+        "memory_ids": [memory["id"] for memory in result.stored_memories],
         "memory_proposal_ids": [proposal["id"] for proposal in result.memory_proposals],
     }
     if wants_json:
         return jsonify(response)
-    return redirect(url_for(
-        "chat_page",
-        conversation_id=result.conversation_id,
-        provider=provider,
-        memory_mode=memory_mode,
-    ))
+    return redirect(url_for("chat_page", conversation_id=result.conversation_id))
 
 
 @app.route("/board")

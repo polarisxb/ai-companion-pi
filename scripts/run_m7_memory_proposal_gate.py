@@ -14,12 +14,20 @@ from companion_core import CompanionPaths, run_m7_memory_proposal_gate
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate M7 dialogue memory proposals without accepting them.")
+    parser = argparse.ArgumentParser(description="Inspect M7 memory proposal artifacts without accepting proposals.")
     parser.add_argument("--companion-home", default=None)
+    parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
-    result = run_m7_memory_proposal_gate(CompanionPaths.from_env(args.companion_home))
-    print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if result.ok else 1
+
+    paths = CompanionPaths.from_env(args.companion_home)
+    report = run_m7_memory_proposal_gate(paths)
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+    else:
+        print(f"recommendation={report['recommendation']} ok={report['ok']}")
+        for reason in report.get("stop_reasons", []):
+            print(f"stop_reason={reason}")
+    return 0 if report.get("ok") else 1
 
 
 if __name__ == "__main__":
