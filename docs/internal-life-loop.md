@@ -399,6 +399,6 @@ For the full real-provider trial path, see `docs/m3-real-trial.md`.
    Pi, and reachable through text dialogue.
    the Pi.
 
-## M7 dialogue boundaries
+## M7 memory proposal boundary
 
-M7.4/M7.5 keep text dialogue separate from autonomous life-loop execution. The memory proposal gate is read-only and writes only `life-loop/m7_memory_proposal_report.json`; it does not accept proposals or make them prompt-authoritative. Dashboard chat is user-initiated through `/chat` and reuses `DialogueRunner`, preserving the no-wake, no-scheduler, no-life-write, no-raw-payload, and no-semantic-authority boundaries already enforced by M7 dialogue events.
+M7 dialogue memory proposals remain proposal-only until a future explicit acceptance workflow exists. `scripts/run_m7_memory_proposal_gate.py` reports whether proposal records carry `conversation_id` and `source_turn_id`, remain separate from accepted memory, and are not prompt-authoritative. This gate is read-only and does not mutate wake, scheduler, provider, `/life`, or semantic-shadow authority.

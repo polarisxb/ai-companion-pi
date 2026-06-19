@@ -6973,32 +6973,48 @@ def test_m7_chat_cli_one_turn_outputs_reply_json_without_provider_payload(tmp_pa
     assert not (tmp_path / "life-loop" / "wake_events.jsonl").exists()
 
 
-def test_m7_dashboard_chat_route_is_separate_from_life_and_preserves_input(tmp_path, monkeypatch):
+def test_dashboard_chat_page_and_send_use_dialogue_runner(tmp_path, monkeypatch):
     write_minimal_context(tmp_path)
     (tmp_path / "life-loop").mkdir(parents=True, exist_ok=True)
     (tmp_path / "life-loop" / "m6_final_freeze_report.json").write_text(json.dumps({
         "ok": True,
         "recommendation": "m6_frozen_ready_for_scheduler_handoff",
     }))
+    monkeypatch.setenv("COMPANION_CHAT_FAKE_RESPONSE", "我在这里。\n===DIALOGUE_METADATA===\n{}")
     window = load_window_module(tmp_path, monkeypatch)
-
-    class BrokenChatLLM:
-        def generate(self, prompt, context):
-            raise RuntimeError("chat provider unavailable")
-
-    monkeypatch.setattr(window, "create_llm_client", lambda *args, **kwargs: BrokenChatLLM())
     client = window.app.test_client()
-    get_response = client.get("/chat")
-    post_response = client.post("/chat/send", data={"message": "keep this draft", "provider": "fake"})
 
-    assert get_response.status_code == 200
-    assert post_response.status_code == 500
-    html = post_response.data.decode()
-    assert "keep this draft" in html
-    assert "chat provider unavailable" in html
-    life_rules = [rule for rule in window.app.url_map.iter_rules() if rule.rule == "/life"]
-    assert life_rules
-    assert all(sorted(rule.methods - {"HEAD", "OPTIONS"}) == ["GET"] for rule in life_rules)
-    assert any(rule.rule == "/chat" for rule in window.app.url_map.iter_rules())
-    assert any(rule.rule == "/chat/send" and "POST" in rule.methods for rule in window.app.url_map.iter_rules())
+    page = client.get("/chat")
+    assert page.status_code == 200
+    assert b"Companion Chat" in page.data
+    assert b"provider:" in page.data
+
+    response = client.post("/chat/send", json={"message": "hello dashboard", "conversation_id": "dash-chat"})
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["ok"] is True
+    assert payload["reply"] == "我在这里。"
+    assert payload["conversation_id"] == "dash-chat"
+    assert (tmp_path / "conversations" / "dash-chat.jsonl").exists()
+    assert (tmp_path / "life-loop" / "conversation_events.jsonl").exists()
+    assert not (tmp_path / "life-loop" / "wake_events.jsonl").exists()
+
+    transcript_page = client.get("/chat?conversation_id=dash-chat")
+    assert transcript_page.status_code == 200
+    assert b"hello dashboard" in transcript_page.data
+    assert "我在这里。".encode() in transcript_page.data
+
+
+def test_dashboard_chat_send_error_preserves_input(tmp_path, monkeypatch):
+    write_minimal_context(tmp_path)
+    monkeypatch.delenv("COMPANION_CHAT_FAKE_RESPONSE", raising=False)
+    monkeypatch.setenv("COMPANION_LLM_PROVIDER", "deepseek")
+    window = load_window_module(tmp_path, monkeypatch)
+    client = window.app.test_client()
+
+    response = client.post("/chat/send", data={"message": "keep this text", "conversation_id": "failed-chat"})
+
+    assert response.status_code == 500
+    assert b"keep this text" in response.data
+    assert b"I could not send that chat turn yet" in response.data
     assert not (tmp_path / "life-loop" / "wake_events.jsonl").exists()

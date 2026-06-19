@@ -10,8 +10,11 @@ from .dialogue import (
     load_dialogue_context,
     parse_dialogue_output,
 )
-from .m7_memory_gate import M7MemoryProposalGateResult, run_m7_memory_proposal_gate
-
+from .m7_memory_gate import (
+    M7MemoryProposalGateResult,
+    run_m7_memory_proposal_gate,
+    write_m7_memory_proposal_report,
+)
 from .dialogue_replay import DialogueReplayCheckResult, check_dialogue_transcript
 from .m7_memory_gate import run_m7_memory_proposal_gate
 from .memory import JsonMemoryStore, SemanticFirstMemoryStore
@@ -103,6 +106,9 @@ __all__ = [
     "load_dialogue_context",
     "parse_dialogue_output",
     "check_dialogue_transcript",
+    "M7MemoryProposalGateResult",
+    "run_m7_memory_proposal_gate",
+    "write_m7_memory_proposal_report",
     "create_llm_client",
     "build_trial_summary",
     "load_wake_events",

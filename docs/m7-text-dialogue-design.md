@@ -554,3 +554,13 @@ After `m7_text_dialogue_frozen`, the next milestone can choose between:
 
 The recommended path is scheduler handoff after text dialogue is stable, then
 voice/hardware adapters.
+
+## M7.4 Memory Proposal Gate
+
+`companion_core.m7_memory_gate.run_m7_memory_proposal_gate` is a read-only report gate for dialogue memory behavior. It inspects `life-loop/memory_proposals.jsonl`, accepted JSON memory, conversation transcripts, and dialogue events, then writes `life-loop/m7_memory_proposal_report.json` via `scripts/run_m7_memory_proposal_gate.py`.
+
+The gate does not accept proposals, does not change proposal state, does not call a provider, and does not make proposed memories prompt-authoritative. A passing report recommends `m7_memory_proposals_ready` and records proposal/accepted counts, conversation/turn linkage, prompt-authority status, stop reasons, and dialogue boundaries.
+
+## M7.5 Dashboard Chat
+
+The Window dashboard exposes `/chat` and `/chat/send` for user-initiated text dialogue. The route reuses `DialogueRunner`; it is not a separate provider path. The page shows transcript rows, composer, provider, memory mode, conversation id/transcript path, and memory proposal count. Failed form submissions preserve the submitted input in the response; JSON clients receive an `ok: false` error contract with the original input.

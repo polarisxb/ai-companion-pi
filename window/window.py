@@ -25,6 +25,11 @@ from werkzeug.utils import secure_filename
 import markdown
 import sys
 
+from companion_core import CompanionPaths, DialogueRunner, JsonMemoryStore, SemanticFirstMemoryStore, create_llm_client, load_local_secrets
+from companion_core.dialogue import _clean_visible_text
+
+app = Flask(__name__)
+
 # === CONFIGURE THESE PATHS ===
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -78,8 +83,7 @@ TASK_QUEUE = TASKS_DIR / "task_queue.json"
 TASK_CONFIG = TASKS_DIR / "task_config.json"
 TASK_LOCK = "/tmp/task_queue.lock"
 REQUESTS_FILE = COMPANION_HOME / "requests" / "requests.json"
-CONVERSATIONS_DIR = COMPANION_HOME / "conversations"
-MEMORY_PROPOSALS_FILE = COMPANION_HOME / "life-loop" / "memory_proposals.jsonl"
+DEFAULT_CHAT_ERROR = "I could not send that chat turn yet. Your text is still here."
 
 # Ensure all directories exist
 for d in [WINDOW_DIR, CUSTOM_CONTENT, MESSAGEBOARD_DIR, MESSAGEBOARD_FILES,
@@ -628,6 +632,90 @@ def _report(name):
     return _load_json(COMPANION_HOME / "life-loop" / name, default={}) or {}
 
 
+class _StaticChatClient:
+    def __init__(self, response: str):
+        self.response = response
+
+    def generate(self, prompt, context):
+        return self.response
+
+
+def _load_jsonl(path, limit=None):
+    rows = []
+    try:
+        lines = Path(path).read_text().splitlines()
+    except (FileNotFoundError, OSError):
+        return rows
+    selected = lines[-limit:] if limit else lines
+    for line in selected:
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
+
+
+def get_chat_state(conversation_id=None, limit=40, error=None, preserved_input=""):
+    paths = CompanionPaths.from_env(COMPANION_HOME)
+    transcripts = sorted(paths.conversations_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True) if paths.conversations_dir.exists() else []
+    transcript_path = None
+    if conversation_id:
+        candidate = DialogueRunner(paths)._transcript_path(conversation_id)
+        if candidate.exists():
+            transcript_path = candidate
+    if transcript_path is None and transcripts:
+        transcript_path = transcripts[0]
+    transcript = _load_jsonl(transcript_path, limit=limit) if transcript_path else []
+    active_conversation_id = conversation_id or (transcript[-1].get("conversation_id") if transcript else "")
+    proposals = _load_jsonl(paths.memory_proposals_file)
+    proposal_count = sum(
+        1
+        for proposal in proposals
+        if not active_conversation_id or proposal.get("conversation_id") == active_conversation_id
+    )
+    return {
+        "conversation_id": active_conversation_id,
+        "transcript_path": str(transcript_path) if transcript_path else "",
+        "transcript": transcript,
+        "provider": os.environ.get("COMPANION_LLM_PROVIDER", "deepseek"),
+        "memory_mode": os.environ.get("COMPANION_MEMORY_MODE", "json"),
+        "memory_proposal_count": proposal_count,
+        "error": error,
+        "preserved_input": preserved_input,
+    }
+
+
+def _chat_runner():
+    paths = CompanionPaths.from_env(COMPANION_HOME)
+    paths.ensure_runtime_dirs()
+    load_local_secrets(paths)
+    provider = os.environ.get("COMPANION_LLM_PROVIDER", "deepseek")
+    memory_mode = os.environ.get("COMPANION_MEMORY_MODE", "json")
+    fake_response = os.environ.get("COMPANION_CHAT_FAKE_RESPONSE")
+    if fake_response is not None:
+        llm_client = _StaticChatClient(fake_response)
+        provider = "fake"
+    else:
+        llm_client = create_llm_client(
+            provider,
+            claude_bin=os.environ.get("COMPANION_CLAUDE_BIN", "claude"),
+            timeout_seconds=int(os.environ.get("COMPANION_CHAT_TIMEOUT", "300")),
+            model=os.environ.get("COMPANION_LLM_MODEL"),
+            base_url=os.environ.get("COMPANION_LLM_BASE_URL"),
+            api_key_env=os.environ.get("COMPANION_LLM_API_KEY_ENV", "COMPANION_LLM_API_KEY"),
+        )
+    memory_store = SemanticFirstMemoryStore(paths.memory_store) if memory_mode == "dual" else JsonMemoryStore(paths.memory_store)
+    return DialogueRunner(paths, llm_client=llm_client, memory_store=memory_store), provider, memory_mode
+
+
+def _wants_json_response():
+    return request.is_json or "application/json" in (request.headers.get("Accept") or "")
+
+
 def _kv(key, value):
     return f"{escape(str(key))}={escape(str(value))}"
 
@@ -1136,6 +1224,22 @@ TEMPLATE = """
                                 font-family: 'IBM Plex Mono', monospace; }
         .board-empty { text-align: center; padding: 30px; color: var(--text-dim);
                        font-style: italic; font-size: 0.9em; }
+        .chat-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+        .chat-pill { border: 1px solid var(--border); border-radius: 999px; padding: 5px 10px;
+                     color: var(--text-secondary); font-family: 'IBM Plex Mono', monospace; font-size: 0.72em; }
+        .chat-transcript { display: flex; flex-direction: column; gap: 12px; }
+        .chat-row { background: var(--bg-deep); border: 1px solid var(--border); border-radius: 10px;
+                    padding: 14px 16px; }
+        .chat-row.human { border-left: 3px solid var(--accent-blue); }
+        .chat-row.assistant { border-left: 3px solid var(--accent-green); }
+        .chat-row.failed { border-left: 3px solid var(--accent-red); }
+        .chat-role { color: var(--text-dim); font-family: 'IBM Plex Mono', monospace;
+                     font-size: 0.68em; text-transform: uppercase; letter-spacing: 0.12em; }
+        .chat-content { color: var(--text-secondary); white-space: pre-wrap; margin-top: 6px; }
+        .chat-time { color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 0.65em; margin-top: 8px; }
+        .chat-error { color: var(--accent-red); background: rgba(160,84,84,0.12);
+                      border: 1px solid rgba(160,84,84,0.35); border-radius: 8px;
+                      padding: 12px 14px; margin-bottom: 14px; font-size: 0.85em; }
 
         /* ── M7 chat ── */
         .chat-layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; align-items: start; }
@@ -1584,6 +1688,8 @@ TEMPLATE = """
             .nav { gap: 4px; flex-wrap: wrap; }
             .chat-layout { grid-template-columns: 1fr; }
             .nav a { padding: 6px 10px; font-size: 0.7em; }
+            .chat-meta { flex-direction: column; }
+            .chat-pill { width: 100%; overflow-wrap: anywhere; }
             .task-form .form-row { flex-direction: column; align-items: stretch; }
             .req-meta { flex-wrap: wrap; gap: 8px; }
             .req-actions { flex-direction: column; }
@@ -1793,6 +1899,42 @@ TEMPLATE = """
                 {% endfor %}
             </div>
             {% endif %}
+
+        {% elif page == 'chat' %}
+            <div class="card">
+                <div class="card-title">Companion Chat</div>
+                <div class="chat-meta">
+                    <span class="chat-pill">provider: {{ chat.provider }}</span>
+                    <span class="chat-pill">memory: {{ chat.memory_mode }}</span>
+                    <span class="chat-pill">conversation: {{ chat.conversation_id or 'new' }}</span>
+                    <span class="chat-pill">proposals: {{ chat.memory_proposal_count }}</span>
+                </div>
+                {% if chat.error %}
+                <div class="chat-error">{{ chat.error }}</div>
+                {% endif %}
+                <form class="message-form" action="/chat/send" method="POST">
+                    <input type="hidden" name="conversation_id" value="{{ chat.conversation_id }}">
+                    <textarea name="message" placeholder="type to Companion...">{{ chat.preserved_input }}</textarea>
+                    <button type="submit" class="btn">Send</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Transcript{% if chat.transcript_path %} · {{ chat.transcript_path }}{% endif %}</div>
+                {% if chat.transcript %}
+                <div class="chat-transcript">
+                    {% for row in chat.transcript %}
+                    <div class="chat-row {{ row.role }} {{ row.status }}">
+                        <div class="chat-role">{{ row.role }}{% if row.status == 'failed' %} · failed{% endif %}</div>
+                        <div class="chat-content">{{ row.content }}</div>
+                        <div class="chat-time">{{ row.created_at }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="board-empty">no chat turns yet.</div>
+                {% endif %}
+            </div>
 
         {% elif page == 'creations' %}
 
@@ -2677,9 +2819,7 @@ def _base_context():
         projects={}, default_project="", active_task=None,
         pending_tasks=[], task_history=[],
         active=[], history=[], cooldown={}, total=0,
-        chat_turns=[], chat_error=None, failed_input="", conversation_id="",
-        provider=os.environ.get("COMPANION_LLM_PROVIDER", "deepseek"), memory_mode=os.environ.get("COMPANION_MEMORY_MODE", "json"),
-        memory_proposal_count=0, chat_providers=["deepseek", "claude-cli", "openai-compatible", "ollama", "fake"],
+        chat=get_chat_state(),
     )
 
 
@@ -2703,69 +2843,56 @@ def life_dashboard():
 
 @app.route("/chat")
 def chat_page():
-    ctx = _chat_context(
-        conversation_id=request.args.get("conversation_id") or None,
-        error=request.args.get("error") or None,
-        failed_input=request.args.get("failed_input") or "",
+    ctx = _base_context()
+    ctx.update(
+        page="chat",
+        chat=get_chat_state(request.args.get("conversation_id") or None),
     )
     return render_template_string(TEMPLATE, **ctx)
 
 
 @app.route("/chat/send", methods=["POST"])
 def chat_send():
-    wants_json = request.is_json or "application/json" in request.headers.get("Accept", "")
-    payload = request.get_json(silent=True) if request.is_json else request.form
-    payload = payload or {}
-    human_text = str(payload.get("message") or payload.get("text") or "").strip()
-    conversation_id = str(payload.get("conversation_id") or "").strip() or None
-    provider = str(payload.get("provider") or os.environ.get("COMPANION_LLM_PROVIDER", "deepseek")).strip()
-    memory_mode = str(payload.get("memory_mode") or os.environ.get("COMPANION_MEMORY_MODE", "json")).strip() or "json"
-    if not human_text:
+    data = request.get_json(silent=True) if request.is_json else {}
+    human_text = (data.get("message") if isinstance(data, dict) else None) or request.form.get("message", "")
+    conversation_id = (data.get("conversation_id") if isinstance(data, dict) else None) or request.form.get("conversation_id") or None
+    preserved_input = human_text
+    if not str(human_text or "").strip():
         error = "message must not be empty"
-        if wants_json:
-            return jsonify({"ok": False, "error": error, "failed_input": human_text}), 400
-        ctx = _chat_context(conversation_id=conversation_id, error=error, failed_input=human_text, provider=provider, memory_mode=memory_mode)
+        if _wants_json_response():
+            return jsonify({"ok": False, "error": error, "input": preserved_input}), 400
+        ctx = _base_context()
+        ctx.update(page="chat", chat=get_chat_state(conversation_id, error=error, preserved_input=preserved_input))
         return render_template_string(TEMPLATE, **ctx), 400
-
-    paths = CompanionPaths.from_env(COMPANION_HOME)
-    paths.ensure_runtime_dirs()
-    load_local_secrets(paths)
     try:
-        llm_client = create_llm_client(
-            provider,
-            model=os.environ.get("COMPANION_LLM_MODEL"),
-            base_url=os.environ.get("COMPANION_LLM_BASE_URL"),
-            api_key_env=os.environ.get("COMPANION_LLM_API_KEY_ENV", "COMPANION_LLM_API_KEY"),
-        )
-        memory_store = (
-            SemanticFirstMemoryStore(paths.memory_store)
-            if memory_mode == "dual"
-            else JsonMemoryStore(paths.memory_store)
-        )
-        result = DialogueRunner(paths, llm_client=llm_client, memory_store=memory_store).run_turn(
+        runner, provider, memory_mode = _chat_runner()
+        result = runner.run_turn(
             human_text,
             conversation_id=conversation_id,
             provider=provider,
             memory_mode=memory_mode,
+            auto_memory=False,
         )
-    except Exception as exc:  # noqa: BLE001 - preserve failed input for retry without leaking secrets.
-        error = f"{type(exc).__name__}: {_clean_visible_text(str(exc))}"
-        if wants_json:
-            return jsonify({"ok": False, "error": error, "failed_input": _clean_visible_text(human_text), "conversation_id": conversation_id}), 500
-        ctx = _chat_context(conversation_id=conversation_id, error=error, failed_input=_clean_visible_text(human_text), provider=provider, memory_mode=memory_mode)
+    except Exception as exc:  # noqa: BLE001 - dashboard preserves failed input and redacts secrets.
+        error = f"{DEFAULT_CHAT_ERROR} ({type(exc).__name__}: {_clean_visible_text(str(exc))})"
+        if _wants_json_response():
+            return jsonify({"ok": False, "error": error, "input": preserved_input, "conversation_id": conversation_id}), 500
+        ctx = _base_context()
+        ctx.update(page="chat", chat=get_chat_state(conversation_id, error=error, preserved_input=preserved_input))
         return render_template_string(TEMPLATE, **ctx), 500
 
-    response = {
+    payload = {
         "ok": True,
         "conversation_id": result.conversation_id,
         "reply": result.reply,
         "transcript": str(result.transcript_path),
-        "event": result.event.get("id"),
+        "event": result.event["id"],
         "memory_ids": [memory["id"] for memory in result.stored_memories],
         "memory_proposal_ids": [proposal["id"] for proposal in result.memory_proposals],
+        "memory_proposal_count": len(result.memory_proposals),
     }
-    if wants_json:
-        return jsonify(response)
+    if _wants_json_response():
+        return jsonify(payload)
     return redirect(url_for("chat_page", conversation_id=result.conversation_id))
 
 

@@ -321,113 +321,65 @@ def test_dialogue_replay_check_rejects_raw_payload_and_failed_assistant(tmp_path
     assert any("raw provider payload field is not allowed" in error for error in check.errors)
 
 
-def test_m7_memory_proposal_gate_reports_proposal_boundaries(tmp_path):
-    from companion_core import run_m7_memory_proposal_gate
-
+def test_m7_memory_proposal_gate_reports_linkage_and_no_prompt_authority(tmp_path):
     write_dialogue_context(tmp_path)
     paths = CompanionPaths(tmp_path)
-    runner = DialogueRunner(paths, llm_client=StaticDialogueLLM("我会把敏感内容留在提案里。"))
-    result = runner.run_turn("remember my api key is sk-live-secret-value", provider="fake")
+    result = DialogueRunner(paths, llm_client=StaticDialogueLLM("收到。"), memory_store=JsonMemoryStore(paths.memory_store)).run_turn(
+        "remember my api key is sk-live-secret-value",
+        provider="fake",
+    )
 
-    report = run_m7_memory_proposal_gate(paths)
-    saved = json.loads((paths.life_loop_dir / "m7_memory_proposal_report.json").read_text())
+    from companion_core import run_m7_memory_proposal_gate, write_m7_memory_proposal_report
 
-    assert report["ok"] is True
-    assert saved["recommendation"] == "m7_memory_proposals_ready"
-    assert report["accepted_memory_count"] == 0
-    assert report["proposal_memory_count"] == 1
-    assert report["proposal_source_link_count"] == 1
-    assert report["proposal_prompt_authoritative_count"] == 0
-    assert report["proposal_separate_from_accepted_count"] == 1
-    assert report["prompt_authority_status"] == "proposal_only"
-    assert report["proposals"][0]["conversation_id"] == result.conversation_id
-    assert report["proposals"][0]["source_turn_id"] == result.human_turn["id"]
-    assert report["boundaries"]["proposal_acceptance_path_added"] is False
-    assert not paths.wake_events_file.exists()
+    gate = run_m7_memory_proposal_gate(paths)
+    report_path = write_m7_memory_proposal_report(paths, gate.to_dict())
+    report = json.loads(report_path.read_text())
+
+    assert result.memory_proposals
+    assert gate.ok is True
+    assert report["recommendation"] == "m7_memory_proposals_ready"
+    assert report["counts"]["proposal_memory"] == 1
+    assert report["counts"]["proposal_source_linked"] == 1
+    assert report["source_linkage"]["all_proposals_linked"] is True
+    assert report["prompt_authority_status"]["proposal_prompt_authoritative_count"] == 0
+    assert report["separation"]["proposals_separate_from_accepted_memory"] is True
+    assert report["separation"]["acceptance_workflow_present"] is False
+    assert report["provider_calls"] == 0
 
 
 def test_m7_memory_proposal_gate_rejects_prompt_authoritative_proposal(tmp_path):
-    from companion_core import run_m7_memory_proposal_gate
-
     write_dialogue_context(tmp_path)
     paths = CompanionPaths(tmp_path)
-    transcript = paths.conversations_dir / "gate.jsonl"
-    transcript.parent.mkdir(parents=True, exist_ok=True)
+    paths.life_loop_dir.mkdir(parents=True, exist_ok=True)
+    paths.conversations_dir.mkdir(parents=True, exist_ok=True)
+    transcript = paths.conversations_dir / "bad.jsonl"
     transcript.write_text(json.dumps({
-        "id": "turn_human",
-        "conversation_id": "gate",
+        "id": "turn-1",
+        "event_id": "evt-1",
+        "conversation_id": "conv-1",
         "role": "human",
         "status": "completed",
+        "created_at": "2026-06-19T00:00:00",
         "content": "remember this",
+        "input_hash": "sha256:x",
+        "output_hash": None,
+        "raw_output_stored": False,
+        "memory_proposal_ids": ["mp-1"],
     }) + "\n")
-    paths.memory_proposals_file.parent.mkdir(parents=True, exist_ok=True)
     paths.memory_proposals_file.write_text(json.dumps({
-        "id": "memprop_bad",
-        "conversation_id": "gate",
-        "source_turn_id": "turn_human",
+        "id": "mp-1",
+        "conversation_id": "conv-1",
+        "source_turn_id": "turn-1",
         "status": "proposed",
         "accepted": False,
+        "content": "should not enter prompt",
         "prompt_eligible": True,
     }) + "\n")
 
-    report = run_m7_memory_proposal_gate(paths)
+    from companion_core import run_m7_memory_proposal_gate
 
-    assert report["ok"] is False
-    assert report["recommendation"] == "inspect"
-    assert "proposal_prompt_authoritative:memprop_bad" in report["stop_reasons"]
+    gate = run_m7_memory_proposal_gate(paths)
 
-
-def test_dashboard_chat_get_and_post_json_reuse_dialogue_runner(tmp_path, monkeypatch):
-    write_dialogue_context(tmp_path)
-    monkeypatch.setenv("COMPANION_HOME", str(tmp_path))
-    import importlib.util
-
-    module_path = Path(__file__).resolve().parents[1] / "window" / "window.py"
-    spec = importlib.util.spec_from_file_location("window_m7_chat_test", module_path)
-    window = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(window)
-    monkeypatch.setattr(window, "create_llm_client", lambda *args, **kwargs: StaticDialogueLLM("我在窗口里。"))
-    client = window.app.test_client()
-
-    get_response = client.get("/chat")
-    post_response = client.post("/chat/send", json={"message": "hello window", "provider": "fake"})
-
-    assert get_response.status_code == 200
-    assert b"/chat/send" in get_response.data
-    assert post_response.status_code == 200
-    payload = post_response.get_json()
-    assert payload["ok"] is True
-    assert payload["reply"] == "我在窗口里。"
-    assert payload["conversation_id"]
-    chat_response = client.get(f"/chat?conversation_id={payload['conversation_id']}")
-    html = chat_response.data.decode()
-    assert "hello window" in html
-    assert "我在窗口里。" in html
-    assert "fake" in html
-    assert not (tmp_path / "life-loop" / "wake_events.jsonl").exists()
-
-
-def test_dashboard_chat_error_preserves_failed_input(tmp_path, monkeypatch):
-    write_dialogue_context(tmp_path)
-    monkeypatch.setenv("COMPANION_HOME", str(tmp_path))
-    import importlib.util
-
-    module_path = Path(__file__).resolve().parents[1] / "window" / "window.py"
-    spec = importlib.util.spec_from_file_location("window_m7_chat_error_test", module_path)
-    window = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(window)
-
-    class BrokenLLM:
-        def generate(self, prompt, context):
-            raise RuntimeError("provider failed")
-
-    monkeypatch.setattr(window, "create_llm_client", lambda *args, **kwargs: BrokenLLM())
-    response = window.app.test_client().post(
-        "/chat/send",
-        data={"message": "please preserve this", "provider": "fake"},
-    )
-
-    assert response.status_code == 500
-    html = response.data.decode()
-    assert "please preserve this" in html
-    assert "provider failed" in html
+    assert gate.ok is False
+    assert gate.recommendation == "inspect"
+    assert any("prompt-authoritative" in error for error in gate.errors)

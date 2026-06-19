@@ -123,9 +123,6 @@ Files in `window/content/` render as cards on the homepage. Markdown files get r
 
 Replace `window/icon.svg` with any SVG. This becomes the PWA app icon and the favicon.
 
+## Chat page
 
-## M7 Chat
-
-The dashboard includes a text dialogue surface at `GET /chat` with a form-backed and JSON-capable `POST /chat/send` API. The route reuses `companion_core.dialogue.DialogueRunner`; it does not implement a separate provider path, run wake cycles, mutate scheduler state, or add write routes under `/life`.
-
-The chat page shows transcript rows, a composer, provider and memory-mode controls, current conversation id, companion status, and the count of memory proposals. Failed sends preserve the submitted text in the response so the human can retry or edit it.
+`GET /chat` renders a text chat surface backed by `companion_core.dialogue.DialogueRunner`. `POST /chat/send` accepts form or JSON input (`message`, optional `conversation_id`) and returns JSON when requested by API clients. The route writes dialogue transcripts and dialogue events only; it does not add `/life` write routes, wake cycles, scheduler changes, or raw provider payload storage.
