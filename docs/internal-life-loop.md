@@ -383,25 +383,39 @@ only when the companion explicitly emits mood/status. M7 must not run wake
 cycles from chat, edit scheduler state, promote semantic shadow authority, or
 store raw provider payloads by default. The M7.4 gate writes only `life-loop/m7_memory_proposal_report.json`; M7.5 chat writes only dialogue transcripts/events through `DialogueRunner` and does not add `/life` write routes. M7.6 adds `companion_core/m7_dialogue_freeze.py` and `scripts/run_m7_dialogue_freeze.py` as a read-only freeze gate; the CLI writes `life-loop/m7_dialogue_freeze_report.json` with recommendation `m7_text_dialogue_frozen` when M6.7 and M7.1-M7.5 evidence still satisfy the dialogue boundaries.
 
+M8 is the Memory Steward and dialogue-humanity milestone after M7.6. Its design
+starts in `docs/m8-memory-steward-design.md`. M8 should let the companion manage
+ordinary low-risk memory through an internal steward while preserving code-level
+policy authority, an append-only decision ledger, quarantine for sensitive or
+ambiguous candidates, retrieval filtering for accepted memory, and sparse human
+review only for edge cases. M8 must not make the human the routine memory
+administrator, and it must not reopen wake, scheduler, `/life`, raw payload, or
+semantic-shadow authority boundaries.
+
 For the full real-provider trial path, see `docs/m3-real-trial.md`.
 
 ## Expansion Plan
 
-1. Execute M7 text dialogue without reopening M3-M6 frozen contracts.
-2. Build CLI one-turn chat first, then interactive transcript, memory proposal
-   gate, dashboard `/chat`, and M7 dialogue freeze.
-3. Revisit scheduler handoff after the human can already talk to the companion;
-   do not replace cron or install timers as part of M7 dialogue work.
+1. Keep M7 text dialogue frozen without reopening M3-M6 contracts.
+2. Execute M8 memory steward and dialogue-humanity hardening.
+3. Revisit scheduler handoff after accepted/retrieved memory improves ordinary
+   dialogue continuity; do not replace cron or install timers as part of M8.
 4. Add optional Signal delivery as an output/input adapter only after text
-   dialogue is frozen and scheduler handoff is explicitly approved.
+   dialogue and memory stewardship are frozen and scheduler handoff is
+   explicitly approved.
 5. Add voice, hardware/body adapters, and broader product surfaces only after
    the internal companion loop is stable, observable, recoverable, frozen on the
-   Pi, and reachable through text dialogue.
-   the Pi.
+   Pi, reachable through text dialogue, and backed by safe memory stewardship.
 
 ## M7 memory proposal boundary
 
-M7 dialogue memory proposals remain proposal-only until a future explicit acceptance workflow exists. `scripts/run_m7_memory_proposal_gate.py` reports whether proposal records carry `conversation_id` and `source_turn_id`, remain separate from accepted memory, and are not prompt-authoritative. This gate is read-only and does not mutate wake, scheduler, provider, `/life`, or semantic-shadow authority.
+M7 dialogue memory proposals remain proposal-only until the M8 Memory Steward
+and policy-gated ledger path accepts, quarantines, rejects, or routes them to
+human review. `scripts/run_m7_memory_proposal_gate.py` reports whether proposal
+records carry `conversation_id` and `source_turn_id`, remain separate from
+accepted memory, and are not prompt-authoritative. This gate is read-only and
+does not mutate wake, scheduler, provider, `/life`, or semantic-shadow
+authority.
 
 
 ## M7 dialogue freeze boundary

@@ -4,13 +4,15 @@
 
 - Status: Active
 - Last refreshed: 2026-06-19
-- Primary product surfaces: Companion Window home, message board, creations, tasks, requests, `/life`, and planned M7 text chat.
+- Primary product surfaces: Companion Window home, message board, creations, tasks, requests, `/life`, M7 text chat, and planned M8 memory review/stewardship.
 - Evidence reviewed:
   - `docs/web-dashboard.md`
   - `docs/requests-system-design.md`
   - `docs/internal-life-loop.md`
   - `docs/m5-companion-quality-design.md`
   - `docs/m6-pi-field-pilot-design.md`
+  - `docs/m7-text-dialogue-design.md`
+  - `docs/m8-memory-steward-design.md`
   - `window/window.py`
 
 ## Brand
@@ -24,15 +26,19 @@
 - Goals:
   - Make the companion feel reachable, inspectable, and continuous.
   - Let the human talk to the same companion identity through a text-first channel.
+  - Let the companion manage ordinary memory herself through an internal steward while keeping risky memory auditable and reviewable.
   - Preserve M3-M6 safety contracts while adding a deliberately scoped dialogue surface.
 - Non-goals:
-  - Voice, camera, sensors, Signal, and hardware body work.
+  - Voice, camera, sensors, Signal, and hardware body work before M8 memory/dialogue hardening freezes.
   - Scheduler installation as a prerequisite for dialogue.
-  - Automatic promotion of chat text into long-term factual memory.
+  - Human micromanagement of every memory candidate.
+  - Automatic promotion of sensitive, inferred, conflicting, or relationship-defining chat text into long-term factual memory.
 - Success signals:
   - The human can send text and receive a response from the live companion identity.
   - Conversation history is durable and reviewable.
-  - Memory proposals are visible without being silently committed.
+  - Low-risk memory can be stewarded automatically with evidence and policy gates.
+  - Sensitive or ambiguous memory is quarantined or routed to sparse human review.
+  - Accepted memories improve future chat naturally without the companion announcing backend memory work.
   - Existing wake, `/life`, request, and recovery flows still pass tests.
 
 ## Confirmed M7 direction
@@ -49,6 +55,15 @@
   content remains proposal-only.
 - State: every completed turn writes transcript; current companion state updates
   only when the companion explicitly emits mood/status.
+
+## Confirmed M8 direction
+
+- M8 is memory hardening and dialogue humanity, not scheduler, voice, Signal, or hardware.
+- The human should not become the routine memory administrator.
+- A Memory Steward internal personality should review completed dialogue turns and propose memory decisions.
+- Code-level policy gates retain final authority over accepted prompt-eligible memory.
+- Human review is reserved for sensitive, ambiguous, conflicting, or relationship-defining cases.
+- Retrieval should make accepted memory improve ordinary chat while keeping unaccepted proposals, quarantined items, and audit-only reflections out of prompt context.
 
 ## Personas and jobs
 
@@ -72,10 +87,12 @@
   - `/board`: asynchronous human-to-companion notes for later wake cycles.
   - `/requests`: companion-to-human structured requests.
   - `/life`: read-only runtime evidence.
-  - `/chat`: planned M7 live text dialogue.
+  - `/chat`: M7 live text dialogue.
+  - `/memory-review`: planned M8 exception queue for ambiguous or sensitive memory decisions.
 - Content hierarchy:
   - Chat foregrounds the conversation.
   - State, provider, memory mode, transcript id, and proposals are secondary metadata.
+  - Memory review foregrounds only decisions that require human judgment; ordinary low-risk stewarded memory should not demand routine clicks.
   - Diagnostics are visible on failure but not dominant during normal conversation.
 
 ## Design principles
@@ -85,8 +102,10 @@
 - Explicit write boundaries: distinguish transcript writes, memory proposals, memory commits, requests, and wake events.
 - Natural reply, structured shadow: keep the visible reply conversational while
   machine-readable metadata stays behind the scenes.
+- Stewarded memory, sparse review: ordinary memory management belongs to the companion's internal steward; human review is an exception path.
 - Reuse before redesign: extend existing Window styles and routes before introducing a new UI system.
 - Tradeoffs: early M7 should prefer CLI and plain HTML reliability over polished real-time effects.
+  M8 should prefer auditable memory correctness over invisible personalization magic.
 
 ## Visual language
 
@@ -110,12 +129,15 @@
   - Composer with send button and disabled/loading states.
   - Conversation status strip.
   - Memory proposal panel.
+  - Memory review queue rows.
+  - Memory decision detail view with source turn, candidate, risk, reason, and action controls.
 - Variants and states:
   - Empty conversation.
   - Sending.
   - Provider timeout/error.
   - Retry available.
   - Memory proposal present.
+  - Memory decision accepted, quarantined, rejected, audit-only, and human-review-required.
   - Transcript saved.
 - Token/component ownership: keep tokens in `window/window.py` until the dashboard is split into static assets.
 
@@ -153,10 +175,13 @@
   - Use "message board" for asynchronous notes.
   - Use "request" for structured companion-to-human asks.
   - Use "memory proposal" when text is not yet committed to durable memory.
+  - Use "Memory Steward" only in implementation/docs; avoid surfacing it as a second companion persona in ordinary chat.
+  - Use "memory review" for the sparse human exception queue.
 - Microcopy rules:
   - Do not imply memory was saved unless it was actually committed.
   - Do not imply a wake ran during chat.
   - Do not hide provider or transcript failures behind soft language.
+  - Do not make ordinary chat narrate background memory operations.
 
 ## Implementation constraints
 
@@ -166,12 +191,14 @@
 - Compatibility constraints: the Pi production environment is also development, so changes must be reversible and tested locally.
 - Test/screenshot expectations:
   - Route tests for `/chat`.
+  - Route tests for `/memory-review` once implemented.
   - Unit tests for dialogue engine boundaries.
+  - Unit tests for Memory Steward decision schema, policy gate, quarantine, and retrieval filtering.
   - No POST/write routes added to `/life`.
   - Manual browser check on `http://127.0.0.1:3000`.
 
 ## Open questions
 
-- [ ] Should M7.1 require DeepSeek only, or allow fake provider for local chat smoke tests? Owner: implementation. Impact: testing speed and provider safety.
-- [ ] Should the first dashboard chat use full page reloads or fetch-based async submit? Owner: implementation. Impact: reliability versus UX smoothness.
 - [ ] What is the exact human-facing companion name in the chat header? Owner: user. Impact: final polish, not blocking.
+- [ ] Should M8 use the same DeepSeek provider call for Memory Steward, or begin with deterministic rule-only stewardship before provider-backed decisions? Owner: implementation. Impact: cost, latency, and decision quality.
+- [ ] Should `/memory-review` be a standalone route first, or should the first human-review controls appear inside `/chat`? Owner: implementation/user. Impact: workflow simplicity versus separation of concerns.

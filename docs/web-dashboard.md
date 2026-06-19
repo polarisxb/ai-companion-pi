@@ -52,19 +52,29 @@ The companion's outbound communication channel. Shows active requests (pending, 
 
 See [requests-system-design.md](requests-system-design.md) for the full request system documentation.
 
-### Chat (Planned M7)
+### Chat
 
-The planned M7 chat page is the human's live text dialogue channel with the
-companion. It is distinct from the Message Board, which stores notes for the
-next wakeup, and distinct from Requests, which are structured companion asks.
+The M7 chat page is the human's live text dialogue channel with the companion.
+It is distinct from the Message Board, which stores notes for the next wakeup,
+and distinct from Requests, which are structured companion asks.
 
-The first chat implementation should prove the M7 dialogue engine through CLI
-first. The dashboard page should reuse that engine after the API is stable and
-may follow a human-provided UI design. It should write conversation
-transcripts, not wake events, and show a transcript, composer, compact
-companion state/provider metadata, error/retry states, and memory proposals
-when present. See [m7-text-dialogue-design.md](m7-text-dialogue-design.md) and
-the repository `DESIGN.md`.
+The current implementation reuses the M7 dialogue engine, writes conversation
+transcripts and dialogue events, not wake events, and shows a transcript,
+composer, compact provider/memory metadata, error/retry states, and memory
+proposal counts. See [m7-text-dialogue-design.md](m7-text-dialogue-design.md)
+and the repository `DESIGN.md`.
+
+### Memory Review (Planned M8)
+
+M8 should add a sparse memory-review surface for the Memory Steward exception
+queue. Ordinary low-risk memory should be handled by the companion's internal
+steward and code policy gate; the human review page is only for sensitive,
+ambiguous, conflicting, or relationship-defining memory decisions.
+
+The first review implementation should show the source turn, candidate memory,
+risk, reason, recommended action, and approve/reject/edit/archive controls.
+This page must not be a `/life` write route and must not make unreviewed,
+quarantined, rejected, or audit-only memory prompt-authoritative.
 
 ## Setup
 

@@ -556,15 +556,22 @@ For M7.6:
 
 ## M8 Handoff
 
-After `m7_text_dialogue_frozen`, the next milestone can choose between:
+After `m7_text_dialogue_frozen`, M8 should harden memory and ordinary dialogue
+before scheduler, voice, Signal, or hardware work resumes.
 
-- scheduler handoff for automatic wake cadence
-- voice input/output on top of the M7 dialogue engine
-- Signal chat adapter
-- memory proposal acceptance UI
+M8 is the Memory Steward and dialogue humanity milestone. It should add an
+internal memory-steward pass, code-level memory policy gates, an auditable
+memory decision ledger, quarantine for sensitive or ambiguous candidates,
+retrieval assembly for accepted memories, and a sparse human-review exception
+queue. The human should not become the routine memory administrator.
 
-The recommended path is scheduler handoff after text dialogue is stable, then
-voice/hardware adapters.
+The recommended path is:
+
+```text
+M8 memory/dialogue hardening
+  -> M9 scheduler handoff
+  -> voice / Signal / hardware adapters after scheduler and memory are stable
+```
 
 ## M7.4 Memory Proposal Gate
 
