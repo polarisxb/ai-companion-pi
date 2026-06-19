@@ -6848,95 +6848,112 @@ def m3_release_gate_report_fixture():
     }
 
 
+def test_m7_dialogue_turn_writes_transcript_event_and_preserves_wake_boundaries(tmp_path):
+    from companion_core.dialogue import DialogueRunner, load_transcript_turns
 
-def test_m7_dialogue_writes_transcript_event_and_does_not_wake(tmp_path):
     write_minimal_context(tmp_path)
-    paths = CompanionPaths(tmp_path)
-    client = CapturingLLMClient(
-        '你好，我在这里。\nINTERNAL_METADATA: {"companion_state": {"mood": "专注", "status": "正在聊天。"}}'
+    paths = CompanionPaths.from_env(tmp_path)
+    paths.ensure_runtime_dirs()
+    (paths.memory_store.parent).mkdir(parents=True, exist_ok=True)
+    paths.memory_store.write_text(json.dumps([
+        {
+            "id": "mem_prompt",
+            "content": "The human likes concise engineering updates.",
+            "created_at": "2026-06-19T00:00:00",
+            "status": "active",
+            "memory_type": "semantic",
+            "authority": "user_asserted",
+            "prompt_eligible": True,
+        },
+        {
+            "id": "mem_shadow",
+            "content": "Semantic shadow must not become authority.",
+            "created_at": "2026-06-19T00:00:01",
+            "status": "active",
+            "memory_type": "semantic",
+            "authority": "model_proposed",
+            "prompt_eligible": True,
+        },
+    ]))
+    llm = CapturingLLMClient("""我在。我们先把文字对话的边界跑通，不会触发唤醒。
+===DIALOGUE_METADATA===
+{"companion_state": {"mood": "专注", "status": "正在和 Polaris 验证 M7 文字对话。"}}
+""")
+
+    result = DialogueRunner(paths, llm_client=llm).run_turn(
+        "你好，remember that my project codename is digital_life.",
+        provider="fake",
     )
 
-    result = DialogueEngine(paths, client, provider="fake", memory_mode="json").run_turn(
-        "你好，今天只测试聊天。",
-        conversation_id="conv_test",
-    )
+    assert "The human likes concise engineering updates." in llm.prompts[0]
+    assert "Semantic shadow must not become authority." not in llm.prompts[0]
+    assert "This is not a wake cycle" in llm.prompts[0]
+    assert result.reply == "我在。我们先把文字对话的边界跑通，不会触发唤醒。"
+    assert result.transcript_path.exists()
+    turns = load_transcript_turns(result.transcript_path)
+    assert [turn["role"] for turn in turns] == ["human", "assistant"]
+    assert turns[0]["content"] == "你好，remember that my project codename is digital_life."
+    assert turns[1]["raw_output_stored"] is False
+    assert turns[1]["output_hash"].startswith("sha256:")
+    assert not (tmp_path / "life-loop" / "wake_events.jsonl").exists()
 
-    assert result.reply == "你好，我在这里。"
-    transcript_lines = [json.loads(line) for line in result.transcript_path.read_text().splitlines()]
-    assert [turn["role"] for turn in transcript_lines] == ["human", "assistant"]
-    assert all(turn["raw_output_stored"] is False for turn in transcript_lines)
     events = load_wake_events(paths.conversation_events_file)
-    assert events[-1]["trigger"] == "human-text-chat"
-    assert events[-1]["wake_cycle_triggered"] is False
-    assert events[-1]["scheduler_mutated"] is False
-    assert events[-1]["raw_provider_payload_stored"] is False
-    assert not paths.wake_events_file.exists()
+    assert len(events) == 1
+    assert events[0]["trigger"] == "human-text-chat"
+    assert events[0]["status"] == "completed"
+    assert events[0]["raw_output_stored"] is False
+    assert events[0]["transcript"].startswith("conversations/")
+    memories = json.loads(paths.memory_store.read_text())
+    accepted = [memory for memory in memories if memory.get("source_event_id") == events[0]["id"]]
+    assert len(accepted) == 1
+    assert accepted[0]["authority"] == "user_asserted"
+    assert accepted[0]["prompt_eligible"] is True
     state = json.loads(paths.companion_state_file.read_text())
     assert state["mood"] == "专注"
-    assert "=== WHO YOU ARE ===" in client.prompts[0]
-    assert "===JOURNAL===" not in result.reply
 
 
-def test_m7_dialogue_low_risk_user_fact_is_narrow_auto_memory(tmp_path):
+def test_m7_dialogue_sensitive_memory_is_proposal_only_and_redacts_secrets(tmp_path):
+    from companion_core.dialogue import DialogueRunner, build_memory_proposals, load_transcript_turns
+
     write_minimal_context(tmp_path)
-    paths = CompanionPaths(tmp_path)
-    engine = DialogueEngine(paths, StaticLLMClient("记住了，我会这样称呼你。"), provider="fake")
+    paths = CompanionPaths.from_env(tmp_path)
+    paths.ensure_runtime_dirs()
+    llm = CapturingLLMClient("收到，我不会把这个直接写成长期记忆。")
 
-    result = engine.run_turn("以后叫我 Polaris.", conversation_id="conv_memory")
+    result = DialogueRunner(paths, llm_client=llm).run_turn(
+        "remember my api key is sk-testSECRETSECRETSECRET",
+        provider="fake",
+    )
 
-    assert len(result.stored_memory_ids) == 1
-    memories = JsonMemoryStore(paths.memory_store).load()
-    assert memories[0]["authority"] == "user_asserted"
-    assert memories[0]["source_type"] == "user"
-    assert memories[0]["prompt_eligible"] is True
-    assert "Polaris" in memories[0]["content"]
-    assert not paths.conversation_memory_proposals_file.exists()
-
-
-def test_m7_dialogue_sensitive_or_ambiguous_memory_is_proposal_only(tmp_path):
-    write_minimal_context(tmp_path)
-    paths = CompanionPaths(tmp_path)
-    engine = DialogueEngine(paths, StaticLLMClient("我先不把这个当成确定事实。"), provider="fake")
-
-    result = engine.run_turn("My API key is sk-abcdefghijklmnopqrstuvwxyz and maybe this matters", conversation_id="conv_prop")
-
-    assert result.stored_memory_ids == []
-    assert result.memory_proposal_ids
-    assert JsonMemoryStore(paths.memory_store).load() == []
-    proposals = [json.loads(line) for line in paths.conversation_memory_proposals_file.read_text().splitlines()]
-    assert proposals[-1]["status"] == "proposed"
-    assert "sk-abcdefghijklmnopqrstuvwxyz" not in proposals[-1]["content"]
-    transcript = result.transcript_path.read_text()
-    assert "sk-abcdefghijklmnopqrstuvwxyz" not in transcript
-    assert "[REDACTED]" in transcript
+    assert "sk-testSECRET" not in llm.prompts[0]
+    turns = load_transcript_turns(result.transcript_path)
+    assert "[REDACTED_SECRET]" in turns[0]["content"]
+    assert not paths.memory_store.exists()
+    proposals = load_wake_events(paths.memory_proposals_file)
+    assert len(proposals) == 1
+    assert proposals[0]["status"] == "proposed"
+    assert proposals[0]["accepted"] is False
+    assert "[REDACTED_SECRET]" in proposals[0]["content"]
+    assert build_memory_proposals(
+        "I prefer concise answers.",
+        conversation_id="conv_test",
+        source_turn_id="turn_test",
+    )[0]["status"] == "auto_accepted"
 
 
-def test_m7_dialogue_does_not_update_state_without_explicit_metadata(tmp_path):
-    write_minimal_context(tmp_path)
-    paths = CompanionPaths(tmp_path)
-    engine = DialogueEngine(paths, StaticLLMClient("当然，我们慢慢来。"), provider="fake")
-
-    result = engine.run_turn("我们聊一下项目。", conversation_id="conv_no_state")
-
-    assert result.companion_state is None
-    assert not paths.companion_state_file.exists()
-    assert result.event["companion_state_updated"] is False
-
-
-
-def test_m7_chat_cli_one_turn_fake_outputs_reply_and_metadata(tmp_path):
+def test_m7_chat_cli_one_turn_outputs_reply_json_without_provider_payload(tmp_path):
     write_minimal_context(tmp_path)
     script = Path(__file__).resolve().parents[1] / "scripts" / "chat_with_companion.py"
-
     result = subprocess.run(
         [
             sys.executable,
             str(script),
+            "你好",
             "--companion-home",
             str(tmp_path),
-            "--fake-llm",
+            "--fake-response",
+            "你好，我在这里。\n===DIALOGUE_METADATA===\n{}",
             "--json",
-            "以后叫我 Polaris.",
         ],
         capture_output=True,
         text=True,
@@ -6945,9 +6962,12 @@ def test_m7_chat_cli_one_turn_fake_outputs_reply_and_metadata(tmp_path):
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert "reply" in payload
-    assert payload["stored_memories"]
-    assert payload["memory_proposals"] == []
-    assert Path(payload["transcript"]).exists()
-    assert load_wake_events(CompanionPaths(tmp_path).conversation_events_file)[-1]["trigger"] == "human-text-chat"
-    assert not CompanionPaths(tmp_path).wake_events_file.exists()
+    assert payload["reply"] == "你好，我在这里。"
+    transcript = Path(payload["transcript"])
+    assert transcript.exists()
+    transcript_text = transcript.read_text()
+    assert "DIALOGUE_METADATA" not in transcript_text
+    assert "raw_output_stored" in transcript_text
+    events = (tmp_path / "life-loop" / "conversation_events.jsonl").read_text()
+    assert "human-text-chat" in events
+    assert not (tmp_path / "life-loop" / "wake_events.jsonl").exists()

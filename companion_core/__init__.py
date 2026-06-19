@@ -1,7 +1,7 @@
 """Core runtime for the AI companion internal life loop."""
 
 from .lifecycle import LifeLoopRunner, WakeResult
-from .dialogue import DialogueEngine, DialogueTurnResult, FakeDialogueClient
+from .dialogue import DialogueResult, DialogueRunner, build_memory_proposals, load_dialogue_context, parse_dialogue_output
 from .memory import JsonMemoryStore, SemanticFirstMemoryStore
 from .llm import (
     ClaudeCliClient,
@@ -61,9 +61,8 @@ __all__ = [
     "DEEPSEEK_API_KEY_ENV",
     "DEEPSEEK_BASE_URL",
     "DEEPSEEK_DEFAULT_MODEL",
-    "DialogueEngine",
-    "DialogueTurnResult",
-    "FakeDialogueClient",
+    "DialogueResult",
+    "DialogueRunner",
     "FakeLLMClient",
     "HttpLLMError",
     "JsonMemoryStore",
@@ -86,6 +85,9 @@ __all__ = [
     "append_wake_event",
     "check_llm_provider",
     "check_runtime_readiness",
+    "build_memory_proposals",
+    "load_dialogue_context",
+    "parse_dialogue_output",
     "create_llm_client",
     "build_trial_summary",
     "load_wake_events",

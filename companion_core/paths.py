@@ -59,8 +59,8 @@ class CompanionPaths:
         return self.life_loop_dir / "conversation_events.jsonl"
 
     @property
-    def conversation_memory_proposals_file(self) -> Path:
-        return self.life_loop_dir / "conversation_memory_proposals.jsonl"
+    def memory_proposals_file(self) -> Path:
+        return self.life_loop_dir / "memory_proposals.jsonl"
 
     @property
     def model_outputs_dir(self) -> Path:
