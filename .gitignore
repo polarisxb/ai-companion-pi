@@ -52,10 +52,15 @@ window/content/*
 
 # Life-loop runtime state (personal/local)
 life-loop/wake_events.jsonl
+life-loop/conversation_events.jsonl
+life-loop/memory_proposals.jsonl
 life-loop/*.lock
 life-loop/companion_state.json
 life-loop/context_capsule.json
 life-loop/model_outputs/
+
+# Dialogue runtime state (personal/local)
+conversations/
 
 # Creations (personal)
 creations/code/*

@@ -1,0 +1,28 @@
+{
+  "boundaries": {
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false
+  },
+  "conversation_id": "conv_20260619_162714_008906_468d43",
+  "event_id": "dialogue_20260619_162714_008906_315dc79b",
+  "m6_final_freeze": {
+    "exists": true,
+    "ok": true,
+    "path": "life-loop/m6_final_freeze_report.json",
+    "recommendation": "m6_frozen_ready_for_scheduler_handoff"
+  },
+  "memory_ids": [],
+  "memory_mode": "json",
+  "memory_proposal_count": 0,
+  "ok": true,
+  "provider": "deepseek",
+  "raw_provider_payload_stored": false,
+  "recommendation": "m7_cli_dialogue_ready",
+  "saved_at": "2026-06-19T16:27:17.820166",
+  "schema_version": 1,
+  "stop_reasons": [],
+  "transcript": "conversations/conv_20260619_162714_008906_468d43.jsonl"
+}

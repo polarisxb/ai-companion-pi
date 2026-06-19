@@ -38,6 +38,17 @@ AUTO_MEMORY_PATTERNS = (
     re.compile(r"(?:以后叫我|叫我)[，,：:\s]*(?P<fact>[^。！？\n]{1,80})"),
     re.compile(r"我(?:喜欢|希望|想要|偏好)[，,：:\s]*(?P<fact>[^。！？\n]{2,160})"),
 )
+DIALOGUE_BOUNDARIES = {
+    "wake_cycle_run": False,
+    "wake_events_written": False,
+    "scheduler_mutated": False,
+    "raw_provider_payload_stored": False,
+    "semantic_shadow_authority_promoted": False,
+}
+
+
+class DialoguePreflightError(RuntimeError):
+    """Raised before provider work when a dialogue safety gate is not ready."""
 
 
 @dataclass
@@ -56,6 +67,10 @@ class DialogueResult:
     stored_memories: list[dict] = field(default_factory=list)
     memory_proposals: list[dict] = field(default_factory=list)
     companion_state: dict | None = None
+
+    @property
+    def accepted_memories(self) -> list[dict]:
+        return self.stored_memories
 
 
 class DialogueRunner:
@@ -87,7 +102,10 @@ class DialogueRunner:
         conversation_id = conversation_id or f"conv_{started_at.strftime('%Y%m%d_%H%M%S_%f')}_{uuid.uuid4().hex[:6]}"
         event_id = f"dialogue_{started_at.strftime('%Y%m%d_%H%M%S_%f')}_{uuid.uuid4().hex[:8]}"
         transcript_path = self._transcript_path(conversation_id)
+        m6_final_freeze = load_m6_final_freeze_evidence(self.paths)
         try:
+            if not _provider_is_fake(provider) and not m6_final_freeze["ok"]:
+                raise DialoguePreflightError("M6.7 final freeze evidence is not ready for real-provider dialogue")
             context = load_dialogue_context(self.paths, self.memory_store, transcript_path=transcript_path)
             prompt = self._render_prompt(context, cleaned_input)
             raw_output = self.llm_client.generate(prompt, context)
@@ -153,8 +171,21 @@ class DialogueRunner:
                 stored_memories=stored_memories,
                 memory_proposals=proposal_records,
                 companion_state_updated=has_state_update(metadata_state),
+                m6_final_freeze=m6_final_freeze,
             )
             append_wake_event(self.paths.conversation_events_file, event)
+            write_m7_dialogue_report(self.paths, build_m7_dialogue_report(
+                ok=True,
+                recommendation="m7_cli_dialogue_ready",
+                provider=provider,
+                memory_mode=memory_mode,
+                conversation_id=conversation_id,
+                transcript_path=transcript_path,
+                event=event,
+                m6_final_freeze=m6_final_freeze,
+                stored_memories=stored_memories,
+                memory_proposals=proposal_records,
+            ))
             return DialogueResult(
                 conversation_id=conversation_id,
                 transcript_path=transcript_path,
@@ -177,8 +208,25 @@ class DialogueRunner:
                 memory_mode=memory_mode,
                 transcript_path=transcript_path,
                 error=exc,
+                m6_final_freeze=m6_final_freeze,
             )
             append_wake_event(self.paths.conversation_events_file, event)
+            write_m7_dialogue_report(self.paths, build_m7_dialogue_report(
+                ok=False,
+                recommendation="inspect",
+                provider=provider,
+                memory_mode=memory_mode,
+                conversation_id=conversation_id,
+                transcript_path=transcript_path,
+                event=event,
+                m6_final_freeze=m6_final_freeze,
+                stop_reasons=[
+                    "m6_final_freeze_not_ready"
+                    if isinstance(exc, DialoguePreflightError)
+                    else "dialogue_turn_failed"
+                ],
+                error=exc,
+            ))
             raise
 
     def _transcript_path(self, conversation_id: str) -> Path:
@@ -271,6 +319,7 @@ Return human-visible companion dialogue first. If needed, append:
         memory_proposals: list[dict] | None = None,
         companion_state_updated: bool = False,
         error: Exception | None = None,
+        m6_final_freeze: dict | None = None,
     ) -> dict:
         event = {
             "id": event_id,
@@ -285,13 +334,16 @@ Return human-visible companion dialogue first. If needed, append:
             "transcript": _relative_to_home(self.paths, transcript_path),
             "turn_count": 2 if status == "completed" else 0,
             "memory_ids": [memory["id"] for memory in stored_memories or []],
+            "memory_count": len(stored_memories or []),
             "memory_proposal_count": len(memory_proposals or []),
             "companion_state_updated": companion_state_updated,
             "raw_output_stored": False,
+            "boundaries": dict(DIALOGUE_BOUNDARIES),
+            "m6_final_freeze": m6_final_freeze or {},
             "error": None,
         }
         if error:
-            event["error"] = {"type": type(error).__name__, "message": str(error)}
+            event["error"] = {"type": type(error).__name__, "message": _clean_visible_text(str(error))}
         return event
 
 
@@ -392,6 +444,74 @@ def append_jsonl(path: Path, records: list[dict]) -> None:
             fcntl.flock(lock_fd, fcntl.LOCK_UN)
 
 
+def load_m6_final_freeze_evidence(paths: CompanionPaths) -> dict:
+    report_path = paths.life_loop_dir / "m6_final_freeze_report.json"
+    evidence = {
+        "path": _relative_to_home(paths, report_path),
+        "exists": report_path.exists(),
+        "ok": False,
+        "recommendation": None,
+    }
+    if not report_path.exists():
+        return evidence
+    try:
+        report = json.loads(report_path.read_text())
+    except json.JSONDecodeError as exc:
+        evidence["error"] = f"invalid_json:{exc.msg}"
+        return evidence
+    recommendation = report.get("recommendation")
+    evidence.update({
+        "ok": bool(report.get("ok") is True and recommendation == "m6_frozen_ready_for_scheduler_handoff"),
+        "recommendation": recommendation,
+    })
+    return evidence
+
+
+def build_m7_dialogue_report(
+    *,
+    ok: bool,
+    recommendation: str,
+    provider: str | None,
+    memory_mode: str,
+    conversation_id: str,
+    transcript_path: Path,
+    event: dict,
+    m6_final_freeze: dict,
+    stored_memories: list[dict] | None = None,
+    memory_proposals: list[dict] | None = None,
+    stop_reasons: list[str] | None = None,
+    error: Exception | None = None,
+) -> dict:
+    report = {
+        "schema_version": 1,
+        "saved_at": datetime.now().isoformat(),
+        "ok": ok,
+        "recommendation": recommendation,
+        "stop_reasons": stop_reasons or [],
+        "provider": provider,
+        "memory_mode": memory_mode,
+        "conversation_id": conversation_id,
+        "transcript": event.get("transcript") or str(transcript_path),
+        "event_id": event.get("id"),
+        "m6_final_freeze": m6_final_freeze,
+        "boundaries": dict(DIALOGUE_BOUNDARIES),
+        "memory_ids": [memory["id"] for memory in stored_memories or []],
+        "memory_proposal_count": len(memory_proposals or []),
+        "raw_provider_payload_stored": False,
+    }
+    if error:
+        report["error"] = {"type": type(error).__name__, "message": _clean_visible_text(str(error))}
+    return report
+
+
+def write_m7_dialogue_report(paths: CompanionPaths, report: dict) -> None:
+    report_path = paths.life_loop_dir / "m7_text_dialogue_report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = report_path.with_suffix(".tmp")
+    tmp_path.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+    tmp_path.replace(report_path)
+
+
 def _metadata_memory_proposals(metadata: dict, conversation_id: str, source_turn_id: str) -> list[dict]:
     proposals = []
     for item in metadata.get("memory_proposals", []) if isinstance(metadata, dict) else []:
@@ -450,3 +570,11 @@ def _relative_to_home(paths: CompanionPaths, path: Path) -> str:
         return str(path.relative_to(paths.home))
     except ValueError:
         return str(path)
+
+
+def _provider_is_fake(provider: str | None) -> bool:
+    return str(provider or "").lower() == "fake"
+
+
+DialogueEngine = DialogueRunner
+DialogueTurnResult = DialogueResult
