@@ -65,15 +65,33 @@
     },
     {
       "errors": [],
+      "events_checked": 3,
+      "ok": true,
+      "provider_calls": 0,
+      "recommendation": "m7_dialogue_transcript_ready",
+      "rows_checked": 6,
+      "transcript": "conversations/conv_20260619_162714_008906_468d43.jsonl"
+    },
+    {
+      "errors": [],
       "events_checked": 1,
       "ok": true,
       "provider_calls": 0,
       "recommendation": "m7_dialogue_transcript_ready",
       "rows_checked": 2,
-      "transcript": "conversations/conv_20260619_162714_008906_468d43.jsonl"
+      "transcript": "conversations/m7-context-check.jsonl"
+    },
+    {
+      "errors": [],
+      "events_checked": 4,
+      "ok": true,
+      "provider_calls": 0,
+      "recommendation": "m7_dialogue_transcript_ready",
+      "rows_checked": 8,
+      "transcript": "conversations/m7-user-acceptance-test.jsonl"
     }
   ],
-  "saved_at": "2026-06-19T17:54:46.772461",
+  "saved_at": "2026-06-19T18:15:23.330365",
   "schema_version": 1,
   "source_reports": {
     "m6_final_freeze": {
@@ -86,14 +104,14 @@
     "m7_memory_proposal_current": {
       "ok": true,
       "recommendation": "m7_memory_proposals_ready",
-      "saved_at": "2026-06-19T17:54:46.722497"
+      "saved_at": "2026-06-19T18:15:23.273641"
     },
     "m7_text_dialogue": {
       "exists": true,
       "ok": true,
       "path": "life-loop/m7_text_dialogue_report.json",
       "recommendation": "m7_cli_dialogue_ready",
-      "saved_at": "2026-06-19T16:27:17.820166"
+      "saved_at": "2026-06-19T18:12:55.642997"
     }
   },
   "stages": [
@@ -129,11 +147,31 @@
     },
     {
       "details": {
-        "events_checked": 1,
-        "rows_checked": 2,
+        "events_checked": 3,
+        "rows_checked": 6,
         "transcript": "conversations/conv_20260619_162714_008906_468d43.jsonl"
       },
       "message": "conversations/conv_20260619_162714_008906_468d43.jsonl replay ready",
+      "name": "m7_dialogue_replay",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "events_checked": 1,
+        "rows_checked": 2,
+        "transcript": "conversations/m7-context-check.jsonl"
+      },
+      "message": "conversations/m7-context-check.jsonl replay ready",
+      "name": "m7_dialogue_replay",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "events_checked": 4,
+        "rows_checked": 8,
+        "transcript": "conversations/m7-user-acceptance-test.jsonl"
+      },
+      "message": "conversations/m7-user-acceptance-test.jsonl replay ready",
       "name": "m7_dialogue_replay",
       "status": "pass"
     },

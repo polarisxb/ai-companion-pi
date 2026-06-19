@@ -8,10 +8,10 @@
   },
   "counts": {
     "accepted_memory": 3,
-    "conversation_events": 3,
-    "proposal_memory": 0,
-    "proposal_source_linked": 0,
-    "transcript_turns": 6
+    "conversation_events": 10,
+    "proposal_memory": 2,
+    "proposal_source_linked": 2,
+    "transcript_turns": 20
   },
   "errors": [],
   "ok": true,
@@ -23,7 +23,7 @@
   },
   "provider_calls": 0,
   "recommendation": "m7_memory_proposals_ready",
-  "saved_at": "2026-06-19T17:36:38.206831",
+  "saved_at": "2026-06-19T18:15:23.236545",
   "schema_version": 1,
   "separation": {
     "acceptance_workflow_present": false,
@@ -33,7 +33,7 @@
   },
   "source_linkage": {
     "all_proposals_linked": true,
-    "proposal_records_with_required_linkage": 0,
+    "proposal_records_with_required_linkage": 2,
     "required_fields": [
       "conversation_id",
       "source_turn_id"
@@ -42,7 +42,6 @@
   "stop_reasons": [
     "accepted_memory_source_event_missing",
     "accepted_memory_source_event_missing",
-    "accepted_memory_source_event_missing",
-    "no_memory_proposals_observed"
+    "accepted_memory_source_event_missing"
   ]
 }

@@ -214,6 +214,8 @@ def test_interactive_cli_keeps_memory_candidates_as_proposals(tmp_path):
     proposals = read_jsonl(tmp_path / "life-loop" / "memory_proposals.jsonl")
     assert proposals[0]["status"] == "proposed"
     assert proposals[0]["accepted"] is False
+    assert proposals[0]["prompt_eligible"] is False
+    assert proposals[0]["prompt_authoritative"] is False
 
 
 def test_failed_turn_preserves_human_input_without_assistant_and_can_retry(tmp_path):

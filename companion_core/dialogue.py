@@ -144,6 +144,8 @@ class DialogueRunner:
                     if proposal.get("status") == "auto_accepted":
                         proposal["status"] = "proposed"
                         proposal["accepted"] = False
+                        proposal["prompt_eligible"] = False
+                        proposal["prompt_authoritative"] = False
                         proposal["reason"] = "interactive dialogue keeps memory proposal-only until an explicit later gate"
             stored_memories = self._store_auto_memories(proposals, event_id=event_id)
             proposal_records = [proposal for proposal in proposals if proposal["status"] == "proposed"]

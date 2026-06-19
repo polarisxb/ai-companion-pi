@@ -6,8 +6,8 @@
     "wake_cycle_run": false,
     "wake_events_written": false
   },
-  "conversation_id": "conv_20260619_162714_008906_468d43",
-  "event_id": "dialogue_20260619_162714_008906_315dc79b",
+  "conversation_id": "m7-user-acceptance-test",
+  "event_id": "dialogue_20260619_181252_643583_e2d92609",
   "m6_final_freeze": {
     "exists": true,
     "ok": true,
@@ -16,13 +16,13 @@
   },
   "memory_ids": [],
   "memory_mode": "json",
-  "memory_proposal_count": 0,
+  "memory_proposal_count": 1,
   "ok": true,
   "provider": "deepseek",
   "raw_provider_payload_stored": false,
   "recommendation": "m7_cli_dialogue_ready",
-  "saved_at": "2026-06-19T16:27:17.820166",
+  "saved_at": "2026-06-19T18:12:55.642997",
   "schema_version": 1,
   "stop_reasons": [],
-  "transcript": "conversations/conv_20260619_162714_008906_468d43.jsonl"
+  "transcript": "conversations/m7-user-acceptance-test.jsonl"
 }
