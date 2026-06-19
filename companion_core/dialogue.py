@@ -113,10 +113,36 @@ class DialogueRunner:
             prompt = self._render_prompt(context, cleaned_input)
             now = datetime.now()
             human_turn_id = f"turn_{now.strftime('%Y%m%d_%H%M%S_%f')}_human"
+            assistant_turn_id = f"turn_{now.strftime('%Y%m%d_%H%M%S_%f')}_assistant"
+
+            proposals = build_memory_proposals(
+                cleaned_input,
+                conversation_id=conversation_id,
+                source_turn_id=human_turn_id,
+            )
+            proposals.extend(_metadata_memory_proposals(metadata, conversation_id, assistant_turn_id))
+            if not auto_memory:
+                for proposal in proposals:
+                    if proposal.get("status") == "auto_accepted":
+                        proposal["status"] = "proposed"
+                        proposal["accepted"] = False
+                        proposal["reason"] = "interactive dialogue keeps memory as proposal until explicit review"
+            stored_memories = self._store_auto_memories(proposals, event_id=event_id)
+            proposal_records = [proposal for proposal in proposals if proposal["status"] == "proposed"]
+            if proposal_records:
+                append_jsonl(self.paths.memory_proposals_file, proposal_records)
+
+            companion_state = context.companion_state
+            metadata_state = metadata.get("companion_state") if isinstance(metadata, dict) else None
+            if has_state_update(metadata_state):
+                companion_state = update_companion_state(self.paths.companion_state_file, metadata_state)
+
             human_turn = {
                 "id": human_turn_id,
+                "event_id": event_id,
                 "conversation_id": conversation_id,
                 "role": "human",
+                "status": "completed",
                 "created_at": now.isoformat(),
                 "content": cleaned_input,
                 "provider": provider,
@@ -156,9 +182,11 @@ class DialogueRunner:
 
             assistant_turn = {
                 "id": assistant_turn_id,
+                "event_id": event_id,
                 "conversation_id": conversation_id,
                 "role": "assistant",
-                "created_at": assistant_now.isoformat(),
+                "status": "completed",
+                "created_at": datetime.now().isoformat(),
                 "content": reply,
                 "provider": provider,
                 "memory_mode": memory_mode,
@@ -179,6 +207,7 @@ class DialogueRunner:
                 provider=provider,
                 memory_mode=memory_mode,
                 transcript_path=transcript_path,
+                turn_ids=[human_turn_id, assistant_turn_id],
                 stored_memories=stored_memories,
                 memory_proposals=proposal_records,
                 companion_state_updated=has_state_update(metadata_state),
@@ -209,24 +238,24 @@ class DialogueRunner:
                 companion_state=companion_state,
             )
         except Exception as exc:
-            if not human_turn_written and cleaned_input:
-                failed_at = datetime.now()
-                human_turn = {
-                    "id": f"turn_{failed_at.strftime('%Y%m%d_%H%M%S_%f')}_human",
-                    "conversation_id": conversation_id,
-                    "role": "human",
-                    "created_at": failed_at.isoformat(),
-                    "content": cleaned_input,
-                    "provider": provider,
-                    "memory_mode": memory_mode,
-                    "input_hash": _sha256(cleaned_input),
-                    "output_hash": None,
-                    "raw_output_stored": False,
-                    "memory_proposal_ids": [],
-                    "turn_status": "failed",
-                    "error": {"type": type(exc).__name__, "message": _clean_visible_text(str(exc))},
-                }
-                append_jsonl(transcript_path, [human_turn])
+            failed_at = datetime.now()
+            failed_human_turn = {
+                "id": f"turn_{failed_at.strftime('%Y%m%d_%H%M%S_%f')}_human_failed",
+                "event_id": event_id,
+                "conversation_id": conversation_id,
+                "role": "human",
+                "status": "failed",
+                "created_at": failed_at.isoformat(),
+                "content": cleaned_input,
+                "provider": provider,
+                "memory_mode": memory_mode,
+                "input_hash": _sha256(cleaned_input),
+                "output_hash": None,
+                "raw_output_stored": False,
+                "memory_proposal_ids": [],
+                "error": {"type": type(exc).__name__, "message": _clean_visible_text(str(exc))},
+            }
+            append_jsonl(transcript_path, [failed_human_turn])
             event = self._build_event(
                 event_id=event_id,
                 conversation_id=conversation_id,
@@ -236,6 +265,7 @@ class DialogueRunner:
                 provider=provider,
                 memory_mode=memory_mode,
                 transcript_path=transcript_path,
+                turn_ids=[failed_human_turn["id"]],
                 error=exc,
                 m6_final_freeze=m6_final_freeze,
             )
@@ -344,6 +374,7 @@ Return human-visible companion dialogue first. If needed, append:
         provider: str | None,
         memory_mode: str,
         transcript_path: Path,
+        turn_ids: list[str] | None = None,
         stored_memories: list[dict] | None = None,
         memory_proposals: list[dict] | None = None,
         companion_state_updated: bool = False,
@@ -361,7 +392,10 @@ Return human-visible companion dialogue first. If needed, append:
             "completed_at": datetime.now().isoformat(),
             "duration_seconds": round(time.monotonic() - monotonic_start, 3),
             "transcript": _relative_to_home(self.paths, transcript_path),
-            "turn_count": 2 if status == "completed" else 0,
+            "turn_count": 2 if status == "completed" else 1,
+            "turn_ids": turn_ids or [],
+            "first_turn_id": (turn_ids or [None])[0],
+            "last_turn_id": (turn_ids or [None])[-1],
             "memory_ids": [memory["id"] for memory in stored_memories or []],
             "memory_count": len(stored_memories or []),
             "memory_proposal_count": len(memory_proposals or []),
@@ -449,7 +483,12 @@ def build_memory_proposals(human_text: str, *, conversation_id: str, source_turn
     return proposals
 
 
-def load_transcript_turns(transcript_path: Path | None, *, limit: int | None = None) -> list[dict]:
+def load_transcript_turns(
+    transcript_path: Path | None,
+    *,
+    limit: int | None = None,
+    include_failed: bool = False,
+) -> list[dict]:
     if transcript_path is None:
         return []
     try:
@@ -457,7 +496,8 @@ def load_transcript_turns(transcript_path: Path | None, *, limit: int | None = N
     except FileNotFoundError:
         return []
     turns = [json.loads(line) for line in lines if line.strip()]
-    turns = [turn for turn in turns if turn.get("turn_status") != "failed"]
+    if not include_failed:
+        turns = [turn for turn in turns if turn.get("status", "completed") == "completed"]
     return turns[-limit:] if limit else turns
 
 

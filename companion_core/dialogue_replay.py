@@ -1,200 +1,189 @@
-"""Read-only validation for M7 dialogue transcripts and events."""
+"""Read-only validation for M7 dialogue transcripts and event ledgers."""
 
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
-from .dialogue import _clean_visible_text, _relative_to_home, _sha256  # internal validation helpers
+from .dialogue import DIALOGUE_BOUNDARIES, _sha256
 from .paths import CompanionPaths
+
+RAW_PAYLOAD_KEYS = {
+    "raw_output",
+    "raw_provider_payload",
+    "provider_payload",
+    "raw_response",
+    "provider_response",
+    "request_payload",
+    "response_payload",
+}
 
 
 @dataclass
 class DialogueReplayCheckResult:
     ok: bool
-    transcript_path: Path
-    transcript_rows: int = 0
-    conversation_id: str | None = None
-    event_count: int = 0
-    problems: list[str] = field(default_factory=list)
+    transcript: str
+    event_log: str
+    rows_checked: int
+    events_checked: int
+    errors: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict:
         return {
             "ok": self.ok,
-            "transcript": str(self.transcript_path),
-            "transcript_rows": self.transcript_rows,
-            "conversation_id": self.conversation_id,
-            "event_count": self.event_count,
-            "problems": self.problems,
             "recommendation": "m7_dialogue_transcript_ready" if self.ok else "inspect",
+            "transcript": self.transcript,
+            "event_log": self.event_log,
+            "rows_checked": self.rows_checked,
+            "events_checked": self.events_checked,
+            "errors": self.errors,
+            "provider_calls": 0,
+            "boundaries": dict(DIALOGUE_BOUNDARIES),
         }
 
 
-def check_dialogue_transcript(
-    paths: CompanionPaths,
-    transcript_path: str | Path,
-    *,
-    events_path: str | Path | None = None,
-) -> DialogueReplayCheckResult:
-    """Validate a dialogue transcript and matching events without provider calls or writes."""
+def check_dialogue_transcript(paths: CompanionPaths, transcript_path: Path) -> DialogueReplayCheckResult:
+    """Validate a transcript and linked dialogue events without provider calls."""
 
-    transcript = Path(transcript_path).expanduser()
-    if not transcript.is_absolute():
-        transcript = paths.home / transcript
-    result = DialogueReplayCheckResult(ok=False, transcript_path=transcript)
+    transcript_path = transcript_path.expanduser()
+    if not transcript_path.is_absolute():
+        transcript_path = paths.home / transcript_path
+    event_log = paths.conversation_events_file
+    errors: list[str] = []
+    rows = _read_jsonl(transcript_path, errors, label="transcript")
+    events = _read_jsonl(event_log, errors, label="event_log") if event_log.exists() else []
 
-    rows = _read_jsonl(transcript, result.problems, label="transcript")
-    if rows is None:
-        return result
-    result.transcript_rows = len(rows)
-    _validate_rows(rows, result)
+    conversation_ids = {row.get("conversation_id") for row in rows if isinstance(row, dict)}
+    if len(conversation_ids) > 1:
+        errors.append(f"transcript mixes conversation ids: {sorted(conversation_ids)}")
+    conversation_id = next(iter(conversation_ids), None) if conversation_ids else None
 
-    event_file = Path(events_path).expanduser() if events_path is not None else paths.conversation_events_file
-    if not event_file.is_absolute():
-        event_file = paths.home / event_file
-    events = _read_jsonl(event_file, result.problems, label="events", missing_ok=True)
-    if events is not None:
-        _validate_events(paths, transcript, rows, events, result)
+    for idx, row in enumerate(rows, start=1):
+        _validate_turn_row(row, idx, errors)
 
-    result.ok = not result.problems
-    return result
+    for idx, row in enumerate(rows[:-1], start=1):
+        next_row = rows[idx]
+        if row.get("role") == "human" and row.get("status") == "failed" and next_row.get("role") == "assistant":
+            errors.append(f"line {idx + 1}: assistant turn follows failed human input")
+        if row.get("role") == "human" and row.get("status") == "completed" and next_row.get("role") != "assistant":
+            errors.append(f"line {idx}: completed human turn is not followed by assistant turn")
+        if row.get("role") == "assistant" and next_row.get("role") == "assistant":
+            errors.append(f"line {idx + 1}: consecutive assistant turns")
+
+    if rows and rows[-1].get("role") == "human" and rows[-1].get("status") == "completed":
+        errors.append(f"line {len(rows)}: completed human turn has no assistant reply")
+
+    transcript_ref = _relative_to_home(paths, transcript_path)
+    linked_events = [
+        event for event in events
+        if event.get("transcript") in {transcript_ref, str(transcript_path)}
+        and (conversation_id is None or event.get("conversation_id") == conversation_id)
+    ]
+    _validate_events(linked_events, rows, errors)
+
+    return DialogueReplayCheckResult(
+        ok=not errors,
+        transcript=str(transcript_path),
+        event_log=str(event_log),
+        rows_checked=len(rows),
+        events_checked=len(linked_events),
+        errors=errors,
+    )
 
 
-def _read_jsonl(path: Path, problems: list[str], *, label: str, missing_ok: bool = False) -> list[dict[str, Any]] | None:
+def _read_jsonl(path: Path, errors: list[str], *, label: str) -> list[dict]:
+    rows = []
     try:
         lines = path.read_text().splitlines()
     except FileNotFoundError:
-        if missing_ok:
-            return []
-        problems.append(f"{label}:missing:{path}")
-        return None
-    records: list[dict[str, Any]] = []
-    for line_no, line in enumerate(lines, start=1):
+        errors.append(f"{label} missing: {path}")
+        return rows
+    for line_number, line in enumerate(lines, start=1):
         if not line.strip():
             continue
         try:
-            record = json.loads(line)
+            row = json.loads(line)
         except json.JSONDecodeError as exc:
-            problems.append(f"{label}:line_{line_no}:invalid_json:{exc.msg}")
+            errors.append(f"{label} line {line_number}: invalid JSON: {exc.msg}")
             continue
-        if not isinstance(record, dict):
-            problems.append(f"{label}:line_{line_no}:not_object")
+        if not isinstance(row, dict):
+            errors.append(f"{label} line {line_number}: row must be an object")
             continue
-        records.append(record)
-    return records
+        rows.append(row)
+    return rows
 
 
-def _validate_rows(rows: list[dict[str, Any]], result: DialogueReplayCheckResult) -> None:
-    if not rows:
-        result.problems.append("transcript:empty")
+def _validate_turn_row(row: dict, line_number: int, errors: list[str]) -> None:
+    role = row.get("role")
+    status = row.get("status", "completed")
+    content = row.get("content")
+    if role not in {"human", "assistant"}:
+        errors.append(f"line {line_number}: invalid role {role!r}")
+    if status not in {"completed", "failed"}:
+        errors.append(f"line {line_number}: invalid status {status!r}")
+    for key in ("id", "conversation_id", "created_at"):
+        if not row.get(key):
+            errors.append(f"line {line_number}: missing {key}")
+    if not row.get("event_id"):
+        errors.append(f"line {line_number}: missing event_id")
+    if not isinstance(content, str) or not content.strip():
+        errors.append(f"line {line_number}: content must be non-empty text")
+    if any(key in row for key in RAW_PAYLOAD_KEYS):
+        errors.append(f"line {line_number}: raw provider payload field is not allowed")
+    if row.get("raw_output_stored") is not False:
+        errors.append(f"line {line_number}: raw_output_stored must be false")
+    if role == "human":
+        if row.get("input_hash") != _sha256(content or ""):
+            errors.append(f"line {line_number}: input_hash mismatch")
+        if row.get("output_hash") is not None:
+            errors.append(f"line {line_number}: human output_hash must be null")
+    if role == "assistant":
+        if status != "completed":
+            errors.append(f"line {line_number}: assistant turn must be completed")
+        if row.get("output_hash") != _sha256(content or ""):
+            errors.append(f"line {line_number}: output_hash mismatch")
+
+
+def _validate_events(events: list[dict], rows: list[dict], errors: list[str]) -> None:
+    if not events:
+        errors.append("no linked dialogue events found")
         return
-    expected_conversation_id = rows[0].get("conversation_id")
-    if not expected_conversation_id:
-        result.problems.append("transcript:line_1:missing_conversation_id")
-    result.conversation_id = expected_conversation_id
-
-    previous_human: dict[str, Any] | None = None
-    failed_human_pending = False
-    seen_ids: set[str] = set()
-    for index, row in enumerate(rows, start=1):
-        row_id = row.get("id")
-        role = row.get("role")
-        content = row.get("content")
-        if not row_id:
-            result.problems.append(f"transcript:line_{index}:missing_id")
-        elif row_id in seen_ids:
-            result.problems.append(f"transcript:line_{index}:duplicate_id:{row_id}")
+    completed_rows = [row for row in rows if row.get("role") == "assistant" and row.get("status", "completed") == "completed"]
+    failed_rows = [row for row in rows if row.get("role") == "human" and row.get("status") == "failed"]
+    completed_events = [event for event in events if event.get("status") == "completed"]
+    failed_events = [event for event in events if event.get("status") == "failed"]
+    if len(completed_events) != len(completed_rows):
+        errors.append(f"completed event count {len(completed_events)} does not match assistant rows {len(completed_rows)}")
+    if len(failed_events) != len(failed_rows):
+        errors.append(f"failed event count {len(failed_events)} does not match failed human rows {len(failed_rows)}")
+    for event in events:
+        event_turn_ids = event.get("turn_ids")
+        if not isinstance(event_turn_ids, list) or not event_turn_ids:
+            errors.append(f"event {event.get('id')}: missing turn_ids")
         else:
-            seen_ids.add(str(row_id))
-        if row.get("conversation_id") != expected_conversation_id:
-            result.problems.append(f"transcript:line_{index}:conversation_id_mismatch")
-        if role not in {"human", "assistant"}:
-            result.problems.append(f"transcript:line_{index}:invalid_role:{role}")
-        if not isinstance(content, str) or not content:
-            result.problems.append(f"transcript:line_{index}:missing_content")
-        if row.get("raw_output_stored") is not False:
-            result.problems.append(f"transcript:line_{index}:raw_output_stored_not_false")
-        if "raw_provider_payload" in row or "raw_output" in row:
-            result.problems.append(f"transcript:line_{index}:raw_provider_payload_present")
-        if content and _clean_visible_text(content) != content:
-            result.problems.append(f"transcript:line_{index}:secret_like_content_not_redacted")
-
-        if role == "human":
-            if row.get("input_hash") != _sha256(content or ""):
-                result.problems.append(f"transcript:line_{index}:input_hash_mismatch")
-            if row.get("output_hash") is not None:
-                result.problems.append(f"transcript:line_{index}:human_output_hash_not_null")
-            previous_human = row
-            failed_human_pending = row.get("turn_status") == "failed"
-        elif role == "assistant":
-            if failed_human_pending:
-                result.problems.append(f"transcript:line_{index}:assistant_after_failed_human_turn")
-            if previous_human is None:
-                result.problems.append(f"transcript:line_{index}:assistant_without_human_turn")
-            elif row.get("input_hash") != previous_human.get("input_hash"):
-                result.problems.append(f"transcript:line_{index}:assistant_input_hash_mismatch")
-            if row.get("output_hash") != _sha256(content or ""):
-                result.problems.append(f"transcript:line_{index}:output_hash_mismatch")
-            if row.get("turn_status") == "failed":
-                result.problems.append(f"transcript:line_{index}:failed_assistant_turn")
-            previous_human = None
-            failed_human_pending = False
-
-
-def _validate_events(
-    paths: CompanionPaths,
-    transcript: Path,
-    rows: list[dict[str, Any]],
-    events: list[dict[str, Any]],
-    result: DialogueReplayCheckResult,
-) -> None:
-    transcript_ref = _relative_to_home(paths, transcript)
-    matching = [event for event in events if event.get("transcript") in {transcript_ref, str(transcript)}]
-    result.event_count = len(matching)
-    seen_event_ids: set[str] = set()
-    for index, event in enumerate(events, start=1):
-        event_id = event.get("id")
-        if not event_id:
-            result.problems.append(f"events:line_{index}:missing_id")
-        elif event_id in seen_event_ids:
-            result.problems.append(f"events:line_{index}:duplicate_id:{event_id}")
-        else:
-            seen_event_ids.add(str(event_id))
+            linked_rows = [row for row in rows if row.get("event_id") == event.get("id")]
+            linked_row_ids = [row.get("id") for row in linked_rows]
+            if event_turn_ids != linked_row_ids:
+                errors.append(f"event {event.get('id')}: turn_ids do not match transcript rows")
+            if event.get("first_turn_id") != event_turn_ids[0]:
+                errors.append(f"event {event.get('id')}: first_turn_id mismatch")
+            if event.get("last_turn_id") != event_turn_ids[-1]:
+                errors.append(f"event {event.get('id')}: last_turn_id mismatch")
+        if any(key in event for key in RAW_PAYLOAD_KEYS):
+            errors.append(f"event {event.get('id')}: raw provider payload field is not allowed")
         if event.get("raw_output_stored") is not False:
-            result.problems.append(f"events:line_{index}:raw_output_stored_not_false")
-        if "raw_provider_payload" in event or "raw_output" in event:
-            result.problems.append(f"events:line_{index}:raw_provider_payload_present")
-        boundaries = event.get("boundaries")
-        if isinstance(boundaries, dict):
-            for name in ("wake_cycle_run", "scheduler_mutated", "raw_provider_payload_stored", "semantic_shadow_authority_promoted"):
-                if boundaries.get(name) is not False:
-                    result.problems.append(f"events:line_{index}:boundary_{name}_not_false")
-    if not matching:
-        result.problems.append(f"events:no_event_for_transcript:{transcript_ref}")
-        return
-    completed_assistant_rows = [row for row in rows if row.get("role") == "assistant" and row.get("turn_status") != "failed"]
-    failed_human_rows = [row for row in rows if row.get("role") == "human" and row.get("turn_status") == "failed"]
-    completed_events = [event for event in matching if event.get("status") == "completed"]
-    failed_events = [event for event in matching if event.get("status") == "failed"]
-    if completed_events and not completed_assistant_rows:
-        result.problems.append("events:completed_event_without_assistant_turn")
-    if len(completed_events) != len(completed_assistant_rows):
-        result.problems.append(
-            f"events:completed_event_count_mismatch:events={len(completed_events)} assistant_turns={len(completed_assistant_rows)}"
-        )
-    if len(failed_events) != len(failed_human_rows):
-        result.problems.append(
-            f"events:failed_event_count_mismatch:events={len(failed_events)} failed_human_turns={len(failed_human_rows)}"
-        )
-    for event in completed_events:
-        if result.conversation_id and event.get("conversation_id") != result.conversation_id:
-            result.problems.append(f"events:{event.get('id')}:conversation_id_mismatch")
-        if event.get("turn_count") not in {None, 2} and event.get("turn_count") != len(rows):
-            result.problems.append(f"events:{event.get('id')}:unexpected_turn_count:{event.get('turn_count')}")
-    for event in failed_events:
-        if result.conversation_id and event.get("conversation_id") != result.conversation_id:
-            result.problems.append(f"events:{event.get('id')}:conversation_id_mismatch")
-        if event.get("turn_count") not in {None, 0}:
-            result.problems.append(f"events:{event.get('id')}:failed_event_turn_count_not_zero:{event.get('turn_count')}")
+            errors.append(f"event {event.get('id')}: raw_output_stored must be false")
+        if event.get("boundaries") != DIALOGUE_BOUNDARIES:
+            errors.append(f"event {event.get('id')}: dialogue boundaries changed")
+        if event.get("status") == "failed" and event.get("turn_count") != 1:
+            errors.append(f"event {event.get('id')}: failed event turn_count must be 1")
+        if event.get("status") == "completed" and event.get("turn_count") != 2:
+            errors.append(f"event {event.get('id')}: completed event turn_count must be 2")
+
+
+def _relative_to_home(paths: CompanionPaths, path: Path) -> str:
+    try:
+        return str(path.relative_to(paths.home))
+    except ValueError:
+        return str(path)

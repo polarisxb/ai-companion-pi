@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate M7 dialogue transcripts/events without provider calls."""
+"""Validate an M7 dialogue transcript without calling an LLM provider."""
 
 from __future__ import annotations
 
@@ -16,23 +16,21 @@ from companion_core.dialogue_replay import check_dialogue_transcript
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Read-only M7 dialogue transcript/replay check.")
-    parser.add_argument("transcript", help="Transcript JSONL path, absolute or relative to companion home.")
+    parser.add_argument("transcript", help="Transcript JSONL path, absolute or relative to --companion-home.")
     parser.add_argument("--companion-home", default=None)
-    parser.add_argument("--events", default=None, help="Optional conversation_events.jsonl path.")
     parser.add_argument("--json", action="store_true", help="Print structured JSON result.")
     args = parser.parse_args()
 
     paths = CompanionPaths.from_env(args.companion_home)
-    result = check_dialogue_transcript(paths, args.transcript, events_path=args.events)
+    result = check_dialogue_transcript(paths, Path(args.transcript))
     payload = result.to_dict()
     if args.json:
         print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
     else:
         status = "PASS" if result.ok else "FAIL"
-        print(f"{status}: {payload['recommendation']}")
-        print(f"transcript={payload['transcript']} rows={payload['transcript_rows']} events={payload['event_count']}")
-        for problem in result.problems:
-            print(f"- {problem}")
+        print(f"{status}: checked {result.rows_checked} transcript rows and {result.events_checked} linked events")
+        for error in result.errors:
+            print(f"- {error}", file=sys.stderr)
     return 0 if result.ok else 1
 
 

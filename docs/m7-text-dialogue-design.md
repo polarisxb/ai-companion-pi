@@ -282,6 +282,7 @@ Expected command:
 
 ```bash
 .venv/bin/python scripts/chat_with_companion.py \
+  "你现在在吗？" \
   --companion-home /home/polaris/digital_life \
   --provider deepseek \
   --memory-mode json
@@ -322,18 +323,20 @@ Implementation:
 
 ```bash
 .venv/bin/python scripts/chat_with_companion.py \
+  --interactive \
   --companion-home /home/polaris/digital_life \
   --provider deepseek \
-  --memory-mode json \
-  --interactive
+  --memory-mode json
 ```
 
-The REPL keeps one conversation id for the process, accepts `exit`/`quit`, and
-keeps failed input available for `/retry`. Interactive mode routes otherwise
-auto-accepted memories to proposal records so a local back-and-forth session
-does not silently commit long-term memory without a later explicit gate.
-Failed provider turns are recorded as failed human rows only and are filtered
-out of subsequent prompt context unless the human retries or re-enters them.
+The REPL allocates one `conversation_id` for the local session, appends every
+successful human/assistant pair to that transcript, and exits on `exit` or
+`quit`. If a provider turn fails, the human input is recorded as a failed
+human transcript row with no assistant row, then kept pending in the REPL so
+the operator can press Enter to retry or type replacement text.
+Unlike the M7.1 one-turn command, the interactive command keeps memory
+candidates as proposals instead of auto-accepting low-risk facts during the
+live session.
 
 Acceptance:
 
@@ -341,7 +344,8 @@ Acceptance:
 - Appends each turn to the active transcript.
 - Handles `exit`/`quit` cleanly.
 - Preserves failed human input for retry.
-- Does not automatically commit memory in REPL mode.
+- Does not automatically commit memory.
+- Does not run wake cycles or mutate scheduler state.
 
 Recommendation values:
 
@@ -356,15 +360,16 @@ Implementation:
 
 ```bash
 .venv/bin/python scripts/dialogue_replay_check.py \
+  conversations/<conversation_id>.jsonl \
   --companion-home /home/polaris/digital_life \
-  conversations/<conversation>.jsonl \
   --json
 ```
 
-The check is read-only and does not load provider clients or secrets. It parses
-transcript JSONL and dialogue events, validates hashes, role ordering, event
-linkage, failed-turn shape, raw-payload absence, and the no-wake/scheduler/
-semantic-authority boundaries.
+The check is read-only. It parses transcript JSONL and the linked
+`life-loop/conversation_events.jsonl` ledger, validates turn/event linkage,
+verifies transcript content hashes, rejects raw provider payload fields, and
+confirms failed provider turns have no assistant turn. It does not construct an
+LLM client, call a provider, run wake logic, or write scheduler/runtime state.
 
 Acceptance:
 
@@ -373,6 +378,8 @@ Acceptance:
 - Hash-only output audit is present.
 - A replay/check command can parse transcripts without calling the provider.
 - Failed provider turns do not create assistant turns marked completed.
+- Raw provider payload fields in transcript rows or dialogue events fail the
+  check.
 
 Recommendation values:
 
