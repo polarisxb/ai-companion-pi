@@ -25,6 +25,16 @@ from werkzeug.utils import secure_filename
 import markdown
 import sys
 
+from companion_core import (
+    CompanionPaths,
+    DialogueRunner,
+    JsonMemoryStore,
+    SemanticFirstMemoryStore,
+    create_llm_client,
+    load_local_secrets,
+)
+from companion_core.dialogue import _clean_visible_text, load_transcript_turns
+
 app = Flask(__name__)
 
 # === CONFIGURE THESE PATHS ===
@@ -73,6 +83,8 @@ TASK_QUEUE = TASKS_DIR / "task_queue.json"
 TASK_CONFIG = TASKS_DIR / "task_config.json"
 TASK_LOCK = "/tmp/task_queue.lock"
 REQUESTS_FILE = COMPANION_HOME / "requests" / "requests.json"
+CHAT_DEFAULT_PROVIDER = os.environ.get("COMPANION_LLM_PROVIDER", "deepseek")
+CHAT_DEFAULT_MEMORY_MODE = os.environ.get("COMPANION_MEMORY_MODE", "json")
 
 # Ensure all directories exist
 for d in [WINDOW_DIR, CUSTOM_CONTENT, MESSAGEBOARD_DIR, MESSAGEBOARD_FILES,
@@ -1473,6 +1485,25 @@ TEMPLATE = """
         .reply-form { display: flex; gap: 6px; flex: 1; }
         .reply-form input { flex: 1; }
 
+        /* ── Chat ── */
+        .chat-meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .chat-pill { background: var(--bg-deep); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+                     font-family: 'IBM Plex Mono', monospace; font-size: 0.72em; color: var(--text-dim); overflow-wrap: anywhere; }
+        .chat-pill span { display: block; color: var(--text-secondary); margin-top: 3px; }
+        .chat-transcript { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+        .chat-row { max-width: 86%; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border); }
+        .chat-row-human { align-self: flex-end; background: rgba(74,111,165,0.14); border-color: rgba(74,111,165,0.35); }
+        .chat-row-assistant { align-self: flex-start; background: var(--bg-deep); }
+        .chat-row-failed { border-color: var(--accent-red); opacity: 0.85; }
+        .chat-role { font-family: 'IBM Plex Mono', monospace; font-size: 0.68em; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 6px; }
+        .chat-content { color: var(--text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
+        .chat-error { border-left: 3px solid var(--accent-red); background: rgba(160,84,84,0.12); padding: 12px 14px; border-radius: 8px; color: var(--text-secondary); margin-bottom: 16px; }
+        .chat-form textarea { width: 100%; min-height: 115px; padding: 15px; background: var(--bg-deep); border: 1px solid var(--border);
+                              border-radius: 8px; color: var(--text-primary); font-family: 'DM Sans', sans-serif; font-size: 0.95em; resize: vertical; }
+        .chat-form textarea:focus { outline: none; border-color: var(--accent-blue); }
+        .chat-form .chat-options { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+        .chat-form input, .chat-form select { background: var(--bg-deep); border: 1px solid var(--border); border-radius: 6px; color: var(--text-secondary); padding: 8px 10px; }
+
         /* ── Footer ── */
         .footer { text-align: center; padding: 40px 0 20px; margin-top: 40px;
                   border-top: 1px solid var(--border); color: var(--text-dim);
@@ -1495,6 +1526,8 @@ TEMPLATE = """
             .req-meta { flex-wrap: wrap; gap: 8px; }
             .req-actions { flex-direction: column; }
             .reply-form { flex-direction: column; }
+            .chat-row { max-width: 100%; }
+            .chat-form .chat-options { flex-direction: column; align-items: stretch; }
             .keepsake-row { grid-template-columns: repeat(3, 1fr); }
             .gallery-grid { columns: 2; }
         }
@@ -1539,6 +1572,7 @@ TEMPLATE = """
         <div class="nav">
             <a href="/" class="{{ 'active' if page == 'home' }}">home</a>
             <a href="/life" class="{{ 'active' if page == 'life' }}">life</a>
+            <a href="/chat" class="{{ 'active' if page == 'chat' }}">chat</a>
             <a href="/board" class="{{ 'active' if page == 'board' }}">message board</a>
             <a href="/creations" class="{{ 'active' if page == 'creations' }}">creations</a>
             <a href="/library" class="{{ 'active' if page in ('library', 'reading') }}">library</a>
@@ -1595,6 +1629,52 @@ TEMPLATE = """
                     {% endfor %}
                 </div>
             </div>
+
+        {% elif page == 'chat' %}
+            <div class="card">
+                <div class="card-title">Companion Chat</div>
+                <div class="chat-meta-grid">
+                    <div class="chat-pill">provider<span>{{ chat_provider }}</span></div>
+                    <div class="chat-pill">memory mode<span>{{ chat_memory_mode }}</span></div>
+                    <div class="chat-pill">conversation<span>{{ chat_conversation_id or 'new conversation' }}</span></div>
+                    <div class="chat-pill">memory proposals<span>{{ chat_memory_proposal_count }}</span></div>
+                </div>
+                {% if chat_error %}
+                <div class="chat-error">
+                    {{ chat_error }}
+                    {% if chat_failed_input %}<br><strong>preserved input:</strong> {{ chat_failed_input }}{% endif %}
+                </div>
+                {% endif %}
+                <div class="chat-transcript">
+                    {% if chat_transcript %}
+                        {% for turn in chat_transcript %}
+                        <div class="chat-row chat-row-{{ turn.role }} {{ 'chat-row-failed' if turn.status == 'failed' }}">
+                            <div class="chat-role">{{ turn.role }}{% if turn.status == 'failed' %} · failed{% endif %}</div>
+                            <div class="chat-content">{{ turn.content }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="board-empty">No transcript yet. Start a user-initiated text chat below.</div>
+                    {% endif %}
+                </div>
+                <form class="chat-form" action="/chat/send" method="POST">
+                    <input type="hidden" name="conversation_id" value="{{ chat_conversation_id or '' }}">
+                    <textarea name="message" placeholder="Type to Companion...">{{ chat_failed_input }}</textarea>
+                    <div class="chat-options">
+                        <select name="provider">
+                            {% for provider in chat_supported_providers %}
+                            <option value="{{ provider }}" {{ 'selected' if provider == chat_provider }}>{{ provider }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="memory_mode">
+                            <option value="json" {{ 'selected' if chat_memory_mode == 'json' }}>json memory</option>
+                            <option value="dual" {{ 'selected' if chat_memory_mode == 'dual' }}>dual memory</option>
+                        </select>
+                        <button type="submit" class="btn">Send</button>
+                    </div>
+                </form>
+            </div>
+
 
         {% elif page == 'board' %}
             <div class="card">
@@ -2431,6 +2511,82 @@ def icon():
     return send_file(ICON_FILE, mimetype="image/svg+xml")
 
 
+def _chat_context(*, conversation_id: str = "", provider: str = "", memory_mode: str = "", error: str = "", failed_input: str = ""):
+    ctx = _base_context()
+    paths = CompanionPaths(COMPANION_HOME)
+    transcript_path = paths.conversations_dir / f"{_safe_conversation_id(conversation_id)}.jsonl" if conversation_id else None
+    transcript = load_transcript_turns(transcript_path, include_failed=True) if transcript_path else []
+    ctx.update(
+        page="chat",
+        chat_provider=provider or CHAT_DEFAULT_PROVIDER,
+        chat_memory_mode=memory_mode or CHAT_DEFAULT_MEMORY_MODE,
+        chat_conversation_id=conversation_id or "",
+        chat_transcript=transcript,
+        chat_memory_proposal_count=_memory_proposal_count(paths.memory_proposals_file, conversation_id=conversation_id or None),
+        chat_error=error,
+        chat_failed_input=failed_input,
+    )
+    return ctx
+
+
+def _build_chat_runner(*, provider: str, memory_mode: str) -> DialogueRunner:
+    paths = CompanionPaths(COMPANION_HOME)
+    paths.ensure_runtime_dirs()
+    load_local_secrets(paths)
+    if provider == "fake":
+        llm_client = create_llm_client("fake")
+    else:
+        llm_client = create_llm_client(
+            provider,
+            timeout_seconds=int(os.environ.get("COMPANION_CHAT_TIMEOUT", "300")),
+            model=os.environ.get("COMPANION_LLM_MODEL"),
+            base_url=os.environ.get("COMPANION_LLM_BASE_URL"),
+            api_key_env=os.environ.get("COMPANION_LLM_API_KEY_ENV", "COMPANION_LLM_API_KEY"),
+        )
+    memory_store = SemanticFirstMemoryStore(paths.memory_store) if memory_mode == "dual" else JsonMemoryStore(paths.memory_store)
+    return DialogueRunner(paths, llm_client=llm_client, memory_store=memory_store)
+
+
+def _chat_error_response(*, error: str, failed_input: str, conversation_id: str | None, provider: str, memory_mode: str, wants_json: bool, status_code: int):
+    payload = {
+        "ok": False,
+        "error": error,
+        "failed_input": failed_input,
+        "conversation_id": conversation_id or "",
+    }
+    if wants_json:
+        return jsonify(payload), status_code
+    ctx = _chat_context(
+        conversation_id=conversation_id or "",
+        provider=provider,
+        memory_mode=memory_mode,
+        error=error,
+        failed_input=failed_input,
+    )
+    return render_template_string(TEMPLATE, **ctx), status_code
+
+
+def _memory_proposal_count(path: Path, *, conversation_id: str | None = None) -> int:
+    if not path.exists():
+        return 0
+    count = 0
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if conversation_id is None or row.get("conversation_id") == conversation_id:
+            count += 1
+    return count
+
+
+def _safe_conversation_id(conversation_id: str) -> str:
+    safe = "".join(ch if ch.isalnum() or ch in {"_", "-", "."} else "_" for ch in conversation_id).strip("._")
+    return safe or "conversation"
+
+
 def _base_context():
     """Common template variables shared across all routes."""
     status = get_status()
@@ -2450,6 +2606,10 @@ def _base_context():
         projects={}, default_project="", active_task=None,
         pending_tasks=[], task_history=[],
         active=[], history=[], cooldown={}, total=0,
+        chat_provider=CHAT_DEFAULT_PROVIDER, chat_memory_mode=CHAT_DEFAULT_MEMORY_MODE,
+        chat_conversation_id="", chat_transcript=[], chat_memory_proposal_count=0,
+        chat_error="", chat_failed_input="",
+        chat_supported_providers=("fake", "claude-cli", "openai-compatible", "ollama", "deepseek"),
     )
 
 
@@ -2469,6 +2629,72 @@ def index():
 @app.route("/life")
 def life_dashboard():
     return render_life_dashboard()
+
+
+@app.route("/chat")
+def chat_page():
+    ctx = _chat_context(
+        conversation_id=request.args.get("conversation_id") or "",
+        provider=request.args.get("provider") or CHAT_DEFAULT_PROVIDER,
+        memory_mode=request.args.get("memory_mode") or CHAT_DEFAULT_MEMORY_MODE,
+    )
+    return render_template_string(TEMPLATE, **ctx)
+
+
+@app.route("/chat/send", methods=["POST"])
+def chat_send():
+    wants_json = request.is_json or "application/json" in request.headers.get("Accept", "")
+    payload = request.get_json(silent=True) if request.is_json else request.form
+    payload = payload or {}
+    human_text = str(payload.get("message") or payload.get("text") or "").strip()
+    conversation_id = str(payload.get("conversation_id") or "").strip() or None
+    provider = str(payload.get("provider") or CHAT_DEFAULT_PROVIDER).strip()
+    memory_mode = str(payload.get("memory_mode") or CHAT_DEFAULT_MEMORY_MODE).strip()
+    if not human_text:
+        return _chat_error_response(
+            error="message must not be empty",
+            failed_input=human_text,
+            conversation_id=conversation_id,
+            provider=provider,
+            memory_mode=memory_mode,
+            wants_json=wants_json,
+            status_code=400,
+        )
+    try:
+        result = _build_chat_runner(provider=provider, memory_mode=memory_mode).run_turn(
+            human_text,
+            conversation_id=conversation_id,
+            provider=provider,
+            memory_mode=memory_mode,
+            auto_memory=False,
+        )
+    except Exception as exc:  # noqa: BLE001 - preserve failed input for UI/API callers.
+        return _chat_error_response(
+            error=f"{type(exc).__name__}: {_clean_visible_text(str(exc))}",
+            failed_input=human_text,
+            conversation_id=conversation_id,
+            provider=provider,
+            memory_mode=memory_mode,
+            wants_json=wants_json,
+            status_code=400,
+        )
+    response = {
+        "ok": True,
+        "conversation_id": result.conversation_id,
+        "reply": result.reply,
+        "transcript": str(result.transcript_path),
+        "event": result.event["id"],
+        "memory_proposal_count": len(result.memory_proposals),
+        "memory_proposal_ids": [proposal["id"] for proposal in result.memory_proposals],
+    }
+    if wants_json:
+        return jsonify(response)
+    return redirect(url_for(
+        "chat_page",
+        conversation_id=result.conversation_id,
+        provider=provider,
+        memory_mode=memory_mode,
+    ))
 
 
 @app.route("/board")

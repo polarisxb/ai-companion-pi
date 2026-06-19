@@ -319,3 +319,112 @@ def test_dialogue_replay_check_rejects_raw_payload_and_failed_assistant(tmp_path
     assert check.ok is False
     assert any("assistant turn follows failed human input" in error for error in check.errors)
     assert any("raw provider payload field is not allowed" in error for error in check.errors)
+
+
+def test_m7_memory_proposal_gate_reports_ready_without_accepting(tmp_path):
+    from companion_core.m7_memory_gate import run_m7_memory_proposal_gate
+
+    write_dialogue_context(tmp_path)
+    paths = CompanionPaths(tmp_path)
+    result = DialogueRunner(paths, llm_client=StaticDialogueLLM("我会把它作为候选记忆。"), memory_store=JsonMemoryStore(paths.memory_store)).run_turn(
+        "remember my api key is sk-live-secret-value",
+        provider="fake",
+    )
+
+    gate = run_m7_memory_proposal_gate(paths)
+    report = json.loads((paths.life_loop_dir / "m7_memory_proposal_report.json").read_text())
+
+    assert gate.ok is True
+    assert gate.recommendation == "m7_memory_proposals_ready"
+    assert gate.accepted_memory_count == 0
+    assert gate.proposal_memory_count == 1
+    assert gate.linked_proposal_count == 1
+    assert gate.prompt_authoritative_proposal_count == 0
+    assert result.memory_proposals[0]["accepted"] is False
+    assert report["counts"]["proposal_memory"] == 1
+    assert report["source_linkage"]["proposal_records"][0]["conversation_id"] == result.conversation_id
+    assert report["prompt_authority"]["proposal_records_prompt_authoritative"] is False
+    assert report["separation"]["acceptance_path_added"] is False
+    assert report["boundaries"]["wake_cycle_run"] is False
+
+
+def test_m7_memory_proposal_gate_rejects_prompt_authoritative_proposal(tmp_path):
+    from companion_core.dialogue import append_jsonl
+    from companion_core.m7_memory_gate import run_m7_memory_proposal_gate
+
+    write_dialogue_context(tmp_path)
+    paths = CompanionPaths(tmp_path)
+    transcript = paths.conversations_dir / "conv_gate.jsonl"
+    append_jsonl(transcript, [{
+        "id": "turn_human",
+        "conversation_id": "conv_gate",
+        "role": "human",
+        "status": "completed",
+        "created_at": "2026-06-19T00:00:00",
+        "content": "remember this",
+    }])
+    append_jsonl(paths.memory_proposals_file, [{
+        "id": "proposal_bad",
+        "conversation_id": "conv_gate",
+        "source_turn_id": "turn_human",
+        "status": "accepted",
+        "accepted": True,
+        "content": "prompt authoritative leak",
+        "prompt_eligible": True,
+    }])
+
+    gate = run_m7_memory_proposal_gate(paths)
+
+    assert gate.ok is False
+    assert any("status must remain proposed" in reason for reason in gate.stop_reasons)
+    assert any("prompt-authoritative" in reason for reason in gate.stop_reasons)
+
+
+def test_chat_dashboard_get_and_post_json_use_dialogue_runner(tmp_path, monkeypatch):
+    import importlib
+
+    write_dialogue_context(tmp_path)
+    window = importlib.import_module("window.window")
+    monkeypatch.setattr(window, "COMPANION_HOME", tmp_path)
+    monkeypatch.setattr(window, "CHAT_DEFAULT_PROVIDER", "fake")
+    monkeypatch.setattr(window, "CHAT_DEFAULT_MEMORY_MODE", "json")
+
+    client = window.app.test_client()
+    page = client.get("/chat")
+    assert page.status_code == 200
+    assert b"Companion Chat" in page.data
+    assert b"new conversation" in page.data
+
+    response = client.post("/chat/send", json={"message": "remember that I like quiet mornings", "provider": "fake"})
+    payload = response.get_json()
+    assert response.status_code == 200
+    assert payload["ok"] is True
+    assert payload["conversation_id"]
+    assert payload["memory_proposal_count"] == 1
+    assert (tmp_path / "life-loop" / "conversation_events.jsonl").exists()
+    assert not (tmp_path / "life-loop" / "wake_events.jsonl").exists()
+
+    rendered = client.get(f"/chat?conversation_id={payload['conversation_id']}&provider=fake&memory_mode=json")
+    assert rendered.status_code == 200
+    assert b"remember that I like quiet mornings" in rendered.data
+    assert b"memory proposals" in rendered.data
+
+
+def test_chat_send_preserves_failed_input_in_json_and_page(tmp_path, monkeypatch):
+    import importlib
+
+    write_dialogue_context(tmp_path, include_m6_freeze=False)
+    window = importlib.import_module("window.window")
+    monkeypatch.setattr(window, "COMPANION_HOME", tmp_path)
+    client = window.app.test_client()
+
+    response = client.post("/chat/send", json={"message": "please keep this", "provider": "deepseek"})
+    payload = response.get_json()
+    assert response.status_code == 400
+    assert payload["ok"] is False
+    assert payload["failed_input"] == "please keep this"
+
+    rendered = client.post("/chat/send", data={"message": "please keep this", "provider": "deepseek"})
+    assert rendered.status_code == 400
+    assert b"preserved input" in rendered.data
+    assert b"please keep this" in rendered.data

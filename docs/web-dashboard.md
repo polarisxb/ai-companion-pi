@@ -122,3 +122,9 @@ Files in `window/content/` render as cards on the homepage. Markdown files get r
 ### Customizing the Icon
 
 Replace `window/icon.svg` with any SVG. This becomes the PWA app icon and the favicon.
+
+## Chat surface
+
+`/chat` is a dashboard page for user-initiated Companion text dialogue. It shows the active provider, memory mode, conversation id, transcript rows, and the number of memory proposals linked to the conversation. `POST /chat/send` accepts either form data or JSON and delegates to `DialogueRunner`; it is not a separate provider path.
+
+Failure responses preserve the submitted input (`failed_input` in JSON, preserved text on the rendered page) so the human can retry or edit. `/life` remains read-only; the chat route lives outside `/life` and does not mutate scheduler, cron, timers, services, or wake-cycle state.

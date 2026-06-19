@@ -10,6 +10,8 @@ from .dialogue import (
     load_dialogue_context,
     parse_dialogue_output,
 )
+from .m7_memory_gate import M7MemoryProposalGateResult, run_m7_memory_proposal_gate
+
 from .dialogue_replay import DialogueReplayCheckResult, check_dialogue_transcript
 from .memory import JsonMemoryStore, SemanticFirstMemoryStore
 from .llm import (
@@ -81,6 +83,7 @@ __all__ = [
     "LifeLoopRunner",
     "GroundingEvaluation",
     "GroundedOutputRepairer",
+    "M7MemoryProposalGateResult",
     "MemoryEvaluation",
     "OllamaClient",
     "OpenAICompatibleClient",
@@ -119,6 +122,7 @@ __all__ = [
     "run_m6_recovery_drill",
     "run_m6_scheduler_readiness_check",
     "run_m6_final_freeze_check",
+    "run_m7_memory_proposal_gate",
     "run_m4_observation_check",
     "run_m4_wake_trial",
     "classify_wake_trial_failure",
