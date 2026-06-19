@@ -1259,6 +1259,24 @@ TEMPLATE = """
         .chat-error { border: 1px solid var(--accent-red); color: var(--accent-red); background: rgba(160,84,84,0.08); border-radius: 8px; padding: 12px; margin-bottom: 16px; }
         .chat-empty { color: var(--text-dim); font-style: italic; padding: 24px 0; text-align: center; }
 
+        /* ── M7 chat ── */
+        .chat-layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; align-items: start; }
+        .chat-transcript { display: flex; flex-direction: column; gap: 12px; }
+        .chat-turn { padding: 14px 16px; border-radius: 12px; background: var(--bg-deep); border: 1px solid var(--border); }
+        .chat-turn.assistant { border-color: rgba(74,111,165,0.45); }
+        .chat-turn.failed { border-color: var(--accent-red); }
+        .chat-role { font-family: 'IBM Plex Mono', monospace; font-size: 0.68em; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; }
+        .chat-content { color: var(--text-secondary); white-space: pre-wrap; font-size: 0.94em; }
+        .chat-meta { margin-top: 6px; color: var(--text-dim); font-size: 0.72em; font-family: 'IBM Plex Mono', monospace; }
+        .chat-composer textarea { width: 100%; min-height: 118px; padding: 15px; background: var(--bg-deep); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-family: 'DM Sans', sans-serif; font-size: 0.95em; resize: vertical; }
+        .chat-composer textarea:focus { outline: none; border-color: var(--accent-blue); }
+        .chat-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+        .chat-row input, .chat-row select { background: var(--bg-deep); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+        .chat-strip { display: grid; gap: 8px; }
+        .chat-strip div { padding: 10px; background: var(--bg-deep); border-radius: 8px; color: var(--text-secondary); font-size: 0.82em; }
+        .chat-error { border: 1px solid var(--accent-red); color: var(--accent-red); background: rgba(160,84,84,0.08); border-radius: 8px; padding: 12px; margin-bottom: 16px; }
+        .chat-empty { color: var(--text-dim); font-style: italic; padding: 24px 0; text-align: center; }
+
         /* ─────────────────────────────────────────
            KEEPSAKES — 5-slot horizontal exhibition
         ───────────────────────────────────────── */
