@@ -1,0 +1,144 @@
+{
+  "boundaries": {
+    "accepted_memory_written": false,
+    "memory_decisions_written": false,
+    "provider_generation_requested": false,
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false
+  },
+  "counts": {
+    "accepted_memory": 3,
+    "accepted_shaped_decisions": 1,
+    "decisions": 1,
+    "human_review_decisions": 0,
+    "quarantined_decisions": 0,
+    "source_turn_ids": 20,
+    "transcripts": 3,
+    "turns_checked": 10
+  },
+  "decisions": [
+    {
+      "authority": "memory_steward",
+      "candidate_content": "我希望后续测试报告先给结论，再给证据",
+      "conversation_id": "m7-user-acceptance-test",
+      "created_at": "2026-06-19T19:40:47.665050",
+      "decision": "accepted",
+      "evidence_refs": [
+        {
+          "artifact": "conversation",
+          "id": "turn_20260619_181248_269142_human",
+          "path": "conversations/m7-user-acceptance-test.jsonl"
+        }
+      ],
+      "id": "memdec_20260619_194047_001",
+      "memory_type": "semantic",
+      "prompt_eligible": true,
+      "reason": "explicit low-risk user-stated fact/preference",
+      "risk": "low",
+      "schema_version": 1,
+      "source_turn_ids": [
+        "turn_20260619_181248_269142_human",
+        "turn_20260619_181252_639633_assistant"
+      ]
+    }
+  ],
+  "errors": [],
+  "milestone": "M8.2",
+  "next_commands": {
+    "m8_memory_steward": "python3 scripts/run_m8_memory_steward.py --companion-home /home/polaris/digital_life"
+  },
+  "ok": true,
+  "profile": {
+    "provider_calls": 0,
+    "provider_generation_requested": false,
+    "readonly": true,
+    "scheduler_mutation_allowed": false,
+    "semantic_shadow_authoritative": false,
+    "writes_accepted_memory": false,
+    "writes_memory_decisions": false
+  },
+  "provider_calls": 0,
+  "recommendation": "m8_memory_steward_readonly_ready",
+  "saved_at": "2026-06-19T19:40:47.665050",
+  "schema_version": 1,
+  "source_files": {
+    "accepted_memory": "memory-server/memory_store.json",
+    "memory_decisions": "life-loop/memory_decisions.jsonl",
+    "transcripts": [
+      "conversations/m7-user-acceptance-test.jsonl",
+      "conversations/m7-natural-chat-style-check.jsonl",
+      "conversations/m7-live-style-regression.jsonl"
+    ]
+  },
+  "stages": [
+    {
+      "details": {
+        "count": 3
+      },
+      "message": "accepted_memory loaded",
+      "name": "accepted_memory",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "transcripts": [
+          "conversations/m7-user-acceptance-test.jsonl",
+          "conversations/m7-natural-chat-style-check.jsonl",
+          "conversations/m7-live-style-regression.jsonl"
+        ]
+      },
+      "message": "found 3 transcript(s)",
+      "name": "dialogue_transcripts_discovered",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "rows": 8,
+        "transcript": "conversations/m7-user-acceptance-test.jsonl"
+      },
+      "message": "conversations/m7-user-acceptance-test.jsonl read",
+      "name": "dialogue_transcript_read",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "rows": 4,
+        "transcript": "conversations/m7-natural-chat-style-check.jsonl"
+      },
+      "message": "conversations/m7-natural-chat-style-check.jsonl read",
+      "name": "dialogue_transcript_read",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "rows": 8,
+        "transcript": "conversations/m7-live-style-regression.jsonl"
+      },
+      "message": "conversations/m7-live-style-regression.jsonl read",
+      "name": "dialogue_transcript_read",
+      "status": "pass"
+    },
+    {
+      "message": "1 decision(s) validate against M8.1 schema",
+      "name": "memory_decision_schema",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "accepted_memory_written": false,
+        "memory_decisions_written": false,
+        "provider_calls": 0,
+        "raw_provider_payload_stored": false,
+        "scheduler_mutated": false,
+        "wake_events_written": false
+      },
+      "message": "steward pass is report-only and performs no provider or memory writes",
+      "name": "readonly_boundaries",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}
