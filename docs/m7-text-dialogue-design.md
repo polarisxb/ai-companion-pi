@@ -3,6 +3,8 @@
 Status: planned after M6.7 final freeze
 Last updated: 2026-06-19
 
+Related implementation review: `docs/m7-1-text-dialogue-review.md`
+
 ## Decision
 
 M7 makes the companion directly reachable through text dialogue. It is not a
