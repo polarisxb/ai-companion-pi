@@ -14,6 +14,7 @@ import companion_core.llm as llm_module
 import companion_core.provider_check as provider_check_module
 from companion_core import (
     CompanionPaths,
+    DialogueEngine,
     FakeLLMClient,
     LifeLoopRunner,
     ReplayRunner,
@@ -6845,3 +6846,108 @@ def m3_release_gate_report_fixture():
         "stop_reasons": [],
         "saved_at": "2026-06-14T17:30:00",
     }
+
+
+
+def test_m7_dialogue_writes_transcript_event_and_does_not_wake(tmp_path):
+    write_minimal_context(tmp_path)
+    paths = CompanionPaths(tmp_path)
+    client = CapturingLLMClient(
+        '你好，我在这里。\nINTERNAL_METADATA: {"companion_state": {"mood": "专注", "status": "正在聊天。"}}'
+    )
+
+    result = DialogueEngine(paths, client, provider="fake", memory_mode="json").run_turn(
+        "你好，今天只测试聊天。",
+        conversation_id="conv_test",
+    )
+
+    assert result.reply == "你好，我在这里。"
+    transcript_lines = [json.loads(line) for line in result.transcript_path.read_text().splitlines()]
+    assert [turn["role"] for turn in transcript_lines] == ["human", "assistant"]
+    assert all(turn["raw_output_stored"] is False for turn in transcript_lines)
+    events = load_wake_events(paths.conversation_events_file)
+    assert events[-1]["trigger"] == "human-text-chat"
+    assert events[-1]["wake_cycle_triggered"] is False
+    assert events[-1]["scheduler_mutated"] is False
+    assert events[-1]["raw_provider_payload_stored"] is False
+    assert not paths.wake_events_file.exists()
+    state = json.loads(paths.companion_state_file.read_text())
+    assert state["mood"] == "专注"
+    assert "=== WHO YOU ARE ===" in client.prompts[0]
+    assert "===JOURNAL===" not in result.reply
+
+
+def test_m7_dialogue_low_risk_user_fact_is_narrow_auto_memory(tmp_path):
+    write_minimal_context(tmp_path)
+    paths = CompanionPaths(tmp_path)
+    engine = DialogueEngine(paths, StaticLLMClient("记住了，我会这样称呼你。"), provider="fake")
+
+    result = engine.run_turn("以后叫我 Polaris.", conversation_id="conv_memory")
+
+    assert len(result.stored_memory_ids) == 1
+    memories = JsonMemoryStore(paths.memory_store).load()
+    assert memories[0]["authority"] == "user_asserted"
+    assert memories[0]["source_type"] == "user"
+    assert memories[0]["prompt_eligible"] is True
+    assert "Polaris" in memories[0]["content"]
+    assert not paths.conversation_memory_proposals_file.exists()
+
+
+def test_m7_dialogue_sensitive_or_ambiguous_memory_is_proposal_only(tmp_path):
+    write_minimal_context(tmp_path)
+    paths = CompanionPaths(tmp_path)
+    engine = DialogueEngine(paths, StaticLLMClient("我先不把这个当成确定事实。"), provider="fake")
+
+    result = engine.run_turn("My API key is sk-abcdefghijklmnopqrstuvwxyz and maybe this matters", conversation_id="conv_prop")
+
+    assert result.stored_memory_ids == []
+    assert result.memory_proposal_ids
+    assert JsonMemoryStore(paths.memory_store).load() == []
+    proposals = [json.loads(line) for line in paths.conversation_memory_proposals_file.read_text().splitlines()]
+    assert proposals[-1]["status"] == "proposed"
+    assert "sk-abcdefghijklmnopqrstuvwxyz" not in proposals[-1]["content"]
+    transcript = result.transcript_path.read_text()
+    assert "sk-abcdefghijklmnopqrstuvwxyz" not in transcript
+    assert "[REDACTED]" in transcript
+
+
+def test_m7_dialogue_does_not_update_state_without_explicit_metadata(tmp_path):
+    write_minimal_context(tmp_path)
+    paths = CompanionPaths(tmp_path)
+    engine = DialogueEngine(paths, StaticLLMClient("当然，我们慢慢来。"), provider="fake")
+
+    result = engine.run_turn("我们聊一下项目。", conversation_id="conv_no_state")
+
+    assert result.companion_state is None
+    assert not paths.companion_state_file.exists()
+    assert result.event["companion_state_updated"] is False
+
+
+
+def test_m7_chat_cli_one_turn_fake_outputs_reply_and_metadata(tmp_path):
+    write_minimal_context(tmp_path)
+    script = Path(__file__).resolve().parents[1] / "scripts" / "chat_with_companion.py"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--companion-home",
+            str(tmp_path),
+            "--fake-llm",
+            "--json",
+            "以后叫我 Polaris.",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert "reply" in payload
+    assert payload["stored_memories"]
+    assert payload["memory_proposals"] == []
+    assert Path(payload["transcript"]).exists()
+    assert load_wake_events(CompanionPaths(tmp_path).conversation_events_file)[-1]["trigger"] == "human-text-chat"
+    assert not CompanionPaths(tmp_path).wake_events_file.exists()

@@ -1,6 +1,7 @@
 """Core runtime for the AI companion internal life loop."""
 
 from .lifecycle import LifeLoopRunner, WakeResult
+from .dialogue import DialogueEngine, DialogueTurnResult, FakeDialogueClient
 from .memory import JsonMemoryStore, SemanticFirstMemoryStore
 from .llm import (
     ClaudeCliClient,
@@ -59,6 +60,9 @@ __all__ = [
     "DEEPSEEK_API_KEY_ENV",
     "DEEPSEEK_BASE_URL",
     "DEEPSEEK_DEFAULT_MODEL",
+    "DialogueEngine",
+    "DialogueTurnResult",
+    "FakeDialogueClient",
     "FakeLLMClient",
     "HttpLLMError",
     "JsonMemoryStore",
