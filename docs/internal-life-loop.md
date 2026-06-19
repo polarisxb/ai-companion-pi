@@ -398,3 +398,7 @@ For the full real-provider trial path, see `docs/m3-real-trial.md`.
    the internal companion loop is stable, observable, recoverable, frozen on the
    Pi, and reachable through text dialogue.
    the Pi.
+
+## M7 dialogue boundaries
+
+M7.4/M7.5 keep text dialogue separate from autonomous life-loop execution. The memory proposal gate is read-only and writes only `life-loop/m7_memory_proposal_report.json`; it does not accept proposals or make them prompt-authoritative. Dashboard chat is user-initiated through `/chat` and reuses `DialogueRunner`, preserving the no-wake, no-scheduler, no-life-write, no-raw-payload, and no-semantic-authority boundaries already enforced by M7 dialogue events.
