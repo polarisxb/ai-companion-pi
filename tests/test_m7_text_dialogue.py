@@ -90,6 +90,9 @@ def test_dialogue_turn_writes_transcript_event_report_and_preserves_wake_boundar
     assert report["recommendation"] == "m7_cli_dialogue_ready"
     assert report["m6_final_freeze"]["recommendation"] == "m6_frozen_ready_for_scheduler_handoff"
     assert "This is not a wake cycle" in llm.prompts[0]
+    assert "Default to ordinary person-like conversation instead of engineering reporting" in llm.prompts[0]
+    assert "Do not volunteer project phase, milestone reports, test evidence, progress summaries, or system status in casual chat" in llm.prompts[0]
+    assert "If the human explicitly asks about phase, status, tests, evidence, progress, or system boundaries" in llm.prompts[0]
 
 
 def test_dialogue_memory_gate_keeps_sensitive_or_model_claims_as_proposals(tmp_path):

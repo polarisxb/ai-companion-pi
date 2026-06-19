@@ -83,6 +83,15 @@
     },
     {
       "errors": [],
+      "events_checked": 2,
+      "ok": true,
+      "provider_calls": 0,
+      "recommendation": "m7_dialogue_transcript_ready",
+      "rows_checked": 4,
+      "transcript": "conversations/m7-natural-chat-style-check.jsonl"
+    },
+    {
+      "errors": [],
       "events_checked": 4,
       "ok": true,
       "provider_calls": 0,
@@ -91,7 +100,7 @@
       "transcript": "conversations/m7-user-acceptance-test.jsonl"
     }
   ],
-  "saved_at": "2026-06-19T18:15:23.330365",
+  "saved_at": "2026-06-19T18:27:12.710664",
   "schema_version": 1,
   "source_reports": {
     "m6_final_freeze": {
@@ -104,14 +113,14 @@
     "m7_memory_proposal_current": {
       "ok": true,
       "recommendation": "m7_memory_proposals_ready",
-      "saved_at": "2026-06-19T18:15:23.273641"
+      "saved_at": "2026-06-19T18:27:12.649354"
     },
     "m7_text_dialogue": {
       "exists": true,
       "ok": true,
       "path": "life-loop/m7_text_dialogue_report.json",
       "recommendation": "m7_cli_dialogue_ready",
-      "saved_at": "2026-06-19T18:12:55.642997"
+      "saved_at": "2026-06-19T18:25:34.015706"
     }
   },
   "stages": [
@@ -162,6 +171,16 @@
         "transcript": "conversations/m7-context-check.jsonl"
       },
       "message": "conversations/m7-context-check.jsonl replay ready",
+      "name": "m7_dialogue_replay",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "events_checked": 2,
+        "rows_checked": 4,
+        "transcript": "conversations/m7-natural-chat-style-check.jsonl"
+      },
+      "message": "conversations/m7-natural-chat-style-check.jsonl replay ready",
       "name": "m7_dialogue_replay",
       "status": "pass"
     },
