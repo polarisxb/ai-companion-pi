@@ -51,6 +51,18 @@ class CompanionPaths:
         return self.life_loop_dir / "wake_events.jsonl"
 
     @property
+    def conversations_dir(self) -> Path:
+        return self.home / "conversations"
+
+    @property
+    def conversation_events_file(self) -> Path:
+        return self.life_loop_dir / "conversation_events.jsonl"
+
+    @property
+    def conversation_memory_proposals_file(self) -> Path:
+        return self.life_loop_dir / "conversation_memory_proposals.jsonl"
+
+    @property
     def model_outputs_dir(self) -> Path:
         return self.life_loop_dir / "model_outputs"
 
@@ -85,6 +97,7 @@ class CompanionPaths:
             self.memory_dir,
             self.requests_dir,
             self.life_loop_dir,
+            self.conversations_dir,
             self.window_dir,
             self.window_dir / "content",
         ):
@@ -92,3 +105,7 @@ class CompanionPaths:
 
     def context_file(self, name: str) -> Path:
         return self.context_dir / name
+
+    def conversation_transcript(self, conversation_id: str) -> Path:
+        safe_id = "".join(ch if ch.isalnum() or ch in {"_", "-"} else "_" for ch in conversation_id)
+        return self.conversations_dir / f"conversation_{safe_id}.jsonl"
