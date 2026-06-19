@@ -104,8 +104,7 @@ class DialogueRunner:
         event_id = f"dialogue_{started_at.strftime('%Y%m%d_%H%M%S_%f')}_{uuid.uuid4().hex[:8]}"
         transcript_path = self._transcript_path(conversation_id)
         m6_final_freeze = load_m6_final_freeze_evidence(self.paths)
-        human_turn: dict | None = None
-        human_turn_written = False
+        transcript_written = False
         try:
             if not _provider_is_fake(provider) and not m6_final_freeze["ok"]:
                 raise DialoguePreflightError("M6.7 final freeze evidence is not ready for real-provider dialogue")
@@ -113,30 +112,6 @@ class DialogueRunner:
             prompt = self._render_prompt(context, cleaned_input)
             now = datetime.now()
             human_turn_id = f"turn_{now.strftime('%Y%m%d_%H%M%S_%f')}_human"
-            assistant_turn_id = f"turn_{now.strftime('%Y%m%d_%H%M%S_%f')}_assistant"
-
-            proposals = build_memory_proposals(
-                cleaned_input,
-                conversation_id=conversation_id,
-                source_turn_id=human_turn_id,
-            )
-            proposals.extend(_metadata_memory_proposals(metadata, conversation_id, assistant_turn_id))
-            if not auto_memory:
-                for proposal in proposals:
-                    if proposal.get("status") == "auto_accepted":
-                        proposal["status"] = "proposed"
-                        proposal["accepted"] = False
-                        proposal["reason"] = "interactive dialogue keeps memory as proposal until explicit review"
-            stored_memories = self._store_auto_memories(proposals, event_id=event_id)
-            proposal_records = [proposal for proposal in proposals if proposal["status"] == "proposed"]
-            if proposal_records:
-                append_jsonl(self.paths.memory_proposals_file, proposal_records)
-
-            companion_state = context.companion_state
-            metadata_state = metadata.get("companion_state") if isinstance(metadata, dict) else None
-            if has_state_update(metadata_state):
-                companion_state = update_companion_state(self.paths.companion_state_file, metadata_state)
-
             human_turn = {
                 "id": human_turn_id,
                 "event_id": event_id,
@@ -196,7 +171,7 @@ class DialogueRunner:
                 "memory_proposal_ids": [proposal["id"] for proposal in proposal_records],
             }
             append_jsonl(transcript_path, [human_turn, assistant_turn])
-            human_turn_written = True
+            transcript_written = True
 
             event = self._build_event(
                 event_id=event_id,
@@ -255,7 +230,8 @@ class DialogueRunner:
                 "memory_proposal_ids": [],
                 "error": {"type": type(exc).__name__, "message": _clean_visible_text(str(exc))},
             }
-            append_jsonl(transcript_path, [failed_human_turn])
+            if not transcript_written:
+                append_jsonl(transcript_path, [failed_human_turn])
             event = self._build_event(
                 event_id=event_id,
                 conversation_id=conversation_id,

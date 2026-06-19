@@ -39,7 +39,6 @@ def main() -> int:
     parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--memory-mode", choices=("json", "dual"), default=None)
     parser.add_argument("--fake-response", default=None, help="Deterministic local response for smoke tests; bypasses provider calls.")
-    parser.add_argument("--interactive", action="store_true", help="Keep a local REPL session with one conversation id.")
     parser.add_argument("--json", action="store_true", help="Print structured result instead of only companion reply.")
     parser.add_argument("--interactive", action="store_true", help="Start a continuous local REPL using one conversation id.")
     args = parser.parse_args()
@@ -93,12 +92,16 @@ def main() -> int:
             json_output=args.json,
         )
 
-    result = runner.run_turn(
-        human_text,
-        conversation_id=args.conversation_id,
-        provider=provider,
-        memory_mode=memory_mode,
-    )
+    try:
+        result = runner.run_turn(
+            human_text,
+            conversation_id=args.conversation_id,
+            provider=provider,
+            memory_mode=memory_mode,
+        )
+    except Exception as exc:  # noqa: BLE001 - CLI keeps provider/preflight errors terse and redacted.
+        print(f"ERROR: {type(exc).__name__}: {_clean_visible_text(str(exc))}", file=sys.stderr)
+        return 1
     if args.json:
         print(json.dumps({
             "conversation_id": result.conversation_id,
