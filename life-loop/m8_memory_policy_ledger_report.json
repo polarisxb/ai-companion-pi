@@ -1,0 +1,147 @@
+{
+  "actions": [
+    {
+      "accepted_memory_id": "mem_1844814a5322",
+      "action": "accepted_memory_written",
+      "decision": "accepted",
+      "id": "memdec_20260619_194047_001",
+      "prompt_eligible": true,
+      "risk": "low"
+    }
+  ],
+  "boundaries": {
+    "accepted_memory_written": true,
+    "memory_decisions_written": true,
+    "provider_generation_requested": false,
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false
+  },
+  "counts": {
+    "accepted_memory_existing": 0,
+    "accepted_memory_written": 1,
+    "existing_ledger_decisions": 0,
+    "ledger_appended": 1,
+    "new_ledger_decisions": 1,
+    "quarantined_or_review_only": 0,
+    "skipped_existing_decisions": 0,
+    "source_decisions": 1
+  },
+  "errors": [],
+  "ledger_records": [
+    {
+      "accepted_memory_id": "mem_1844814a5322",
+      "authority": "memory_steward",
+      "candidate_content": "我希望后续测试报告先给结论，再给证据",
+      "conversation_id": "m7-user-acceptance-test",
+      "created_at": "2026-06-19T19:40:47.665050",
+      "decision": "accepted",
+      "evidence_refs": [
+        {
+          "artifact": "conversation",
+          "id": "turn_20260619_181248_269142_human",
+          "path": "conversations/m7-user-acceptance-test.jsonl"
+        }
+      ],
+      "id": "memdec_20260619_194047_001",
+      "memory_type": "semantic",
+      "prompt_eligible": true,
+      "reason": "explicit low-risk user-stated fact/preference",
+      "risk": "low",
+      "schema_version": 1,
+      "source_turn_ids": [
+        "turn_20260619_181248_269142_human",
+        "turn_20260619_181252_639633_assistant"
+      ]
+    }
+  ],
+  "milestone": "M8.3",
+  "next_commands": {
+    "m8_memory_policy": "python3 scripts/run_m8_memory_policy_ledger.py --companion-home /home/polaris/digital_life"
+  },
+  "ok": true,
+  "profile": {
+    "policy_gate": true,
+    "provider_calls": 0,
+    "provider_generation_requested": false,
+    "scheduler_mutation_allowed": false,
+    "semantic_shadow_authoritative": false,
+    "writes_accepted_memory": true,
+    "writes_memory_decisions": true
+  },
+  "provider_calls": 0,
+  "recommendation": "m8_memory_policy_ledger_ready",
+  "saved_at": "2026-06-21T00:07:00.541601",
+  "schema_version": 1,
+  "source_files": {
+    "accepted_memory": "memory-server/memory_store.json",
+    "memory_decisions": "life-loop/memory_decisions.jsonl",
+    "steward_report": "life-loop/m8_memory_steward_report.json"
+  },
+  "stages": [
+    {
+      "details": {
+        "steward_report": "life-loop/m8_memory_steward_report.json"
+      },
+      "message": "loaded 1 steward decision(s)",
+      "name": "source_decisions",
+      "status": "pass"
+    },
+    {
+      "message": "loaded 0 existing ledger decision(s)",
+      "name": "existing_ledger",
+      "status": "pass"
+    },
+    {
+      "message": "loaded 3 accepted memory row(s)",
+      "name": "accepted_memory",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "policy_errors": 0,
+        "skipped_existing_decisions": 0,
+        "validated_new_decisions": 1,
+        "validation_errors": 0
+      },
+      "message": "1 new decision(s) passed policy",
+      "name": "memory_policy_gate",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "ledger_appended": 1,
+        "ledger_records_ready": 1,
+        "write_ledger": true
+      },
+      "message": "appended 1 decision(s) to memory_decisions.jsonl",
+      "name": "memory_decision_ledger",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "accepted_memory_existing": 0,
+        "accepted_memory_writes": 1,
+        "write_accepted_memory": true
+      },
+      "message": "wrote 1 accepted memory row(s)",
+      "name": "accepted_memory_write",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "provider_calls": 0,
+        "raw_provider_payload_stored": false,
+        "scheduler_mutated": false,
+        "semantic_shadow_authority_promoted": false,
+        "wake_events_written": false
+      },
+      "message": "policy gate does not call providers, wake, scheduler, /life routes, or semantic shadow",
+      "name": "policy_boundaries",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}

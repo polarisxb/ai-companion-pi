@@ -39,6 +39,11 @@ from .memory_steward import (
     run_m8_memory_steward_readonly,
     write_m8_memory_steward_report,
 )
+from .m8_memory_policy import (
+    M8MemoryPolicyLedgerResult,
+    run_m8_memory_policy_ledger,
+    write_m8_memory_policy_ledger_report,
+)
 from .dialogue_replay import DialogueReplayCheckResult, check_dialogue_transcript
 from .memory import JsonMemoryStore, SemanticFirstMemoryStore
 from .llm import (
@@ -117,6 +122,7 @@ __all__ = [
     "M7DialogueFreezeResult",
     "M7MemoryProposalGateResult",
     "MEMORY_DECISION_SCHEMA",
+    "M8MemoryPolicyLedgerResult",
     "M8MemoryStewardResult",
     "MemoryDecision",
     "MemoryDecisionValidationError",
@@ -141,9 +147,11 @@ __all__ = [
     "check_dialogue_transcript",
     "run_m7_dialogue_freeze_check",
     "run_m7_memory_proposal_gate",
+    "run_m8_memory_policy_ledger",
     "run_m8_memory_steward_readonly",
     "write_m7_dialogue_freeze_report",
     "write_m7_memory_proposal_report",
+    "write_m8_memory_policy_ledger_report",
     "write_m8_memory_steward_report",
     "create_llm_client",
     "build_trial_summary",
