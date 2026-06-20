@@ -17,6 +17,7 @@ from .context_capsule import render_context_capsule
 from .events import append_wake_event
 from .llm import ClaudeCliClient, LLMClient
 from .memory import JsonMemoryStore, MemoryEntry
+from .memory_retrieval import assemble_dialogue_memory_context
 from .paths import CompanionPaths
 from .state import has_state_update, update_companion_state
 
@@ -109,6 +110,12 @@ class DialogueRunner:
             if not _provider_is_fake(provider) and not m6_final_freeze["ok"]:
                 raise DialoguePreflightError("M6.7 final freeze evidence is not ready for real-provider dialogue")
             context = load_dialogue_context(self.paths, self.memory_store, transcript_path=transcript_path)
+            retrieval = assemble_dialogue_memory_context(
+                self.paths,
+                cleaned_input,
+                memory_store=self.memory_store,
+            )
+            context.recent_memories = retrieval.memories
             prompt = self._render_prompt(context, cleaned_input)
             now = datetime.now()
             human_turn_id = f"turn_{now.strftime('%Y%m%d_%H%M%S_%f')}_human"

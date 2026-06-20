@@ -1,0 +1,54 @@
+{
+  "boundaries": {
+    "proposal_or_quarantine_prompt_authority": false,
+    "provider_generation_requested": false,
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false
+  },
+  "counts": {
+    "filtered": 3,
+    "selected": 1
+  },
+  "milestone": "M8.4",
+  "ok": true,
+  "provider_calls": 0,
+  "query": "随便聊聊",
+  "recommendation": "m8_memory_retrieval_ready",
+  "retrieval": {
+    "filtered": [
+      {
+        "id": "mem_84a3ab6ada31",
+        "reason": "not_prompt_eligible_accepted_memory"
+      },
+      {
+        "id": "mem_4e011e265543",
+        "reason": "not_prompt_eligible_accepted_memory"
+      },
+      {
+        "id": "mem_7aa20a86a02f",
+        "reason": "not_prompt_eligible_accepted_memory"
+      }
+    ],
+    "memories": [
+      {
+        "authority": "user_asserted",
+        "content": "我希望后续测试报告先给结论，再给证据",
+        "id": "mem_1844814a5322",
+        "memory_type": "semantic",
+        "reasons": [
+          "prompt_eligible_accepted_memory",
+          "style_or_preference_memory",
+          "m8_policy_accepted"
+        ],
+        "score": 4
+      }
+    ],
+    "query": "随便聊聊"
+  },
+  "saved_at": "2026-06-21T00:18:32.240413",
+  "schema_version": 1,
+  "stop_reasons": []
+}

@@ -44,6 +44,13 @@ from .m8_memory_policy import (
     run_m8_memory_policy_ledger,
     write_m8_memory_policy_ledger_report,
 )
+from .memory_retrieval import (
+    MemoryRetrievalResult,
+    RetrievedMemory,
+    assemble_dialogue_memory_context,
+    run_m8_memory_retrieval_check,
+    write_m8_memory_retrieval_report,
+)
 from .dialogue_replay import DialogueReplayCheckResult, check_dialogue_transcript
 from .memory import JsonMemoryStore, SemanticFirstMemoryStore
 from .llm import (
@@ -127,6 +134,7 @@ __all__ = [
     "MemoryDecision",
     "MemoryDecisionValidationError",
     "MemoryEvaluation",
+    "MemoryRetrievalResult",
     "OllamaClient",
     "OpenAICompatibleClient",
     "SUPPORTED_LLM_PROVIDERS",
@@ -135,10 +143,12 @@ __all__ = [
     "RepairResult",
     "ReplayResult",
     "ReplayRunner",
+    "RetrievedMemory",
     "SemanticShadowWriter",
     "append_memory_decision",
     "append_memory_decisions",
     "append_wake_event",
+    "assemble_dialogue_memory_context",
     "check_llm_provider",
     "check_runtime_readiness",
     "build_memory_proposals",
@@ -148,10 +158,12 @@ __all__ = [
     "run_m7_dialogue_freeze_check",
     "run_m7_memory_proposal_gate",
     "run_m8_memory_policy_ledger",
+    "run_m8_memory_retrieval_check",
     "run_m8_memory_steward_readonly",
     "write_m7_dialogue_freeze_report",
     "write_m7_memory_proposal_report",
     "write_m8_memory_policy_ledger_report",
+    "write_m8_memory_retrieval_report",
     "write_m8_memory_steward_report",
     "create_llm_client",
     "build_trial_summary",
