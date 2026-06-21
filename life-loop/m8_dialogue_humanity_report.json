@@ -1,0 +1,183 @@
+{
+  "boundaries": {
+    "production_dialogue_writes": false,
+    "proposal_or_quarantine_prompt_authority": false,
+    "provider_generation_requested": false,
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false
+  },
+  "cases": {
+    "casual_chat": {
+      "conversation_id": "m8-humanity-casual-20260621_175651_188079_fe2758",
+      "non_prompt_memory_in_prompt": false,
+      "project_status_in_prompt": false,
+      "reply": "我在，这次就轻轻地陪你聊一会儿。",
+      "style_memory_in_prompt": true
+    },
+    "multi_turn": {
+      "conversation_id": "m8-humanity-multiturn-20260621_175651_188079_fe2758",
+      "second_reply": "你刚才说想低强度地聊两句。",
+      "turn_count": 4
+    },
+    "provider_failure": {
+      "conversation_id": "m8-humanity-failure-20260621_175651_188079_fe2758",
+      "retry_reply": "重试后我在这里。",
+      "transcript_roles": [
+        "human",
+        "human",
+        "assistant"
+      ]
+    },
+    "status_query": {
+      "conversation_id": "m8-humanity-status-20260621_175651_188079_fe2758",
+      "project_status_in_prompt": true,
+      "reply": "现在是 M8.5，重点是确认记忆接入后聊天仍然自然。"
+    }
+  },
+  "errors": [],
+  "evidence": {
+    "fake_dialogue_turns": 6,
+    "non_prompt_memory": "Quarantined model-proposed memory should never enter prompt context.",
+    "project_status_memory": "The project is currently in M8.5 Dialogue Humanity Regression.",
+    "provider_calls": 0,
+    "smoke_home": "/tmp/m8_dialogue_humanity_c4ewkh1e",
+    "style_memory": "Polaris prefers ordinary chat to stay natural, concise, and warm unless asked otherwise."
+  },
+  "milestone": "M8.5",
+  "next_commands": {
+    "m8_dialogue_humanity": "python3 scripts/run_m8_dialogue_humanity.py --companion-home /home/polaris/digital_life"
+  },
+  "ok": true,
+  "profile": {
+    "dialogue_humanity_regression": true,
+    "production_dialogue_writes": false,
+    "provider_calls": 0,
+    "provider_generation_requested": false,
+    "scheduler_mutation_allowed": false,
+    "semantic_shadow_authoritative": false,
+    "uses_isolated_smoke_home": true
+  },
+  "provider_calls": 0,
+  "recommendation": "m8_dialogue_humanity_ready",
+  "saved_at": "2026-06-21T17:56:51.186636",
+  "schema_version": 1,
+  "source_files": {
+    "m7_dialogue_freeze": {
+      "exists": true,
+      "ok": true,
+      "path": "life-loop/m7_dialogue_freeze_report.json",
+      "recommendation": "m7_text_dialogue_frozen"
+    },
+    "m8_memory_retrieval": {
+      "exists": true,
+      "ok": true,
+      "path": "life-loop/m8_memory_retrieval_report.json",
+      "recommendation": "m8_memory_retrieval_ready"
+    }
+  },
+  "stages": [
+    {
+      "details": {
+        "exists": true,
+        "ok": true,
+        "path": "life-loop/m7_dialogue_freeze_report.json",
+        "recommendation": "m7_text_dialogue_frozen"
+      },
+      "message": "M7 dialogue freeze evidence is ready",
+      "name": "m8_5_m7_dialogue_freeze_evidence",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "exists": true,
+        "ok": true,
+        "path": "life-loop/m8_memory_retrieval_report.json",
+        "recommendation": "m8_memory_retrieval_ready"
+      },
+      "message": "M8 retrieval evidence is ready",
+      "name": "m8_5_m8_retrieval_evidence",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "non_prompt_memory_in_prompt": false,
+        "project_status_in_prompt": false,
+        "reply": "我在，这次就轻轻地陪你聊一会儿。",
+        "reply_announces_memory_operation": false,
+        "reply_report_like": false,
+        "style_memory_in_prompt": true
+      },
+      "message": "casual chat used style memory without project status, quarantine memory, or report scaffolding",
+      "name": "m8_5_casual_chat_humanity",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "conversation_id_stable": true,
+        "first_assistant_in_second_prompt": true,
+        "first_human_in_second_prompt": true,
+        "reply": "你刚才说想低强度地聊两句。",
+        "transcript_roles": [
+          "human",
+          "assistant",
+          "human",
+          "assistant"
+        ]
+      },
+      "message": "second turn carried recent human and assistant context",
+      "name": "m8_5_multiturn_coherence",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "project_status_in_prompt": true,
+        "reply": "现在是 M8.5，重点是确认记忆接入后聊天仍然自然。"
+      },
+      "message": "project status memory appeared only for an explicit status query",
+      "name": "m8_5_status_only_when_asked",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "first_call_failed": true,
+        "first_status": "failed",
+        "raw_provider_payload_rows": 0,
+        "transcript_roles": [
+          "human",
+          "human",
+          "assistant"
+        ]
+      },
+      "message": "failed input was preserved and retry transcript remained well-formed",
+      "name": "m8_5_provider_failure_recovery",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "conversation_event_count": 6,
+        "event_boundaries_ok": true,
+        "event_raw_payload_count": 0,
+        "transcript_raw_payload_count": 0,
+        "transcript_row_count": 11,
+        "wake_events_file_exists": false
+      },
+      "message": "smoke dialogue preserved no-wake/no-raw-payload dialogue boundaries",
+      "name": "m8_5_smoke_runtime_boundaries",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "persistent_smoke_home": false,
+        "smoke_home": "/tmp/m8_dialogue_humanity_c4ewkh1e",
+        "source_runtime_files_unchanged": true
+      },
+      "message": "source runtime files unchanged; smoke dialogue stayed isolated",
+      "name": "m8_5_source_runtime_boundaries",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}
