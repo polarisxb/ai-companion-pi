@@ -72,6 +72,7 @@
 - M9 is controlled scheduled presence after M8.7 memory/dialogue freeze.
 - M9.0 and M9.1 must not mutate cron, timers, services, or scheduler state.
 - M9 should reuse the existing wake execution path behind a Scheduler Presence Controller rather than creating a second provider path.
+- Scheduled presence uses non-fixed randomized presence windows, with default quiet hours `00:00-08:00`, `daily_live_wake_budget=2`, and internal-only output.
 - Live activation requires read-only revalidation, supervised dry-run evidence, pause/rollback design, and an observation window.
 - Voice, Signal, camera, sensors, and hardware body work remain out of scope until scheduled presence is frozen.
 
@@ -114,7 +115,7 @@
 - Natural reply, structured shadow: keep the visible reply conversational while
   machine-readable metadata stays behind the scenes.
 - Stewarded memory, sparse review: ordinary memory management belongs to the companion's internal steward; human review is an exception path.
-- Controlled presence before new channels: prove scheduler cadence, pause, rollback, and observation before adding voice or Signal.
+- Controlled presence before new channels: prove non-fixed cadence, quiet hours, daily budget, pause, rollback, and observation before adding voice or Signal.
 - Reuse before redesign: extend existing Window styles and routes before introducing a new UI system.
 - Tradeoffs: early M7 should prefer CLI and plain HTML reliability over polished real-time effects.
   M8 should prefer auditable memory correctness over invisible personalization magic.
@@ -217,4 +218,4 @@
 
 - [ ] What is the exact human-facing companion name in the chat header? Owner: user. Impact: final polish, not blocking.
 - [ ] Which scheduler mechanism should M9 prefer after dry-run evidence: cron, systemd timer, or an existing project wrapper? Owner: implementation/user. Impact: deployment and rollback shape.
-- [ ] What initial cadence is acceptable for limited live scheduled presence? Owner: user. Impact: interruption risk and observation duration.
+- [ ] Should the M9 pause flag suppress only scheduled wakes, or also manual scheduler dry-run commands? Owner: implementation/user. Impact: operator control semantics.

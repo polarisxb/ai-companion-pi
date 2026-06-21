@@ -20,6 +20,15 @@
       "rollback_path_defined",
       "bounded_observation_window"
     ],
+    "cadence": {
+      "daily_live_wake_budget": 2,
+      "model": "randomized_presence_windows",
+      "quiet_hours": [
+        "00:00",
+        "08:00"
+      ],
+      "scheduled_wake_output": "internal_only"
+    },
     "document": "docs/m9-controlled-presence-design.md",
     "scope": "controlled scheduler presence after M8.7",
     "scheduler_mutation_in_m9_0": false
@@ -66,6 +75,11 @@
     {
       "message": "Later live activation requires read-only revalidation, dry-run, pause, rollback, and observation evidence",
       "name": "m9_0_activation_gate",
+      "status": "pass"
+    },
+    {
+      "message": "M9 cadence uses bounded non-fixed randomized presence windows with quiet hours and daily budget",
+      "name": "m9_0_cadence_model",
       "status": "pass"
     }
   ],

@@ -40,7 +40,7 @@ opaque failures, stale memory authority, or hard-to-reverse production state.
 
 M9 should therefore focus on controlled presence:
 
-- predictable cadence
+- bounded non-fixed cadence
 - single-wake locking
 - observable scheduler attempts
 - failure backoff
@@ -93,6 +93,67 @@ Non-responsibilities:
 - no voice output
 - no memory authority promotion
 - no direct `/life` mutation
+
+### Cadence Model
+
+M9 should not use a fixed "every N hours" live wake rhythm. Fixed cadence reads
+like a cron job, not like a companion with presence.
+
+M9 should use controlled randomness:
+
+```text
+scheduled opportunity check
+  -> read presence state
+  -> enforce quiet hours / daily budget / min gap / lock / cooldown
+  -> either skip with an auditable reason or run one scheduled wake
+  -> sample the next candidate window
+```
+
+Default M9 cadence design:
+
+```text
+quiet_hours = 00:00-08:00 local time
+daily_live_wake_budget = 2
+scheduled_wake_output = internal_only
+cadence = randomized_presence_windows
+```
+
+The scheduler artifact should wake a lightweight wrapper often enough to check
+state, but the wrapper decides whether a real wake is appropriate. Most checks
+may become auditable skips.
+
+Skip reasons should include:
+
+- `paused`
+- `quiet_hours`
+- `daily_budget_exhausted`
+- `min_gap_not_met`
+- `wake_lock_active`
+- `failure_cooldown`
+- `recent_human_chat_dampening`
+
+The state file should be explicit and inspectable:
+
+```text
+life-loop/scheduler_presence_state.json
+```
+
+Candidate fields:
+
+```json
+{
+  "last_scheduled_wake_at": "2026-06-21T18:00:00",
+  "next_candidate_after": "2026-06-22T09:30:00",
+  "daily_live_wake_budget": 2,
+  "daily_live_wake_count": 0,
+  "quiet_hours": ["00:00", "08:00"],
+  "cooldown_until": null,
+  "last_skip_reason": "quiet_hours"
+}
+```
+
+M9 scheduled output is internal-only: journal, wake event, and `/life` evidence.
+It must not send Signal, speak aloud, or emit external notifications.
 
 ### Wake Execution Path
 
@@ -175,6 +236,8 @@ Acceptance:
 - M9 is defined as controlled scheduled presence, not voice or Signal.
 - M6.7 and M8.7 are the required baselines.
 - Scheduler mutation is explicitly out of scope for M9.0.
+- Cadence is non-fixed and bounded by quiet hours, daily budget, locks,
+  cooldowns, and chat-aware dampening.
 - Later live activation requires dry-run, pause, rollback, and observation
   evidence.
 
@@ -226,6 +289,8 @@ Acceptance:
 - Uses the intended scheduler wrapper command path.
 - Exercises lock acquisition, pause flag behavior, cooldown handling, and event
   writing.
+- Exercises randomized presence windows, quiet hours, daily budget, min-gap
+  checks, and skip reasons.
 - Uses fake provider or dry-run wake mode unless explicitly switched for a
   bounded real-provider smoke.
 - Does not install cron, timers, or services.
@@ -253,7 +318,8 @@ Acceptance:
 - Writes or enables one scheduler artifact only.
 - Records the exact artifact path/name.
 - Records rollback command and pause flag path.
-- Starts with a conservative cadence and short observation window.
+- Starts with randomized presence windows, `daily_live_wake_budget=2`, and
+  `scheduled_wake_output=internal_only`.
 - Does not enable voice, Signal, or extra output channels.
 
 Recommendation values:
@@ -326,7 +392,6 @@ Recommendation values:
 
 - Which scheduler mechanism should production prefer after dry-run evidence:
   cron, systemd timer, or an existing project wrapper?
-- What initial cadence is acceptable for limited live activation?
 - Should the pause flag suppress only scheduled wakes, or also manual scheduler
   dry-run commands?
 - What observation window is enough before M9.5 freeze?
