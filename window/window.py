@@ -36,7 +36,17 @@ SCRIPTS_DIR = COMPANION_HOME / "scripts"
 if SCRIPTS_DIR.exists():
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from companion_core import CompanionPaths, DialogueRunner, JsonMemoryStore, SemanticFirstMemoryStore, create_llm_client, load_local_secrets
+from companion_core import (
+    CompanionPaths,
+    DialogueRunner,
+    JsonMemoryStore,
+    SemanticFirstMemoryStore,
+    approve_memory_review_decision,
+    create_llm_client,
+    load_local_secrets,
+    load_memory_review_queue,
+    reject_memory_review_decision,
+)
 from companion_core.dialogue import _clean_visible_text
 
 app = Flask(__name__)
@@ -637,6 +647,28 @@ def get_chat_state(conversation_id=None, limit=40, error=None, preserved_input="
     }
 
 
+def get_memory_review_state(error=None):
+    paths = CompanionPaths.from_env(COMPANION_HOME)
+    try:
+        queue = load_memory_review_queue(paths)
+    except Exception as exc:  # noqa: BLE001 - dashboard keeps review errors visible.
+        queue = {
+            "pending": [],
+            "reviewed": [],
+            "actions": [],
+            "counts": {
+                "decisions": 0,
+                "reviewable": 0,
+                "pending": 0,
+                "reviewed": 0,
+                "actions": 0,
+            },
+        }
+        error = error or f"{type(exc).__name__}: {_clean_visible_text(str(exc))}"
+    queue["error"] = error
+    return queue
+
+
 def _chat_runner():
     paths = CompanionPaths.from_env(COMPANION_HOME)
     paths.ensure_runtime_dirs()
@@ -662,6 +694,13 @@ def _chat_runner():
 
 def _wants_json_response():
     return request.is_json or "application/json" in (request.headers.get("Accept") or "")
+
+
+def _review_request_value(name, default=""):
+    data = request.get_json(silent=True) if request.is_json else {}
+    if isinstance(data, dict) and data.get(name) is not None:
+        return data.get(name)
+    return request.form.get(name, default)
 
 
 def _kv(key, value):
@@ -974,6 +1013,49 @@ def _m7_dialogue_lines(text_report, memory_report, freeze_report):
     return lines
 
 
+def _m8_memory_lines(
+    steward_report,
+    policy_report,
+    retrieval_report,
+    humanity_report,
+    review_report,
+    freeze_report,
+):
+    lines = ["M8 Memory Steward"]
+    if not any((steward_report, policy_report, retrieval_report, humanity_report, review_report, freeze_report)):
+        lines.append("No M8 memory report captured.")
+        return lines
+    for title, report in (
+        ("M8 Steward", steward_report),
+        ("M8 Policy", policy_report),
+        ("M8 Retrieval", retrieval_report),
+        ("M8 Dialogue Humanity", humanity_report),
+        ("M8 Human Review", review_report),
+        ("M8 Final Freeze", freeze_report),
+    ):
+        if report:
+            lines.extend(_report_lines(title, report))
+    if review_report:
+        counts = review_report.get("counts") if isinstance(review_report.get("counts"), dict) else {}
+        lines.append("review_pending=" + escape(str(counts.get("pending", 0))))
+        lines.append("ordinary_low_risk_review_required=" + escape(str(
+            (review_report.get("profile") or {}).get("ordinary_low_risk_review_required")
+            if isinstance(review_report.get("profile"), dict)
+            else None
+        )))
+    if freeze_report:
+        final_freeze = freeze_report.get("final_freeze") if isinstance(freeze_report.get("final_freeze"), dict) else {}
+        profile = freeze_report.get("profile") if isinstance(freeze_report.get("profile"), dict) else {}
+        lines.append("m8_frozen=" + escape(str(final_freeze.get("frozen"))))
+        lines.append("readonly=" + escape(str(final_freeze.get("readonly"))))
+        lines.append("provider_generation_requested=" + escape(str(profile.get("provider_generation_requested"))))
+        lines.append("scheduler_mutation_allowed=" + escape(str(profile.get("scheduler_mutation_allowed"))))
+        lines.append("semantic_shadow_authoritative=" + escape(str(profile.get("semantic_shadow_authoritative"))))
+        for reason in freeze_report.get("stop_reasons", []) or []:
+            lines.append("stop_reason=" + escape(str(reason)))
+    return lines
+
+
 def _near_status_lines():
     lines = ["Near-status TTL"]
     capsule = _load_json(COMPANION_HOME / "life-loop" / "context_capsule.json", default={}) or {}
@@ -1012,6 +1094,12 @@ def render_life_dashboard():
     m7_text_dialogue = _report("m7_text_dialogue_report.json")
     m7_memory_proposal = _report("m7_memory_proposal_report.json")
     m7_dialogue_freeze = _report("m7_dialogue_freeze_report.json")
+    m8_memory_steward = _report("m8_memory_steward_report.json")
+    m8_memory_policy = _report("m8_memory_policy_ledger_report.json")
+    m8_memory_retrieval = _report("m8_memory_retrieval_report.json")
+    m8_dialogue_humanity = _report("m8_dialogue_humanity_report.json")
+    m8_human_review = _report("m8_human_review_queue_report.json")
+    m8_memory_freeze = _report("m8_memory_freeze_report.json")
 
     sections = [
         ("Internal Life Loop", _event_life_lines(latest)),
@@ -1037,6 +1125,14 @@ def render_life_dashboard():
             m7_text_dialogue,
             m7_memory_proposal,
             m7_dialogue_freeze,
+        )),
+        ("M8 Memory Steward", _m8_memory_lines(
+            m8_memory_steward,
+            m8_memory_policy,
+            m8_memory_retrieval,
+            m8_dialogue_humanity,
+            m8_human_review,
+            m8_memory_freeze,
         )),
         ("Near-status TTL", _near_status_lines()),
     ]
@@ -1691,6 +1787,7 @@ TEMPLATE = """
             <a href="/" class="{{ 'active' if page == 'home' }}">home</a>
             <a href="/life" class="{{ 'active' if page == 'life' }}">life</a>
             <a href="/chat" class="{{ 'active' if page == 'chat' }}">chat</a>
+            <a href="/memory-review" class="{{ 'active' if page == 'memory_review' }}">memory review</a>
             <a href="/board" class="{{ 'active' if page == 'board' }}">message board</a>
             <a href="/creations" class="{{ 'active' if page == 'creations' }}">creations</a>
             <a href="/library" class="{{ 'active' if page in ('library', 'reading') }}">library</a>
@@ -1830,6 +1927,62 @@ TEMPLATE = """
                 <div class="board-empty">no chat turns yet.</div>
                 {% endif %}
             </div>
+
+        {% elif page == 'memory_review' %}
+            <div class="card">
+                <div class="card-title">Memory Review</div>
+                <div class="chat-meta">
+                    <span class="chat-pill">pending: {{ memory_review.counts.pending }}</span>
+                    <span class="chat-pill">reviewed: {{ memory_review.counts.reviewed }}</span>
+                    <span class="chat-pill">actions: {{ memory_review.counts.actions }}</span>
+                </div>
+                {% if memory_review.error %}
+                <div class="chat-error">{{ memory_review.error }}</div>
+                {% endif %}
+            </div>
+
+            {% if memory_review.pending %}
+                {% for item in memory_review.pending %}
+                <div class="card">
+                    <div class="card-title">{{ item.risk }} · {{ item.decision }} · {{ item.recommended_action }}</div>
+                    <div class="memory-item">
+                        <div class="memory-text">{{ item.candidate_content }}</div>
+                        <div class="memory-time">{{ item.id }} · {{ item.conversation_id }}</div>
+                    </div>
+                    <div class="journal-content">{{ item.reason }}</div>
+                    <div class="task-card">
+                        <div class="task-actions">
+                            <form action="/memory-review/{{ item.id }}/approve" method="POST">
+                                <button type="submit" class="btn btn-green btn-small">Approve</button>
+                            </form>
+                            <form action="/memory-review/{{ item.id }}/reject" method="POST">
+                                <button type="submit" class="btn btn-red btn-small">Reject</button>
+                            </form>
+                        </div>
+                        <form class="message-form" action="/memory-review/{{ item.id }}/edit" method="POST">
+                            <textarea name="content">{{ item.candidate_content }}</textarea>
+                            <button type="submit" class="btn btn-purple btn-small">Edit and approve</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="card">
+                    <div class="board-empty">no pending memory review.</div>
+                </div>
+            {% endif %}
+
+            {% if memory_review.reviewed %}
+            <div class="card">
+                <div class="card-title">Reviewed</div>
+                {% for item in memory_review.reviewed %}
+                <div class="memory-item">
+                    <div class="memory-text">{{ item.candidate_content }}</div>
+                    <div class="memory-time">{{ item.id }} · {{ item.latest_action.action }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
 
         {% elif page == 'creations' %}
 
@@ -2713,6 +2866,81 @@ def chat_send():
     if _wants_json_response():
         return jsonify(payload)
     return redirect(url_for("chat_page", conversation_id=result.conversation_id))
+
+
+@app.route("/memory-review")
+def memory_review_page():
+    ctx = _base_context()
+    ctx.update(
+        page="memory_review",
+        memory_review=get_memory_review_state(),
+    )
+    return render_template_string(TEMPLATE, **ctx)
+
+
+@app.route("/memory-review/<decision_id>/approve", methods=["POST"])
+def memory_review_approve(decision_id):
+    note = _review_request_value("note", "")
+    try:
+        result = approve_memory_review_decision(
+            CompanionPaths.from_env(COMPANION_HOME),
+            decision_id,
+            note=note,
+        )
+    except Exception as exc:  # noqa: BLE001 - dashboard returns compact user-visible error.
+        error = f"{type(exc).__name__}: {_clean_visible_text(str(exc))}"
+        if _wants_json_response():
+            return jsonify({"ok": False, "error": error, "decision_id": decision_id}), 400
+        ctx = _base_context()
+        ctx.update(page="memory_review", memory_review=get_memory_review_state(error=error))
+        return render_template_string(TEMPLATE, **ctx), 400
+    if _wants_json_response():
+        return jsonify(result)
+    return redirect(url_for("memory_review_page"))
+
+
+@app.route("/memory-review/<decision_id>/reject", methods=["POST"])
+def memory_review_reject(decision_id):
+    note = _review_request_value("note", "")
+    try:
+        result = reject_memory_review_decision(
+            CompanionPaths.from_env(COMPANION_HOME),
+            decision_id,
+            note=note,
+        )
+    except Exception as exc:  # noqa: BLE001
+        error = f"{type(exc).__name__}: {_clean_visible_text(str(exc))}"
+        if _wants_json_response():
+            return jsonify({"ok": False, "error": error, "decision_id": decision_id}), 400
+        ctx = _base_context()
+        ctx.update(page="memory_review", memory_review=get_memory_review_state(error=error))
+        return render_template_string(TEMPLATE, **ctx), 400
+    if _wants_json_response():
+        return jsonify(result)
+    return redirect(url_for("memory_review_page"))
+
+
+@app.route("/memory-review/<decision_id>/edit", methods=["POST"])
+def memory_review_edit(decision_id):
+    content = _review_request_value("content", "")
+    note = _review_request_value("note", "")
+    try:
+        result = approve_memory_review_decision(
+            CompanionPaths.from_env(COMPANION_HOME),
+            decision_id,
+            edited_content=content,
+            note=note,
+        )
+    except Exception as exc:  # noqa: BLE001
+        error = f"{type(exc).__name__}: {_clean_visible_text(str(exc))}"
+        if _wants_json_response():
+            return jsonify({"ok": False, "error": error, "decision_id": decision_id}), 400
+        ctx = _base_context()
+        ctx.update(page="memory_review", memory_review=get_memory_review_state(error=error))
+        return render_template_string(TEMPLATE, **ctx), 400
+    if _wants_json_response():
+        return jsonify(result)
+    return redirect(url_for("memory_review_page"))
 
 
 @app.route("/board")

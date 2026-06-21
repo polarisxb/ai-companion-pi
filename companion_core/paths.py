@@ -67,6 +67,10 @@ class CompanionPaths:
         return self.life_loop_dir / "memory_decisions.jsonl"
 
     @property
+    def memory_review_actions_file(self) -> Path:
+        return self.life_loop_dir / "memory_review_actions.jsonl"
+
+    @property
     def model_outputs_dir(self) -> Path:
         return self.life_loop_dir / "model_outputs"
 

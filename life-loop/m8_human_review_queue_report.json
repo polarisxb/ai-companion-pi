@@ -1,0 +1,78 @@
+{
+  "boundaries": {
+    "accepted_memory_written_by_check": false,
+    "life_write_route_added": false,
+    "memory_review_actions_written_by_check": false,
+    "provider_generation_requested": false,
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false
+  },
+  "counts": {
+    "actions": 0,
+    "decisions": 1,
+    "pending": 0,
+    "reviewable": 0,
+    "reviewed": 0
+  },
+  "errors": [],
+  "milestone": "M8.6",
+  "next_commands": {
+    "m8_memory_review": "python3 scripts/run_m8_memory_review.py --companion-home /home/polaris/digital_life"
+  },
+  "ok": true,
+  "pending": [],
+  "profile": {
+    "human_review_queue": true,
+    "life_write_route_allowed": false,
+    "ordinary_low_risk_review_required": false,
+    "provider_calls": 0,
+    "provider_generation_requested": false,
+    "scheduler_mutation_allowed": false,
+    "semantic_shadow_authoritative": false
+  },
+  "provider_calls": 0,
+  "recommendation": "m8_human_review_queue_ready",
+  "reviewed": [],
+  "saved_at": "2026-06-21T18:11:03.731640",
+  "schema_version": 1,
+  "source_files": {
+    "accepted_memory": "memory-server/memory_store.json",
+    "memory_decisions": "life-loop/memory_decisions.jsonl",
+    "memory_review_actions": "life-loop/memory_review_actions.jsonl"
+  },
+  "stages": [
+    {
+      "details": {
+        "actions": 0,
+        "decisions": 1,
+        "pending": 0,
+        "reviewable": 0,
+        "reviewed": 0
+      },
+      "message": "loaded 0 pending review item(s)",
+      "name": "m8_6_review_queue_load",
+      "status": "pass"
+    },
+    {
+      "message": "memory review routes are present and /life remains GET-only",
+      "name": "m8_6_window_review_routes",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "life_write_route_added": false,
+        "provider_calls": 0,
+        "scheduler_mutated": false,
+        "semantic_shadow_authority_promoted": false,
+        "wake_events_written": false
+      },
+      "message": "human review queue does not call providers, wake, scheduler, semantic shadow, or /life write routes",
+      "name": "m8_6_review_boundaries",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}

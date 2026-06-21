@@ -1,0 +1,239 @@
+{
+  "boundaries": {
+    "life_write_route_added": false,
+    "proposal_or_quarantine_prompt_authority": false,
+    "provider_generation_requested": false,
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false
+  },
+  "errors": [],
+  "evidence": {
+    "accepted_memory_authority_ready": true,
+    "human_review_auditable": true,
+    "m7_6_dialogue_freeze_ready": true,
+    "m8_1_schema_ready": true,
+    "m8_2_steward_ready": true,
+    "m8_3_policy_ready": true,
+    "m8_4_retrieval_ready": true,
+    "m8_5_dialogue_humanity_ready": true,
+    "m8_6_human_review_ready": true,
+    "nonaccepted_memory_prompt_blocked": true
+  },
+  "final_freeze": {
+    "dialogue_humanity_ready": true,
+    "frozen": true,
+    "memory_stewardship_ready": true,
+    "next_stage": "post_m8_channel_or_scheduler_planning",
+    "readonly": true
+  },
+  "memory": {
+    "accepted_memory_count": 4,
+    "prompt_decision_refs": [
+      "memdec_20260619_194047_001"
+    ],
+    "prompt_eligible_count": 1,
+    "prompt_memory_ids": [
+      "mem_1844814a5322"
+    ]
+  },
+  "memory_decisions": {
+    "approved_review_decision_ids": [],
+    "blocked_decision_ids": [],
+    "decision_count": 1,
+    "prompt_decision_refs": [
+      "memdec_20260619_194047_001"
+    ]
+  },
+  "memory_review": {
+    "approved_action_count": 0,
+    "approved_memory_ids": [],
+    "review_action_count": 0
+  },
+  "milestone": "M8.7",
+  "next_commands": {
+    "m8_memory_freeze": "python3 scripts/run_m8_memory_freeze.py --companion-home /home/polaris/digital_life"
+  },
+  "ok": true,
+  "profile": {
+    "cron_replacement": false,
+    "life_write_route_allowed": false,
+    "name": "M8 memory and dialogue final freeze",
+    "provider_generation_requested": false,
+    "raw_provider_payload_storage_allowed": false,
+    "readonly_gate": true,
+    "scheduler_mutation_allowed": false,
+    "semantic_shadow_authoritative": false,
+    "service_mutation_allowed": false,
+    "timer_installation": false,
+    "wake_cycle_run": false,
+    "writes_report_only": true
+  },
+  "provider_calls": 0,
+  "recommendation": "m8_memory_dialogue_frozen",
+  "saved_at": "2026-06-21T18:16:28.945373",
+  "schema_version": 1,
+  "source_reports": {
+    "m7_dialogue_freeze": {
+      "exists": true,
+      "ok": true,
+      "path": "life-loop/m7_dialogue_freeze_report.json",
+      "recommendation": "m7_text_dialogue_frozen",
+      "saved_at": "2026-06-19T18:31:57.849080"
+    },
+    "m8_dialogue_humanity": {
+      "exists": true,
+      "ok": true,
+      "path": "life-loop/m8_dialogue_humanity_report.json",
+      "recommendation": "m8_dialogue_humanity_ready",
+      "saved_at": "2026-06-21T17:56:51.186636"
+    },
+    "m8_human_review_queue": {
+      "exists": true,
+      "ok": true,
+      "path": "life-loop/m8_human_review_queue_report.json",
+      "recommendation": "m8_human_review_queue_ready",
+      "saved_at": "2026-06-21T18:11:03.731640"
+    },
+    "m8_memory_policy": {
+      "exists": true,
+      "ok": true,
+      "path": "life-loop/m8_memory_policy_ledger_report.json",
+      "recommendation": "m8_memory_policy_ledger_ready",
+      "saved_at": "2026-06-21T00:07:00.541601"
+    },
+    "m8_memory_retrieval": {
+      "exists": true,
+      "ok": true,
+      "path": "life-loop/m8_memory_retrieval_report.json",
+      "recommendation": "m8_memory_retrieval_ready",
+      "saved_at": "2026-06-21T00:18:32.240413"
+    },
+    "m8_memory_steward": {
+      "exists": true,
+      "ok": true,
+      "path": "life-loop/m8_memory_steward_report.json",
+      "recommendation": "m8_memory_steward_readonly_ready",
+      "saved_at": "2026-06-19T19:40:47.665050"
+    }
+  },
+  "stages": [
+    {
+      "details": {
+        "required": [
+          "candidate_content",
+          "conversation_id",
+          "decision",
+          "evidence_refs",
+          "id",
+          "reason",
+          "risk",
+          "source_turn_ids"
+        ]
+      },
+      "message": "M8.1 memory decision schema exposes required fields",
+      "name": "m8_memory_decision_schema",
+      "status": "pass"
+    },
+    {
+      "message": "M7.6 dialogue freeze remains ready",
+      "name": "m7_dialogue_freeze",
+      "status": "pass"
+    },
+    {
+      "message": "m8_memory_steward evidence is ready",
+      "name": "m8_memory_steward",
+      "status": "pass"
+    },
+    {
+      "message": "m8_memory_policy evidence is ready",
+      "name": "m8_memory_policy",
+      "status": "pass"
+    },
+    {
+      "message": "m8_memory_retrieval evidence is ready",
+      "name": "m8_memory_retrieval",
+      "status": "pass"
+    },
+    {
+      "message": "m8_dialogue_humanity evidence is ready",
+      "name": "m8_dialogue_humanity",
+      "status": "pass"
+    },
+    {
+      "message": "m8_human_review_queue evidence is ready",
+      "name": "m8_human_review_queue",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "accepted_memory_count": 4,
+        "prompt_eligible_count": 1,
+        "prompt_memory_ids": [
+          "mem_1844814a5322"
+        ]
+      },
+      "message": "1 prompt-eligible accepted memory row(s) have accepted authority and evidence",
+      "name": "m8_accepted_memory_authority",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "approved_review_decision_ids": [],
+        "blocked_decision_ids": [],
+        "decision_count": 1,
+        "prompt_decision_refs": [
+          "memdec_20260619_194047_001"
+        ]
+      },
+      "message": "proposal/quarantine/rejected/audit-only/review decisions stay out of prompt authority",
+      "name": "m8_nonaccepted_memory_prompt_boundary",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "approved_action_count": 0,
+        "approved_memory_ids": [],
+        "review_action_count": 0
+      },
+      "message": "human review actions are auditable",
+      "name": "m8_human_review_audit",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "proposal_or_quarantine_prompt_authority": false
+      },
+      "message": "retrieval report blocks proposal/quarantine prompt authority",
+      "name": "m8_retrieval_prompt_boundary",
+      "status": "pass"
+    },
+    {
+      "message": "M8 sources contain no scheduler mutation or /life write route",
+      "name": "m8_static_runtime_boundaries",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "cron_replacement": false,
+        "life_write_route_allowed": false,
+        "name": "M8 memory and dialogue final freeze",
+        "provider_generation_requested": false,
+        "raw_provider_payload_storage_allowed": false,
+        "readonly_gate": true,
+        "scheduler_mutation_allowed": false,
+        "semantic_shadow_authoritative": false,
+        "service_mutation_allowed": false,
+        "timer_installation": false,
+        "wake_cycle_run": false,
+        "writes_report_only": true
+      },
+      "message": "freeze gate is read-only; only CLI/report writer emits m8_memory_freeze_report.json",
+      "name": "m8_freeze_readonly_profile",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}
