@@ -1,0 +1,337 @@
+{
+  "boundaries": {
+    "cron_replacement": false,
+    "life_write_route_added": false,
+    "proposal_or_quarantine_prompt_authority": false,
+    "provider_calls": 0,
+    "provider_generation_requested": false,
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "service_mutation_allowed": false,
+    "timer_installation": false,
+    "voice_signal_hardware_activation_allowed": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false
+  },
+  "cadence": {
+    "daily_live_wake_budget": 2,
+    "model": "randomized_presence_windows",
+    "quiet_hours": [
+      "00:00",
+      "08:00"
+    ],
+    "scheduled_wake_output": "internal_only",
+    "skip_reasons": [
+      "paused",
+      "quiet_hours",
+      "daily_budget_exhausted",
+      "min_gap_not_met",
+      "wake_lock_active",
+      "failure_cooldown",
+      "recent_human_chat_dampening"
+    ]
+  },
+  "companion_home": "/home/polaris/digital_life",
+  "errors": [],
+  "evidence": {
+    "m6_7_final_freeze_ready": true,
+    "m8_7_memory_freeze_ready": true,
+    "m9_0_design_ready": true,
+    "pause_and_state_paths_defined": true,
+    "provider_config_shape_ready": true,
+    "runtime_paths_ready": true,
+    "unexpected_scheduler_artifacts": [],
+    "wake_command_shape_ready": true
+  },
+  "handoff": {
+    "memory_mode": "json",
+    "provider": "deepseek",
+    "provider_config_ready": true,
+    "ready": true,
+    "scheduler_mutated": false,
+    "target_command": "cd /home/polaris/digital_life && .venv/bin/python scripts/run_wake_cycle.py --companion-home /home/polaris/digital_life --provider deepseek --memory-mode json --trigger scheduled-wake",
+    "target_script": "scripts/run_wake_cycle.py",
+    "trigger": "scheduled-wake",
+    "wake_command_ready": true,
+    "wake_cycle_run": false
+  },
+  "milestone": "M9.1",
+  "next_commands": {
+    "m9_scheduler_dry_run_later": "requires m9_scheduler_revalidation_ready",
+    "m9_scheduler_revalidation": "python3 scripts/run_m9_scheduler_revalidation.py --companion-home /home/polaris/digital_life"
+  },
+  "ok": true,
+  "profile": {
+    "cron_replacement": false,
+    "life_write_route_allowed": false,
+    "name": "M9 read-only scheduler handoff revalidation",
+    "provider_calls": 0,
+    "provider_generation_requested": false,
+    "raw_provider_payload_storage_allowed": false,
+    "readonly_gate": true,
+    "scheduler_mutation_allowed": false,
+    "semantic_shadow_authoritative": false,
+    "service_mutation_allowed": false,
+    "timer_installation": false,
+    "voice_signal_hardware_activation_allowed": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false,
+    "writes_report_only": true
+  },
+  "provider_calls": 0,
+  "recommendation": "m9_scheduler_revalidation_ready",
+  "saved_at": "2026-06-21T19:15:11.181951",
+  "scheduler": {
+    "expected_state_before_m9_3": "no_live_scheduler_artifact",
+    "inventory": {
+      "mutation_attempted": false,
+      "probes": [
+        {
+          "command": "crontab -l",
+          "matched_lines": [],
+          "message": "no project scheduler lines matched",
+          "name": "crontab",
+          "returncode": 1,
+          "status": "empty"
+        },
+        {
+          "command": "systemctl --user list-timers --all --no-pager --plain",
+          "matched_lines": [],
+          "message": "no project scheduler lines matched",
+          "name": "systemd_user_timers",
+          "returncode": 0,
+          "status": "ok"
+        },
+        {
+          "command": "systemctl --user list-units --type=service --all --no-pager --plain",
+          "matched_lines": [],
+          "message": "no project scheduler lines matched",
+          "name": "systemd_user_services",
+          "returncode": 0,
+          "status": "ok"
+        },
+        {
+          "command": "systemctl list-timers --all --no-pager --plain",
+          "matched_lines": [],
+          "message": "no project scheduler lines matched",
+          "name": "systemd_system_timers",
+          "returncode": 0,
+          "status": "ok"
+        },
+        {
+          "command": "systemctl list-units --type=service --all --no-pager --plain",
+          "matched_lines": [],
+          "message": "no project scheduler lines matched",
+          "name": "systemd_system_services",
+          "returncode": 0,
+          "status": "ok"
+        }
+      ],
+      "source": "read_only_crontab_systemctl",
+      "unexpected_active_artifacts": []
+    },
+    "lock_files": [
+      "life-loop/companion_state.lock",
+      "life-loop/context_capsule.lock",
+      "life-loop/conversation_events.lock",
+      "life-loop/memory_decisions.jsonl.lock",
+      "life-loop/memory_proposals.jsonl.lock",
+      "life-loop/wake_events.lock"
+    ],
+    "pause_flag_path": "life-loop/scheduler_pause.flag",
+    "presence_state_path": "life-loop/scheduler_presence_state.json"
+  },
+  "schema_version": 1,
+  "source_reports": {
+    "m6_final_freeze": {
+      "exists": true,
+      "milestone": "M6.7",
+      "ok": true,
+      "path": "life-loop/m6_final_freeze_report.json",
+      "recommendation": "m6_frozen_ready_for_scheduler_handoff",
+      "saved_at": "2026-06-19T15:11:15.214300",
+      "stop_reasons": []
+    },
+    "m8_memory_freeze": {
+      "exists": true,
+      "milestone": "M8.7",
+      "ok": true,
+      "path": "life-loop/m8_memory_freeze_report.json",
+      "recommendation": "m8_memory_dialogue_frozen",
+      "saved_at": "2026-06-21T18:16:28.945373",
+      "stop_reasons": []
+    },
+    "m9_controlled_presence_design": {
+      "exists": true,
+      "milestone": "M9.0",
+      "ok": true,
+      "path": "life-loop/m9_controlled_presence_design_report.json",
+      "recommendation": "m9_controlled_presence_design_ready",
+      "saved_at": "2026-06-21T18:30:00",
+      "stop_reasons": []
+    }
+  },
+  "stages": [
+    {
+      "details": {
+        "cadence": {
+          "daily_live_wake_budget": 2,
+          "model": "randomized_presence_windows",
+          "quiet_hours": [
+            "00:00",
+            "08:00"
+          ],
+          "scheduled_wake_output": "internal_only"
+        }
+      },
+      "message": "M9.0 controlled presence design is ready",
+      "name": "m9_controlled_presence_design",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "scheduler_handoff_ready": true,
+        "target_command": "cd /home/polaris/digital_life && .venv/bin/python scripts/run_wake_cycle.py --companion-home /home/polaris/digital_life --provider deepseek --memory-mode json --trigger scheduled-wake"
+      },
+      "message": "M6.7 final freeze remains ready for scheduler handoff",
+      "name": "m6_final_freeze",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "dialogue_humanity_ready": true,
+        "frozen": true,
+        "memory_stewardship_ready": true
+      },
+      "message": "M8.7 memory/dialogue freeze remains ready",
+      "name": "m8_memory_freeze",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "missing_command_tokens": [],
+        "missing_flags": [],
+        "required_flags": [
+          "--companion-home",
+          "--trigger",
+          "--memory-mode",
+          "--provider",
+          "--fake-llm",
+          "--check-provider"
+        ],
+        "target_command": "cd /home/polaris/digital_life && .venv/bin/python scripts/run_wake_cycle.py --companion-home /home/polaris/digital_life --provider deepseek --memory-mode json --trigger scheduled-wake",
+        "target_script": "scripts/run_wake_cycle.py"
+      },
+      "message": "wake command shape supports scheduled deepseek/json execution",
+      "name": "wake_command_shape",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "check_provider_flag_available": true,
+        "connectivity_checked": false,
+        "provider": "deepseek",
+        "provider_calls": 0,
+        "supported": true
+      },
+      "message": "provider configuration shape is ready without calling provider",
+      "name": "provider_config_shape",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "conversations": {
+          "exists": true,
+          "is_dir": true,
+          "path": "conversations"
+        },
+        "home": {
+          "exists": true,
+          "is_dir": true,
+          "path": "."
+        },
+        "journals": {
+          "exists": true,
+          "is_dir": true,
+          "path": "journals"
+        },
+        "life_loop": {
+          "exists": true,
+          "is_dir": true,
+          "path": "life-loop"
+        },
+        "memory": {
+          "exists": true,
+          "is_dir": true,
+          "path": "memory-server"
+        },
+        "requests": {
+          "exists": true,
+          "is_dir": true,
+          "path": "requests"
+        }
+      },
+      "message": "runtime directories exist for read-only scheduler handoff checks",
+      "name": "runtime_paths",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "lock_files": [
+          "life-loop/companion_state.lock",
+          "life-loop/context_capsule.lock",
+          "life-loop/conversation_events.lock",
+          "life-loop/memory_decisions.jsonl.lock",
+          "life-loop/memory_proposals.jsonl.lock",
+          "life-loop/wake_events.lock"
+        ],
+        "pause_flag_exists": false,
+        "pause_flag_path": "life-loop/scheduler_pause.flag",
+        "presence_state_exists": false,
+        "presence_state_path": "life-loop/scheduler_presence_state.json"
+      },
+      "message": "pause flag, presence state path, and lock file inventory are defined",
+      "name": "lock_pause_state_paths",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "probe_count": 5,
+        "source": "read_only_crontab_systemctl",
+        "unexpected_active_artifacts": []
+      },
+      "message": "no unexpected project scheduler artifacts detected",
+      "name": "scheduler_inventory",
+      "status": "pass"
+    },
+    {
+      "message": "source scan found no scheduler mutation path or /life write route",
+      "name": "static_runtime_boundaries",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "cron_replacement": false,
+        "life_write_route_allowed": false,
+        "name": "M9 read-only scheduler handoff revalidation",
+        "provider_calls": 0,
+        "provider_generation_requested": false,
+        "raw_provider_payload_storage_allowed": false,
+        "readonly_gate": true,
+        "scheduler_mutation_allowed": false,
+        "semantic_shadow_authoritative": false,
+        "service_mutation_allowed": false,
+        "timer_installation": false,
+        "voice_signal_hardware_activation_allowed": false,
+        "wake_cycle_run": false,
+        "wake_events_written": false,
+        "writes_report_only": true
+      },
+      "message": "M9.1 revalidates evidence only; only the CLI/report writer emits m9_scheduler_revalidation_report.json",
+      "name": "m9_revalidation_readonly_profile",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}
