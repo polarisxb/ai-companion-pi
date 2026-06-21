@@ -79,6 +79,13 @@ from .m9_scheduler_revalidation import (
     source_only_m9_scheduler_inventory,
     write_m9_scheduler_revalidation_report,
 )
+from .m9_scheduler_dry_run import (
+    M9SchedulerDryRunResult,
+    append_scheduler_attempts,
+    load_scheduler_attempts,
+    run_m9_scheduler_dry_run,
+    write_m9_scheduler_dry_run_report,
+)
 from .dialogue_replay import DialogueReplayCheckResult, check_dialogue_transcript
 from .memory import JsonMemoryStore, SemanticFirstMemoryStore
 from .llm import (
@@ -162,6 +169,7 @@ __all__ = [
     "M8DialogueHumanityResult",
     "M8MemoryFreezeResult",
     "M8MemoryReviewQueueResult",
+    "M9SchedulerDryRunResult",
     "M9SchedulerRevalidationResult",
     "MemoryDecision",
     "MemoryDecisionValidationError",
@@ -180,6 +188,7 @@ __all__ = [
     "SemanticShadowWriter",
     "append_memory_decision",
     "append_memory_decisions",
+    "append_scheduler_attempts",
     "append_wake_event",
     "approve_memory_review_decision",
     "archive_memory_review_decision",
@@ -199,6 +208,7 @@ __all__ = [
     "run_m8_memory_freeze_check",
     "run_m8_memory_review_queue_check",
     "run_m8_memory_steward_readonly",
+    "run_m9_scheduler_dry_run",
     "run_m9_scheduler_revalidation_check",
     "write_m7_dialogue_freeze_report",
     "write_m7_memory_proposal_report",
@@ -208,12 +218,14 @@ __all__ = [
     "write_m8_memory_freeze_report",
     "write_m8_memory_review_queue_report",
     "write_m8_memory_steward_report",
+    "write_m9_scheduler_dry_run_report",
     "write_m9_scheduler_revalidation_report",
     "create_llm_client",
     "build_trial_summary",
     "load_memory_decisions",
     "load_memory_review_actions",
     "load_memory_review_queue",
+    "load_scheduler_attempts",
     "load_wake_events",
     "load_local_secrets",
     "normalize_memory_decision",

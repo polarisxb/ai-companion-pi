@@ -1,0 +1,294 @@
+{
+  "boundaries": {
+    "cron_replacement": false,
+    "life_write_route_added": false,
+    "live_scheduler_installation_requested": false,
+    "proposal_or_quarantine_prompt_authority": false,
+    "provider_calls": 0,
+    "provider_generation_requested": false,
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "service_mutation_allowed": false,
+    "timer_installation": false,
+    "voice_signal_hardware_activation_allowed": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false
+  },
+  "companion_home": "/home/polaris/digital_life",
+  "dry_run": {
+    "allowed_decision_count": 1,
+    "attempt_count": 8,
+    "attempt_ids": [
+      "m9dry_20260621100000_4cc933c1",
+      "m9dry_20260621010000_77b1ff4f",
+      "m9dry_20260621103000_0c1ecbd9",
+      "m9dry_20260621110000_86aaeb3e",
+      "m9dry_20260621120000_758ead1b",
+      "m9dry_20260621130000_c296a723",
+      "m9dry_20260621140000_1409331c",
+      "m9dry_20260621150000_df972bbb"
+    ],
+    "attempts": [
+      {
+        "decision": "skipped",
+        "id": "m9dry_20260621100000_4cc933c1",
+        "lock_acquired": false,
+        "scenario": "paused",
+        "skip_reason": "paused",
+        "wake_command_simulated": false
+      },
+      {
+        "decision": "skipped",
+        "id": "m9dry_20260621010000_77b1ff4f",
+        "lock_acquired": false,
+        "scenario": "quiet_hours",
+        "skip_reason": "quiet_hours",
+        "wake_command_simulated": false
+      },
+      {
+        "decision": "skipped",
+        "id": "m9dry_20260621103000_0c1ecbd9",
+        "lock_acquired": false,
+        "scenario": "daily_budget_exhausted",
+        "skip_reason": "daily_budget_exhausted",
+        "wake_command_simulated": false
+      },
+      {
+        "decision": "skipped",
+        "id": "m9dry_20260621110000_86aaeb3e",
+        "lock_acquired": false,
+        "scenario": "min_gap_not_met",
+        "skip_reason": "min_gap_not_met",
+        "wake_command_simulated": false
+      },
+      {
+        "decision": "skipped",
+        "id": "m9dry_20260621120000_758ead1b",
+        "lock_acquired": false,
+        "scenario": "wake_lock_active",
+        "skip_reason": "wake_lock_active",
+        "wake_command_simulated": false
+      },
+      {
+        "decision": "skipped",
+        "id": "m9dry_20260621130000_c296a723",
+        "lock_acquired": false,
+        "scenario": "failure_cooldown",
+        "skip_reason": "failure_cooldown",
+        "wake_command_simulated": false
+      },
+      {
+        "decision": "skipped",
+        "id": "m9dry_20260621140000_1409331c",
+        "lock_acquired": false,
+        "scenario": "recent_human_chat_dampening",
+        "skip_reason": "recent_human_chat_dampening",
+        "wake_command_simulated": false
+      },
+      {
+        "decision": "would_run",
+        "id": "m9dry_20260621150000_df972bbb",
+        "lock_acquired": true,
+        "scenario": "allowed_window",
+        "skip_reason": null,
+        "wake_command_simulated": true
+      }
+    ],
+    "presence_state": {
+      "cooldown_until": null,
+      "daily_budget_date": "2026-06-21",
+      "daily_live_wake_budget": 2,
+      "daily_live_wake_count": 1,
+      "dry_run": true,
+      "dry_run_attempt_count": 8,
+      "dry_run_last_attempt_at": "2026-06-21T15:00:00",
+      "dry_run_skip_reasons": [
+        "daily_budget_exhausted",
+        "failure_cooldown",
+        "min_gap_not_met",
+        "paused",
+        "quiet_hours",
+        "recent_human_chat_dampening",
+        "wake_lock_active"
+      ],
+      "last_attempt_at": "2026-06-21T15:00:00",
+      "last_scheduled_wake_at": "2026-06-21T15:00:00",
+      "last_skip_reason": null,
+      "min_gap_minutes": 180,
+      "next_candidate_after": "2026-06-21T17:39:00",
+      "quiet_hours": [
+        "00:00",
+        "08:00"
+      ]
+    },
+    "random_seed": 902,
+    "runtime_errors": [],
+    "runtime_written": true,
+    "skip_reasons_observed": [
+      "daily_budget_exhausted",
+      "failure_cooldown",
+      "min_gap_not_met",
+      "paused",
+      "quiet_hours",
+      "recent_human_chat_dampening",
+      "wake_lock_active"
+    ],
+    "target_command": "cd /home/polaris/digital_life && .venv/bin/python scripts/run_wake_cycle.py --companion-home /home/polaris/digital_life --provider deepseek --memory-mode json --trigger scheduled-wake",
+    "wake_commands_simulated": 1
+  },
+  "errors": [],
+  "evidence": {
+    "allowed_decision_count": 1,
+    "attempt_count": 8,
+    "m9_1_revalidation_ready": true,
+    "provider_calls": 0,
+    "required_skip_reasons": [
+      "paused",
+      "quiet_hours",
+      "daily_budget_exhausted",
+      "min_gap_not_met",
+      "wake_lock_active",
+      "failure_cooldown",
+      "recent_human_chat_dampening"
+    ],
+    "runtime_written": true,
+    "skip_reasons_observed": [
+      "daily_budget_exhausted",
+      "failure_cooldown",
+      "min_gap_not_met",
+      "paused",
+      "quiet_hours",
+      "recent_human_chat_dampening",
+      "wake_lock_active"
+    ],
+    "wake_commands_simulated": 1
+  },
+  "milestone": "M9.2",
+  "next_commands": {
+    "m9_scheduler_activation_later": "requires m9_scheduler_revalidation_ready and m9_scheduler_dry_run_ready",
+    "m9_scheduler_dry_run": "python3 scripts/run_m9_scheduler_dry_run.py --companion-home /home/polaris/digital_life"
+  },
+  "ok": true,
+  "profile": {
+    "cron_replacement": false,
+    "life_write_route_allowed": false,
+    "live_scheduler_installation_requested": false,
+    "name": "M9 supervised scheduler dry run",
+    "provider_calls": 0,
+    "provider_generation_requested": false,
+    "raw_provider_payload_storage_allowed": false,
+    "scheduler_mutation_allowed": false,
+    "semantic_shadow_authoritative": false,
+    "service_mutation_allowed": false,
+    "supervised_dry_run": true,
+    "timer_installation": false,
+    "voice_signal_hardware_activation_allowed": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false,
+    "writes_presence_state": true,
+    "writes_report": true,
+    "writes_scheduler_attempts": true
+  },
+  "provider_calls": 0,
+  "recommendation": "m9_scheduler_dry_run_ready",
+  "saved_at": "2026-06-21T19:26:04.621777",
+  "scheduler": {
+    "attempts_file": "life-loop/scheduler_attempts.jsonl",
+    "live_scheduler_enabled": false,
+    "live_scheduler_installed": false,
+    "pause_flag_path": "life-loop/scheduler_pause.flag",
+    "presence_state_file": "life-loop/scheduler_presence_state.json",
+    "scheduler_lock_file": "life-loop/scheduler_wake.lock"
+  },
+  "schema_version": 1,
+  "source_reports": {
+    "m9_scheduler_revalidation": {
+      "exists": true,
+      "milestone": "M9.1",
+      "ok": true,
+      "path": "life-loop/m9_scheduler_revalidation_report.json",
+      "recommendation": "m9_scheduler_revalidation_ready",
+      "saved_at": "2026-06-21T19:15:11.181951",
+      "stop_reasons": []
+    }
+  },
+  "stages": [
+    {
+      "message": "M9.1 scheduler revalidation is ready",
+      "name": "m9_scheduler_revalidation",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "allowed_decision_count": 1,
+        "skip_reasons_observed": [
+          "daily_budget_exhausted",
+          "failure_cooldown",
+          "min_gap_not_met",
+          "paused",
+          "quiet_hours",
+          "recent_human_chat_dampening",
+          "wake_lock_active"
+        ],
+        "wake_commands_simulated": 1
+      },
+      "message": "dry-run exercised all scheduler skip reasons and one allowed opportunity",
+      "name": "scenario_coverage",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "attempt_count": 8,
+        "runtime_written": true,
+        "write_runtime": true
+      },
+      "message": "scheduler attempt ledger writes were exercised",
+      "name": "scheduler_attempt_writes",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "last_scheduled_wake_at": "2026-06-21T15:00:00",
+        "next_candidate_after": "2026-06-21T17:39:00",
+        "runtime_written": true,
+        "write_runtime": true
+      },
+      "message": "scheduler presence state write was exercised",
+      "name": "presence_state_write",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "provider_calls": 0,
+        "wake_cycle_run": false
+      },
+      "message": "dry-run used fake/dry-run wake mode and made no provider calls",
+      "name": "provider_boundary",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "cron_replacement": false,
+        "live_scheduler_installation_requested": false,
+        "scheduler_mutated": false,
+        "service_mutation_allowed": false,
+        "timer_installation": false
+      },
+      "message": "dry-run does not install cron, systemd timers, services, or live scheduler artifacts",
+      "name": "scheduler_installation_boundary",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "provider_generation_requested": false,
+        "raw_provider_payload_stored": false,
+        "wake_cycle_run": false
+      },
+      "message": "M9.2 dry-run path records scheduler attempts and state only",
+      "name": "m9_dry_run_static_boundary",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}

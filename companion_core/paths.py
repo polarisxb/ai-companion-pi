@@ -79,6 +79,14 @@ class CompanionPaths:
         return self.life_loop_dir / "scheduler_presence_state.json"
 
     @property
+    def scheduler_attempts_file(self) -> Path:
+        return self.life_loop_dir / "scheduler_attempts.jsonl"
+
+    @property
+    def scheduler_wake_lock_file(self) -> Path:
+        return self.life_loop_dir / "scheduler_wake.lock"
+
+    @property
     def model_outputs_dir(self) -> Path:
         return self.life_loop_dir / "model_outputs"
 
