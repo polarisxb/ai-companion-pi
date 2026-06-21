@@ -1,0 +1,73 @@
+{
+  "boundaries": {
+    "accepted_memory_written": false,
+    "cron_replacement": false,
+    "life_write_route_added": false,
+    "provider_generation_requested": false,
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "service_mutation_allowed": false,
+    "timer_installation": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false
+  },
+  "design": {
+    "activation_requires": [
+      "m9_scheduler_revalidation_ready",
+      "m9_scheduler_dry_run_ready",
+      "pause_flag_defined",
+      "rollback_path_defined",
+      "bounded_observation_window"
+    ],
+    "document": "docs/m9-controlled-presence-design.md",
+    "scope": "controlled scheduler presence after M8.7",
+    "scheduler_mutation_in_m9_0": false
+  },
+  "milestone": "M9.0",
+  "ok": true,
+  "profile": {
+    "controlled_presence_design": true,
+    "provider_calls": 0,
+    "scheduler_mutation_allowed": false,
+    "voice_signal_hardware_scope": false,
+    "writes_report_only": true
+  },
+  "provider_calls": 0,
+  "recommendation": "m9_controlled_presence_design_ready",
+  "saved_at": "2026-06-21T18:30:00",
+  "schema_version": 1,
+  "source_reports": {
+    "m6_final_freeze": {
+      "path": "life-loop/m6_final_freeze_report.json",
+      "recommendation": "m6_frozen_ready_for_scheduler_handoff"
+    },
+    "m8_memory_freeze": {
+      "path": "life-loop/m8_memory_freeze_report.json",
+      "recommendation": "m8_memory_dialogue_frozen"
+    }
+  },
+  "stages": [
+    {
+      "message": "M9 is defined as controlled scheduled presence, not voice or Signal",
+      "name": "m9_0_scope",
+      "status": "pass"
+    },
+    {
+      "message": "M6.7 and M8.7 are required baselines",
+      "name": "m9_0_baselines",
+      "status": "pass"
+    },
+    {
+      "message": "M9.0 performs no scheduler, cron, timer, service, wake, or provider mutation",
+      "name": "m9_0_no_runtime_mutation",
+      "status": "pass"
+    },
+    {
+      "message": "Later live activation requires read-only revalidation, dry-run, pause, rollback, and observation evidence",
+      "name": "m9_0_activation_gate",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}

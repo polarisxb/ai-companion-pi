@@ -3,8 +3,8 @@
 ## Source of truth
 
 - Status: Active
-- Last refreshed: 2026-06-19
-- Primary product surfaces: Companion Window home, message board, creations, tasks, requests, `/life`, M7 text chat, and planned M8 memory review/stewardship.
+- Last refreshed: 2026-06-21
+- Primary product surfaces: Companion Window home, message board, creations, tasks, requests, `/life`, M7 text chat, M8 memory review/stewardship, and planned M9 controlled scheduler presence.
 - Evidence reviewed:
   - `docs/web-dashboard.md`
   - `docs/requests-system-design.md`
@@ -13,6 +13,7 @@
   - `docs/m6-pi-field-pilot-design.md`
   - `docs/m7-text-dialogue-design.md`
   - `docs/m8-memory-steward-design.md`
+  - `docs/m9-controlled-presence-design.md`
   - `window/window.py`
 
 ## Brand
@@ -27,10 +28,11 @@
   - Make the companion feel reachable, inspectable, and continuous.
   - Let the human talk to the same companion identity through a text-first channel.
   - Let the companion manage ordinary memory herself through an internal steward while keeping risky memory auditable and reviewable.
+  - Let the companion eventually appear on a controlled schedule after memory/dialogue hardening is frozen.
   - Preserve M3-M6 safety contracts while adding a deliberately scoped dialogue surface.
 - Non-goals:
-  - Voice, camera, sensors, Signal, and hardware body work before M8 memory/dialogue hardening freezes.
-  - Scheduler installation as a prerequisite for dialogue.
+  - Voice, camera, sensors, Signal, and hardware body work before controlled scheduler presence is observable and reversible.
+  - Scheduler installation as a prerequisite for dialogue or memory stewardship.
   - Human micromanagement of every memory candidate.
   - Automatic promotion of sensitive, inferred, conflicting, or relationship-defining chat text into long-term factual memory.
 - Success signals:
@@ -58,12 +60,20 @@
 
 ## Confirmed M8 direction
 
-- M8 is memory hardening and dialogue humanity, not scheduler, voice, Signal, or hardware.
+- M8 is frozen as memory hardening and dialogue humanity, not scheduler, voice, Signal, or hardware.
 - The human should not become the routine memory administrator.
 - A Memory Steward internal personality should review completed dialogue turns and propose memory decisions.
 - Code-level policy gates retain final authority over accepted prompt-eligible memory.
 - Human review is reserved for sensitive, ambiguous, conflicting, or relationship-defining cases.
 - Retrieval should make accepted memory improve ordinary chat while keeping unaccepted proposals, quarantined items, and audit-only reflections out of prompt context.
+
+## Confirmed M9 direction
+
+- M9 is controlled scheduled presence after M8.7 memory/dialogue freeze.
+- M9.0 and M9.1 must not mutate cron, timers, services, or scheduler state.
+- M9 should reuse the existing wake execution path behind a Scheduler Presence Controller rather than creating a second provider path.
+- Live activation requires read-only revalidation, supervised dry-run evidence, pause/rollback design, and an observation window.
+- Voice, Signal, camera, sensors, and hardware body work remain out of scope until scheduled presence is frozen.
 
 ## Personas and jobs
 
@@ -88,7 +98,8 @@
   - `/requests`: companion-to-human structured requests.
   - `/life`: read-only runtime evidence.
   - `/chat`: M7 live text dialogue.
-  - `/memory-review`: planned M8 exception queue for ambiguous or sensitive memory decisions.
+  - `/memory-review`: M8 exception queue for ambiguous or sensitive memory decisions.
+  - M9 uses `/life` for read-only scheduler presence evidence before any new dashboard controls are considered.
 - Content hierarchy:
   - Chat foregrounds the conversation.
   - State, provider, memory mode, transcript id, and proposals are secondary metadata.
@@ -103,6 +114,7 @@
 - Natural reply, structured shadow: keep the visible reply conversational while
   machine-readable metadata stays behind the scenes.
 - Stewarded memory, sparse review: ordinary memory management belongs to the companion's internal steward; human review is an exception path.
+- Controlled presence before new channels: prove scheduler cadence, pause, rollback, and observation before adding voice or Signal.
 - Reuse before redesign: extend existing Window styles and routes before introducing a new UI system.
 - Tradeoffs: early M7 should prefer CLI and plain HTML reliability over polished real-time effects.
   M8 should prefer auditable memory correctness over invisible personalization magic.
@@ -131,6 +143,7 @@
   - Memory proposal panel.
   - Memory review queue rows.
   - Memory decision detail view with source turn, candidate, risk, reason, and action controls.
+  - Scheduler presence status rows in `/life` once M9 reports exist.
 - Variants and states:
   - Empty conversation.
   - Sending.
@@ -177,6 +190,7 @@
   - Use "memory proposal" when text is not yet committed to durable memory.
   - Use "Memory Steward" only in implementation/docs; avoid surfacing it as a second companion persona in ordinary chat.
   - Use "memory review" for the sparse human exception queue.
+  - Use "controlled presence" for M9 scheduled wake behavior; avoid implying voice or Signal availability.
 - Microcopy rules:
   - Do not imply memory was saved unless it was actually committed.
   - Do not imply a wake ran during chat.
@@ -195,10 +209,12 @@
   - Unit tests for dialogue engine boundaries.
   - Unit tests for Memory Steward decision schema, policy gate, quarantine, and retrieval filtering.
   - No POST/write routes added to `/life`.
+  - No scheduler mutation during M9.0 or M9.1.
+  - M9 route/report tests must prove pause, rollback, and single-wake behavior before live activation.
   - Manual browser check on `http://127.0.0.1:3000`.
 
 ## Open questions
 
 - [ ] What is the exact human-facing companion name in the chat header? Owner: user. Impact: final polish, not blocking.
-- [ ] Should M8 use the same DeepSeek provider call for Memory Steward, or begin with deterministic rule-only stewardship before provider-backed decisions? Owner: implementation. Impact: cost, latency, and decision quality.
-- [ ] Should `/memory-review` be a standalone route first, or should the first human-review controls appear inside `/chat`? Owner: implementation/user. Impact: workflow simplicity versus separation of concerns.
+- [ ] Which scheduler mechanism should M9 prefer after dry-run evidence: cron, systemd timer, or an existing project wrapper? Owner: implementation/user. Impact: deployment and rollback shape.
+- [ ] What initial cadence is acceptable for limited live scheduled presence? Owner: user. Impact: interruption risk and observation duration.
