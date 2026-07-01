@@ -1056,6 +1056,88 @@ def _m8_memory_lines(
     return lines
 
 
+def _m9_controlled_presence_lines(
+    revalidation_report,
+    dry_run_report,
+    activation_report,
+    observation_report,
+    freeze_report,
+):
+    lines = ["M9 Controlled Presence"]
+    if not any((revalidation_report, dry_run_report, activation_report, observation_report, freeze_report)):
+        lines.append("No M9 controlled presence report captured.")
+        return lines
+
+    for title, report in (
+        ("M9 Revalidation", revalidation_report),
+        ("M9 Dry Run", dry_run_report),
+        ("M9 Activation", activation_report),
+        ("M9 Observation", observation_report),
+        ("M9 Final Freeze", freeze_report),
+    ):
+        if report:
+            lines.extend(_report_lines(title, report))
+
+    cadence_source = activation_report or revalidation_report
+    cadence = cadence_source.get("cadence") if isinstance(cadence_source.get("cadence"), dict) else {}
+    if cadence:
+        lines.append("cadence_model=" + escape(str(cadence.get("model"))))
+        lines.append("quiet_hours=" + escape(str(cadence.get("quiet_hours"))))
+        lines.append("daily_live_wake_budget=" + escape(str(cadence.get("daily_live_wake_budget"))))
+        lines.append("scheduled_wake_output=" + escape(str(cadence.get("scheduled_wake_output"))))
+
+    scheduler = {}
+    for report in (freeze_report, observation_report, activation_report):
+        candidate = report.get("scheduler") if isinstance(report.get("scheduler"), dict) else {}
+        if candidate:
+            scheduler = candidate
+            break
+    if scheduler:
+        lines.append("scheduler_mechanism=" + escape(str(scheduler.get("mechanism"))))
+        lines.append("scheduler_enabled=" + escape(str(scheduler.get("enabled"))))
+        lines.append("scheduler_artifact_count=" + escape(str(scheduler.get("artifact_count"))))
+        if scheduler.get("pause_flag_path"):
+            lines.append("pause_flag_path=" + escape(str(scheduler["pause_flag_path"])))
+        if scheduler.get("presence_state_path"):
+            lines.append("presence_state_path=" + escape(str(scheduler["presence_state_path"])))
+        if scheduler.get("rollback_command"):
+            lines.append("rollback_command=" + escape(str(scheduler["rollback_command"])))
+
+    evidence = freeze_report.get("evidence") if isinstance(freeze_report.get("evidence"), dict) else {}
+    if evidence:
+        lines.append("live_attempts_observed=" + escape(str(evidence.get("live_attempts_observed"))))
+        lines.append("scheduled_wake_events_observed=" + escape(str(evidence.get("scheduled_wake_events_observed"))))
+        lines.append("pause_drill_ready=" + escape(str(evidence.get("pause_drill_ready"))))
+        lines.append("rollback_drill_ready=" + escape(str(evidence.get("rollback_drill_ready"))))
+        lines.append("provider_calls_by_freeze=" + escape(str(evidence.get("provider_calls_by_freeze"))))
+
+    final_freeze = freeze_report.get("final_freeze") if isinstance(freeze_report.get("final_freeze"), dict) else {}
+    if final_freeze:
+        lines.append("m9_frozen=" + escape(str(final_freeze.get("frozen"))))
+        lines.append("readonly=" + escape(str(final_freeze.get("readonly"))))
+        lines.append("controlled_presence_ready=" + escape(str(final_freeze.get("controlled_presence_ready"))))
+        lines.append("scheduler_reversible=" + escape(str(final_freeze.get("scheduler_reversible"))))
+
+    boundaries = freeze_report.get("boundaries") if isinstance(freeze_report.get("boundaries"), dict) else {}
+    if boundaries:
+        for key in (
+            "scheduler_mutated_by_freeze",
+            "wake_cycle_run_by_freeze",
+            "provider_generation_requested_by_freeze",
+            "raw_provider_payload_stored",
+            "semantic_shadow_authority_promoted",
+            "proposal_or_quarantine_prompt_authority",
+            "voice_signal_hardware_activation_allowed",
+        ):
+            lines.append(f"{escape(str(key))}={escape(str(boundaries.get(key)))}")
+
+    for report in (revalidation_report, dry_run_report, activation_report, observation_report, freeze_report):
+        for reason in report.get("stop_reasons", []) or []:
+            lines.append("stop_reason=" + escape(str(reason)))
+
+    return lines
+
+
 def _near_status_lines():
     lines = ["Near-status TTL"]
     capsule = _load_json(COMPANION_HOME / "life-loop" / "context_capsule.json", default={}) or {}
@@ -1100,6 +1182,11 @@ def render_life_dashboard():
     m8_dialogue_humanity = _report("m8_dialogue_humanity_report.json")
     m8_human_review = _report("m8_human_review_queue_report.json")
     m8_memory_freeze = _report("m8_memory_freeze_report.json")
+    m9_scheduler_revalidation = _report("m9_scheduler_revalidation_report.json")
+    m9_scheduler_dry_run = _report("m9_scheduler_dry_run_report.json")
+    m9_scheduler_activation = _report("m9_scheduler_activation_report.json")
+    m9_presence_observation = _report("m9_presence_observation_report.json")
+    m9_presence_freeze = _report("m9_presence_freeze_report.json")
 
     sections = [
         ("Internal Life Loop", _event_life_lines(latest)),
@@ -1133,6 +1220,13 @@ def render_life_dashboard():
             m8_dialogue_humanity,
             m8_human_review,
             m8_memory_freeze,
+        )),
+        ("M9 Controlled Presence", _m9_controlled_presence_lines(
+            m9_scheduler_revalidation,
+            m9_scheduler_dry_run,
+            m9_scheduler_activation,
+            m9_presence_observation,
+            m9_presence_freeze,
         )),
         ("Near-status TTL", _near_status_lines()),
     ]

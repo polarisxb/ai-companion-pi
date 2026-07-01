@@ -962,6 +962,148 @@ def test_life_dashboard_shows_m6_final_freeze(tmp_path, monkeypatch):
     assert "live_restore_executed=False" in html
 
 
+def test_life_dashboard_shows_m9_controlled_presence_freeze(tmp_path, monkeypatch):
+    write_minimal_context(tmp_path)
+    paths = CompanionPaths.from_env(tmp_path)
+    paths.life_loop_dir.mkdir(parents=True, exist_ok=True)
+    (paths.life_loop_dir / "m9_scheduler_revalidation_report.json").write_text(json.dumps({
+        "ok": True,
+        "milestone": "M9.1",
+        "recommendation": "m9_scheduler_revalidation_ready",
+        "saved_at": "2026-06-21T19:15:00",
+        "stop_reasons": [],
+        "cadence": {
+            "model": "randomized_presence_windows",
+            "quiet_hours": ["00:00", "08:00"],
+            "daily_live_wake_budget": 2,
+            "scheduled_wake_output": "internal_only",
+        },
+        "stages": [{"name": "m9_design", "status": "pass"}],
+    }))
+    (paths.life_loop_dir / "m9_scheduler_dry_run_report.json").write_text(json.dumps({
+        "ok": True,
+        "milestone": "M9.2",
+        "recommendation": "m9_scheduler_dry_run_ready",
+        "saved_at": "2026-06-21T19:26:00",
+        "stop_reasons": [],
+        "stages": [{"name": "scenario_coverage", "status": "pass"}],
+    }))
+    (paths.life_loop_dir / "m9_scheduler_activation_report.json").write_text(json.dumps({
+        "ok": True,
+        "milestone": "M9.3",
+        "recommendation": "m9_scheduler_activation_ready",
+        "saved_at": "2026-07-01T17:39:00",
+        "stop_reasons": [],
+        "cadence": {
+            "model": "randomized_presence_windows",
+            "quiet_hours": ["00:00", "08:00"],
+            "daily_live_wake_budget": 2,
+            "scheduled_wake_output": "internal_only",
+        },
+        "scheduler": {
+            "mechanism": "cron",
+            "enabled": True,
+            "artifact_count": 1,
+            "pause_flag_path": "life-loop/scheduler_pause.flag",
+            "presence_state_path": "life-loop/scheduler_presence_state.json",
+            "rollback_command": ".venv/bin/python scripts/run_m9_scheduler_activation.py --disable",
+        },
+        "stages": [{"name": "cron_artifact_enablement", "status": "pass"}],
+    }))
+    (paths.life_loop_dir / "m9_presence_observation_report.json").write_text(json.dumps({
+        "ok": True,
+        "milestone": "M9.4",
+        "recommendation": "m9_presence_observation_ready",
+        "saved_at": "2026-07-01T18:00:00",
+        "stop_reasons": [],
+        "scheduler": {
+            "mechanism": "cron",
+            "enabled": True,
+            "artifact_count": 1,
+        },
+        "stages": [{"name": "observation_and_drills", "status": "pass"}],
+    }))
+    (paths.life_loop_dir / "m9_presence_freeze_report.json").write_text(json.dumps({
+        "ok": True,
+        "milestone": "M9.5",
+        "recommendation": "m9_controlled_presence_frozen",
+        "saved_at": "2026-07-01T18:13:00",
+        "stop_reasons": [],
+        "scheduler": {
+            "mechanism": "cron",
+            "enabled": True,
+            "artifact_count": 1,
+            "pause_flag_path": "life-loop/scheduler_pause.flag",
+            "presence_state_path": "life-loop/scheduler_presence_state.json",
+            "rollback_command": ".venv/bin/python scripts/run_m9_scheduler_activation.py --disable",
+        },
+        "evidence": {
+            "live_attempts_observed": 3,
+            "scheduled_wake_events_observed": 0,
+            "pause_drill_ready": True,
+            "rollback_drill_ready": True,
+            "provider_calls_by_freeze": 0,
+        },
+        "final_freeze": {
+            "frozen": True,
+            "readonly": True,
+            "controlled_presence_ready": True,
+            "scheduler_reversible": True,
+        },
+        "boundaries": {
+            "scheduler_mutated_by_freeze": False,
+            "wake_cycle_run_by_freeze": False,
+            "provider_generation_requested_by_freeze": False,
+            "raw_provider_payload_stored": False,
+            "semantic_shadow_authority_promoted": False,
+            "proposal_or_quarantine_prompt_authority": False,
+            "voice_signal_hardware_activation_allowed": False,
+        },
+        "stages": [{"name": "freeze_runtime_boundary", "status": "pass"}],
+    }))
+
+    window = load_window_module(tmp_path, monkeypatch)
+    client = window.app.test_client()
+    response = client.get("/life")
+
+    assert response.status_code == 200
+    html = response.data.decode()
+    assert "M9 Controlled Presence" in html
+    assert "m9_scheduler_revalidation_ready" in html
+    assert "m9_scheduler_dry_run_ready" in html
+    assert "m9_scheduler_activation_ready" in html
+    assert "m9_presence_observation_ready" in html
+    assert "m9_controlled_presence_frozen" in html
+    assert "cadence_model=randomized_presence_windows" in html
+    assert "daily_live_wake_budget=2" in html
+    assert "scheduled_wake_output=internal_only" in html
+    assert "scheduler_mechanism=cron" in html
+    assert "scheduler_enabled=True" in html
+    assert "scheduler_artifact_count=1" in html
+    assert "pause_flag_path=life-loop/scheduler_pause.flag" in html
+    assert "presence_state_path=life-loop/scheduler_presence_state.json" in html
+    assert "run_m9_scheduler_activation.py" in html
+    assert "live_attempts_observed=3" in html
+    assert "scheduled_wake_events_observed=0" in html
+    assert "pause_drill_ready=True" in html
+    assert "rollback_drill_ready=True" in html
+    assert "m9_frozen=True" in html
+    assert "controlled_presence_ready=True" in html
+    assert "scheduler_reversible=True" in html
+    assert "provider_calls_by_freeze=0" in html
+    assert "scheduler_mutated_by_freeze=False" in html
+    assert "wake_cycle_run_by_freeze=False" in html
+    assert "raw_provider_payload_stored=False" in html
+    life_rules = [
+        rule
+        for rule in window.app.url_map.iter_rules()
+        if rule.rule == "/life" or rule.rule.startswith("/life/m9")
+    ]
+    assert life_rules
+    assert all(sorted(rule.methods - {"HEAD", "OPTIONS"}) == ["GET"] for rule in life_rules)
+    assert client.post("/life").status_code == 405
+
+
 def test_life_dashboard_renders_m5_empty_state_when_reports_are_missing(tmp_path, monkeypatch):
     write_minimal_context(tmp_path)
     window = load_window_module(tmp_path, monkeypatch)

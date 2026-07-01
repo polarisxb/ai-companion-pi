@@ -52,6 +52,15 @@ The companion's outbound communication channel. Shows active requests (pending, 
 
 See [requests-system-design.md](requests-system-design.md) for the full request system documentation.
 
+### Life
+
+The read-only operational evidence page for the internal life loop. It renders
+the latest wake event, companion state, and milestone reports through M9,
+including M9 controlled presence reports, scheduler artifact count, pause and
+rollback readiness, observed live attempts, and final freeze boundaries. This
+page is GET-only; it does not mutate scheduler state, memory authority, wake
+cycles, or provider output.
+
 ### Chat
 
 The M7 chat page is the human's live text dialogue channel with the companion.
