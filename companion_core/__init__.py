@@ -101,6 +101,11 @@ from .m9_scheduler_tick import (
     initialize_scheduler_presence_state,
     run_m9_scheduler_tick,
 )
+from .m9_presence_observation import (
+    M9PresenceObservationResult,
+    run_m9_presence_observation,
+    write_m9_presence_observation_report,
+)
 from .dialogue_replay import DialogueReplayCheckResult, check_dialogue_transcript
 from .memory import JsonMemoryStore, SemanticFirstMemoryStore
 from .llm import (
@@ -187,6 +192,7 @@ __all__ = [
     "M9SchedulerDryRunResult",
     "M9SchedulerActivationResult",
     "M9SchedulerTickResult",
+    "M9PresenceObservationResult",
     "M9SchedulerRevalidationResult",
     "MemoryDecision",
     "MemoryDecisionValidationError",
@@ -234,6 +240,7 @@ __all__ = [
     "run_m9_scheduler_activation",
     "run_m9_scheduler_disable",
     "run_m9_scheduler_tick",
+    "run_m9_presence_observation",
     "run_m9_scheduler_revalidation_check",
     "write_m7_dialogue_freeze_report",
     "write_m7_memory_proposal_report",
@@ -245,6 +252,7 @@ __all__ = [
     "write_m8_memory_steward_report",
     "write_m9_scheduler_dry_run_report",
     "write_m9_scheduler_activation_report",
+    "write_m9_presence_observation_report",
     "write_m9_scheduler_revalidation_report",
     "create_llm_client",
     "build_trial_summary",
