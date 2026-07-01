@@ -86,6 +86,21 @@ from .m9_scheduler_dry_run import (
     run_m9_scheduler_dry_run,
     write_m9_scheduler_dry_run_report,
 )
+from .m9_scheduler_activation import (
+    M9SchedulerActivationResult,
+    build_m9_cron_line,
+    disable_command,
+    enable_command,
+    run_m9_scheduler_activation,
+    run_m9_scheduler_disable,
+    write_m9_scheduler_activation_report,
+)
+from .m9_scheduler_tick import (
+    M9SchedulerTickResult,
+    WakeCommandResult,
+    initialize_scheduler_presence_state,
+    run_m9_scheduler_tick,
+)
 from .dialogue_replay import DialogueReplayCheckResult, check_dialogue_transcript
 from .memory import JsonMemoryStore, SemanticFirstMemoryStore
 from .llm import (
@@ -170,6 +185,8 @@ __all__ = [
     "M8MemoryFreezeResult",
     "M8MemoryReviewQueueResult",
     "M9SchedulerDryRunResult",
+    "M9SchedulerActivationResult",
+    "M9SchedulerTickResult",
     "M9SchedulerRevalidationResult",
     "MemoryDecision",
     "MemoryDecisionValidationError",
@@ -181,6 +198,7 @@ __all__ = [
     "SUPPORTED_LLM_PROVIDERS",
     "SemanticFirstMemoryStore",
     "WakeResult",
+    "WakeCommandResult",
     "RepairResult",
     "ReplayResult",
     "ReplayRunner",
@@ -196,7 +214,11 @@ __all__ = [
     "check_llm_provider",
     "check_runtime_readiness",
     "build_memory_proposals",
+    "build_m9_cron_line",
     "discover_m9_scheduler_inventory",
+    "disable_command",
+    "enable_command",
+    "initialize_scheduler_presence_state",
     "load_dialogue_context",
     "parse_dialogue_output",
     "check_dialogue_transcript",
@@ -209,6 +231,9 @@ __all__ = [
     "run_m8_memory_review_queue_check",
     "run_m8_memory_steward_readonly",
     "run_m9_scheduler_dry_run",
+    "run_m9_scheduler_activation",
+    "run_m9_scheduler_disable",
+    "run_m9_scheduler_tick",
     "run_m9_scheduler_revalidation_check",
     "write_m7_dialogue_freeze_report",
     "write_m7_memory_proposal_report",
@@ -219,6 +244,7 @@ __all__ = [
     "write_m8_memory_review_queue_report",
     "write_m8_memory_steward_report",
     "write_m9_scheduler_dry_run_report",
+    "write_m9_scheduler_activation_report",
     "write_m9_scheduler_revalidation_report",
     "create_llm_client",
     "build_trial_summary",

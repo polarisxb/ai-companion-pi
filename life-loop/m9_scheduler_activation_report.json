@@ -1,0 +1,193 @@
+{
+  "boundaries": {
+    "cron_replacement": false,
+    "life_write_route_added": false,
+    "proposal_or_quarantine_prompt_authority": false,
+    "provider_calls": 0,
+    "provider_generation_requested": false,
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated": true,
+    "semantic_shadow_authority_promoted": false,
+    "service_mutation_allowed": false,
+    "timer_installation": false,
+    "voice_signal_hardware_activation_allowed": false,
+    "wake_cycle_run": false,
+    "wake_events_written": false
+  },
+  "cadence": {
+    "daily_live_wake_budget": 2,
+    "model": "randomized_presence_windows",
+    "quiet_hours": [
+      "00:00",
+      "08:00"
+    ],
+    "scheduled_wake_output": "internal_only",
+    "scheduler_check_interval_minutes": 15,
+    "skip_reasons": [
+      "paused",
+      "quiet_hours",
+      "daily_budget_exhausted",
+      "min_gap_not_met",
+      "wake_lock_active",
+      "failure_cooldown",
+      "recent_human_chat_dampening"
+    ]
+  },
+  "companion_home": "/home/polaris/digital_life",
+  "errors": [],
+  "evidence": {
+    "activation_wake_cycle_run": false,
+    "m9_1_revalidation_ready": true,
+    "m9_2_dry_run_ready": true,
+    "pause_flag_path": "life-loop/scheduler_pause.flag",
+    "presence_state_path": "life-loop/scheduler_presence_state.json",
+    "provider_calls": 0,
+    "scheduler_artifact_count": 1
+  },
+  "milestone": "M9.3",
+  "next_commands": {
+    "disable_or_rollback_scheduler": "/home/polaris/digital_life/.venv/bin/python /home/polaris/digital_life/scripts/run_m9_scheduler_activation.py --companion-home /home/polaris/digital_life --disable",
+    "m9_presence_observation_later": "requires m9_scheduler_activation_ready",
+    "pause_scheduler": "touch /home/polaris/digital_life/life-loop/scheduler_pause.flag"
+  },
+  "ok": true,
+  "profile": {
+    "mechanism": "cron",
+    "name": "M9 limited live scheduler activation",
+    "provider_calls": 0,
+    "provider_generation_requested": false,
+    "scheduled_wake_output": "internal_only",
+    "scheduler_mutation_allowed": true,
+    "voice_signal_hardware_activation_allowed": false,
+    "wake_cycle_run": false,
+    "writes_exactly_one_scheduler_artifact": true
+  },
+  "provider_calls": 0,
+  "recommendation": "m9_scheduler_activation_ready",
+  "saved_at": "2026-07-01T17:39:30.640790",
+  "scheduler": {
+    "artifact": {
+      "check_interval_minutes": 15,
+      "line": "*/15 * * * * cd /home/polaris/digital_life && /home/polaris/digital_life/.venv/bin/python /home/polaris/digital_life/scripts/run_m9_scheduler_tick.py --companion-home /home/polaris/digital_life >> /home/polaris/digital_life/window/m9_scheduler_tick.log 2>&1 # digital-life-m9-scheduler-m9.3",
+      "name": "digital-life-m9-scheduler-m9.3",
+      "path": "user-crontab:polaris",
+      "schedule": "*/15 * * * *",
+      "wrapper_script": "scripts/run_m9_scheduler_tick.py"
+    },
+    "artifact_count": 1,
+    "attempts_file": "life-loop/scheduler_attempts.jsonl",
+    "changed": true,
+    "disable_command": "/home/polaris/digital_life/.venv/bin/python /home/polaris/digital_life/scripts/run_m9_scheduler_activation.py --companion-home /home/polaris/digital_life --disable",
+    "enable_command": "/home/polaris/digital_life/.venv/bin/python /home/polaris/digital_life/scripts/run_m9_scheduler_activation.py --companion-home /home/polaris/digital_life --enable",
+    "enabled": true,
+    "mechanism": "cron",
+    "next_candidate_after": "2026-07-01T20:18:30.640790",
+    "pause_flag_path": "life-loop/scheduler_pause.flag",
+    "presence_state_initialized": true,
+    "presence_state_path": "life-loop/scheduler_presence_state.json",
+    "rollback_command": "/home/polaris/digital_life/.venv/bin/python /home/polaris/digital_life/scripts/run_m9_scheduler_activation.py --companion-home /home/polaris/digital_life --disable",
+    "scheduler_lock_file": "life-loop/scheduler_wake.lock",
+    "target_command": "cd /home/polaris/digital_life && .venv/bin/python scripts/run_wake_cycle.py --companion-home /home/polaris/digital_life --provider deepseek --memory-mode json --trigger scheduled-wake",
+    "wrapper_script": "scripts/run_m9_scheduler_tick.py"
+  },
+  "schema_version": 1,
+  "source_reports": {
+    "m9_scheduler_dry_run": {
+      "exists": true,
+      "milestone": "M9.2",
+      "ok": true,
+      "path": "life-loop/m9_scheduler_dry_run_report.json",
+      "recommendation": "m9_scheduler_dry_run_ready",
+      "saved_at": "2026-06-21T19:26:04.621777",
+      "stop_reasons": []
+    },
+    "m9_scheduler_revalidation": {
+      "exists": true,
+      "milestone": "M9.1",
+      "ok": true,
+      "path": "life-loop/m9_scheduler_revalidation_report.json",
+      "recommendation": "m9_scheduler_revalidation_ready",
+      "saved_at": "2026-06-21T19:15:11.181951",
+      "stop_reasons": []
+    }
+  },
+  "stages": [
+    {
+      "message": "M9.1 readiness report is ready",
+      "name": "m9_scheduler_revalidation",
+      "status": "pass"
+    },
+    {
+      "message": "M9.2 readiness report is ready",
+      "name": "m9_scheduler_dry_run",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "cadence_model": "randomized_presence_windows",
+        "daily_live_wake_budget": 2,
+        "quiet_hours": [
+          "00:00",
+          "08:00"
+        ],
+        "scheduled_wake_output": "internal_only",
+        "target_command": "cd /home/polaris/digital_life && .venv/bin/python scripts/run_wake_cycle.py --companion-home /home/polaris/digital_life --provider deepseek --memory-mode json --trigger scheduled-wake",
+        "wrapper_script": "scripts/run_m9_scheduler_tick.py"
+      },
+      "message": "scheduler wrapper and existing wake command shape are ready",
+      "name": "scheduler_wrapper_contract",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "artifact_count": 1,
+        "artifact_name": "digital-life-m9-scheduler-m9.3"
+      },
+      "message": "planned crontab contains exactly one managed M9.3 scheduler artifact",
+      "name": "cron_artifact_plan",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "next_candidate_after": "2026-07-01T20:18:30.640790",
+        "presence_state_path": "life-loop/scheduler_presence_state.json"
+      },
+      "message": "live scheduler presence state initialized without running wake",
+      "name": "presence_state_initialization",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "artifact_count": 1,
+        "artifact_name": "digital-life-m9-scheduler-m9.3",
+        "changed": true
+      },
+      "message": "one managed cron scheduler artifact is enabled",
+      "name": "cron_artifact_enablement",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "provider_calls": 0,
+        "provider_generation_requested": false,
+        "voice_signal_hardware_activation_allowed": false,
+        "wake_cycle_run": false,
+        "wake_events_written": false
+      },
+      "message": "activation installs scheduler only; it does not run wake or call a provider",
+      "name": "activation_runtime_boundary",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "disable_command": "/home/polaris/digital_life/.venv/bin/python /home/polaris/digital_life/scripts/run_m9_scheduler_activation.py --companion-home /home/polaris/digital_life --disable",
+        "pause_flag_path": "life-loop/scheduler_pause.flag",
+        "presence_state_path": "life-loop/scheduler_presence_state.json"
+      },
+      "message": "rollback command, pause flag, and presence state paths are recorded",
+      "name": "rollback_record",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}
