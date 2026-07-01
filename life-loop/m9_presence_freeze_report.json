@@ -1,0 +1,273 @@
+{
+  "boundaries": {
+    "life_write_route_added": false,
+    "proposal_or_quarantine_prompt_authority": false,
+    "provider_calls_by_freeze": 0,
+    "provider_generation_requested_by_freeze": false,
+    "raw_provider_payload_stored": false,
+    "scheduler_mutated_by_freeze": false,
+    "semantic_shadow_authority_promoted": false,
+    "voice_signal_hardware_activation_allowed": false,
+    "wake_cycle_run_by_freeze": false
+  },
+  "companion_home": "/home/polaris/digital_life",
+  "errors": [],
+  "evidence": {
+    "live_attempts_observed": 3,
+    "pause_drill_ready": true,
+    "provider_calls_by_freeze": 0,
+    "required_skip_reasons": [
+      "paused",
+      "quiet_hours",
+      "daily_budget_exhausted",
+      "min_gap_not_met",
+      "wake_lock_active",
+      "failure_cooldown",
+      "recent_human_chat_dampening"
+    ],
+    "rollback_drill_ready": true,
+    "scheduled_wake_events_observed": 0,
+    "scheduler_artifact_count": 1
+  },
+  "final_freeze": {
+    "controlled_presence_ready": true,
+    "frozen": true,
+    "m9_1_to_m9_4_ready": true,
+    "readonly": true,
+    "scheduler_artifact_known": true,
+    "scheduler_observable": true,
+    "scheduler_reversible": true
+  },
+  "milestone": "M9.5",
+  "next_commands": {
+    "pause_scheduler": "touch /home/polaris/digital_life/life-loop/scheduler_pause.flag",
+    "rollback_scheduler": "/home/polaris/digital_life/.venv/bin/python /home/polaris/digital_life/scripts/run_m9_scheduler_activation.py --companion-home /home/polaris/digital_life --disable"
+  },
+  "observation": {
+    "activation_saved_at": "2026-07-01T17:39:30.640790",
+    "live_attempt_count": 3,
+    "live_attempts": [
+      {
+        "attempted_at": "2026-07-01T17:45:01.975209",
+        "decision": "skipped",
+        "id": "m9live_20260701174501_b246f2c9",
+        "lock_acquired": false,
+        "scheduled_wake_output": "internal_only",
+        "skip_reason": "next_candidate_not_reached",
+        "wake_cycle_run": false
+      },
+      {
+        "attempted_at": "2026-07-01T18:00:01.209072",
+        "decision": "skipped",
+        "id": "m9live_20260701180001_037a972a",
+        "lock_acquired": false,
+        "scheduled_wake_output": "internal_only",
+        "skip_reason": "next_candidate_not_reached",
+        "wake_cycle_run": false
+      },
+      {
+        "attempted_at": "2026-07-01T18:00:52.113216",
+        "decision": "skipped",
+        "id": "m9live_20260701180052_76705863",
+        "lock_acquired": false,
+        "scheduled_wake_output": "internal_only",
+        "skip_reason": "paused",
+        "wake_cycle_run": false
+      }
+    ],
+    "scheduled_wake_event_count": 0,
+    "scheduled_wake_events": []
+  },
+  "ok": true,
+  "provider_calls": 0,
+  "recommendation": "m9_controlled_presence_frozen",
+  "saved_at": "2026-07-01T18:13:39.156466",
+  "scheduler": {
+    "artifact_count": 1,
+    "artifact_line": "*/15 * * * * cd /home/polaris/digital_life && /home/polaris/digital_life/.venv/bin/python /home/polaris/digital_life/scripts/run_m9_scheduler_tick.py --companion-home /home/polaris/digital_life >> /home/polaris/digital_life/window/m9_scheduler_tick.log 2>&1 # digital-life-m9-scheduler-m9.3",
+    "artifact_name": "digital-life-m9-scheduler-m9.3",
+    "attempts_file": "life-loop/scheduler_attempts.jsonl",
+    "disable_command": "/home/polaris/digital_life/.venv/bin/python /home/polaris/digital_life/scripts/run_m9_scheduler_activation.py --companion-home /home/polaris/digital_life --disable",
+    "enable_command": "/home/polaris/digital_life/.venv/bin/python /home/polaris/digital_life/scripts/run_m9_scheduler_activation.py --companion-home /home/polaris/digital_life --enable",
+    "enabled": true,
+    "mechanism": "cron",
+    "pause_flag_path": "life-loop/scheduler_pause.flag",
+    "presence_state": {
+      "cooldown_until": null,
+      "daily_budget_date": "2026-07-01",
+      "daily_live_wake_budget": 2,
+      "daily_live_wake_count": 0,
+      "last_scheduled_wake_at": null,
+      "last_skip_reason": null,
+      "next_candidate_after": "2026-07-01T20:56:52.113216",
+      "quiet_hours": [
+        "00:00",
+        "08:00"
+      ],
+      "scheduled_wake_output": "internal_only"
+    },
+    "presence_state_path": "life-loop/scheduler_presence_state.json",
+    "rollback_command": "/home/polaris/digital_life/.venv/bin/python /home/polaris/digital_life/scripts/run_m9_scheduler_activation.py --companion-home /home/polaris/digital_life --disable"
+  },
+  "schema_version": 1,
+  "source_reports": {
+    "m8_memory_freeze": {
+      "exists": true,
+      "milestone": "M8.7",
+      "ok": true,
+      "path": "life-loop/m8_memory_freeze_report.json",
+      "recommendation": "m8_memory_dialogue_frozen",
+      "saved_at": "2026-06-21T18:16:28.945373",
+      "stop_reasons": []
+    },
+    "m9_presence_observation": {
+      "exists": true,
+      "milestone": "M9.4",
+      "ok": true,
+      "path": "life-loop/m9_presence_observation_report.json",
+      "recommendation": "m9_presence_observation_ready",
+      "saved_at": "2026-07-01T18:00:52.113216",
+      "stop_reasons": []
+    },
+    "m9_scheduler_activation": {
+      "exists": true,
+      "milestone": "M9.3",
+      "ok": true,
+      "path": "life-loop/m9_scheduler_activation_report.json",
+      "recommendation": "m9_scheduler_activation_ready",
+      "saved_at": "2026-07-01T17:39:30.640790",
+      "stop_reasons": []
+    },
+    "m9_scheduler_dry_run": {
+      "exists": true,
+      "milestone": "M9.2",
+      "ok": true,
+      "path": "life-loop/m9_scheduler_dry_run_report.json",
+      "recommendation": "m9_scheduler_dry_run_ready",
+      "saved_at": "2026-06-21T19:26:04.621777",
+      "stop_reasons": []
+    },
+    "m9_scheduler_revalidation": {
+      "exists": true,
+      "milestone": "M9.1",
+      "ok": true,
+      "path": "life-loop/m9_scheduler_revalidation_report.json",
+      "recommendation": "m9_scheduler_revalidation_ready",
+      "saved_at": "2026-06-21T19:15:11.181951",
+      "stop_reasons": []
+    }
+  },
+  "stages": [
+    {
+      "message": "M8.7 report is ready",
+      "name": "m8_memory_freeze",
+      "status": "pass"
+    },
+    {
+      "message": "M9.1 report is ready",
+      "name": "m9_scheduler_revalidation",
+      "status": "pass"
+    },
+    {
+      "message": "M9.2 report is ready",
+      "name": "m9_scheduler_dry_run",
+      "status": "pass"
+    },
+    {
+      "message": "M9.3 report is ready",
+      "name": "m9_scheduler_activation",
+      "status": "pass"
+    },
+    {
+      "message": "M9.4 report is ready",
+      "name": "m9_presence_observation",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "artifact_count": 1,
+        "artifact_name": "digital-life-m9-scheduler-m9.3"
+      },
+      "message": "scheduler artifact is known, bounded, and currently enabled",
+      "name": "scheduler_artifact_current",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "cadence": {
+          "daily_live_wake_budget": 2,
+          "model": "randomized_presence_windows",
+          "quiet_hours": [
+            "00:00",
+            "08:00"
+          ],
+          "scheduled_wake_output": "internal_only",
+          "scheduler_check_interval_minutes": 15,
+          "skip_reasons": [
+            "paused",
+            "quiet_hours",
+            "daily_budget_exhausted",
+            "min_gap_not_met",
+            "wake_lock_active",
+            "failure_cooldown",
+            "recent_human_chat_dampening"
+          ]
+        }
+      },
+      "message": "controlled randomized presence cadence remains frozen",
+      "name": "cadence_contract",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "live_attempt_count": 3,
+        "pause_drill_ready": true,
+        "rollback_drill_ready": true
+      },
+      "message": "scheduler is observable, pause-tested, and rollback-tested",
+      "name": "observation_and_drills",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "attempt_count": 3
+      },
+      "message": "observed scheduler attempts preserve M9 boundaries",
+      "name": "scheduler_attempt_boundaries",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "scheduled_wake_event_count": 0
+      },
+      "message": "scheduled wake events have no overlap or raw payload violations",
+      "name": "scheduled_wake_event_boundaries",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "scheduled_wake_event_count": 0
+      },
+      "message": "memory authority remains M8-compliant",
+      "name": "memory_authority_boundaries",
+      "status": "pass"
+    },
+    {
+      "message": "source scan found no /life write route",
+      "name": "static_runtime_boundaries",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "provider_calls_by_freeze": 0,
+        "provider_generation_requested_by_freeze": false,
+        "scheduler_mutated_by_freeze": false,
+        "wake_cycle_run_by_freeze": false
+      },
+      "message": "M9.5 freeze is read-only and does not call provider or mutate scheduler",
+      "name": "freeze_runtime_boundary",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}
