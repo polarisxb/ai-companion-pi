@@ -66,10 +66,11 @@ coverage and staleness, backfill counts, live probe status, and freeze
 state), M13 Feishu chat reports (dry-run decision coverage, channel
 wiring, service unit, observed attempts, and freeze state), M14 Feishu
 media reports (text-priority proof, observed voice/image outcomes, and
-freeze state), and M15 sleep consolidation evidence (dry-run gate report,
-last consolidation time, run count, and recent ledger actions). This page is
-GET-only; it does not mutate scheduler state, memory authority, wake cycles,
-or provider output.
+freeze state), M15 sleep consolidation evidence (dry-run gate report,
+last consolidation time, run count, and recent ledger actions), and operator
+control evidence (recent code-direct shutdown commands with their execution
+outcome). This page is GET-only; it does not mutate scheduler state, memory
+authority, wake cycles, or provider output.
 
 ### Chat
 

@@ -1505,6 +1505,42 @@ def _m15_consolidation_lines(dry_run_report):
     return lines
 
 
+def _operator_controls_lines():
+    lines = ["Operator Controls"]
+    attempts_path = COMPANION_HOME / "life-loop" / "signal_chat_attempts.jsonl"
+    control_records = []
+    try:
+        for raw in attempts_path.read_text().splitlines():
+            if not raw.strip() or '"control"' not in raw:
+                continue
+            try:
+                record = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(record, dict) and isinstance(record.get("control"), dict):
+                control_records.append(record)
+    except FileNotFoundError:
+        pass
+
+    if not control_records:
+        lines.append("No operator control commands recorded.")
+        return lines
+
+    for record in control_records[-3:]:
+        control = record.get("control") or {}
+        lines.append(
+            "command="
+            + escape(str(control.get("command")))
+            + " decision="
+            + escape(str(record.get("decision")))
+            + " executed="
+            + escape(str(control.get("executed")))
+            + " at "
+            + escape(str(record.get("created_at")))
+        )
+    return lines
+
+
 def _near_status_lines():
     lines = ["Near-status TTL"]
     capsule = _load_json(COMPANION_HOME / "life-loop" / "context_capsule.json", default={}) or {}
@@ -1655,6 +1691,7 @@ def render_life_dashboard():
         ("M15 Sleep Consolidation", _m15_consolidation_lines(
             m15_consolidation_dry_run,
         )),
+        ("Operator Controls", _operator_controls_lines()),
         ("Near-status TTL", _near_status_lines()),
     ]
     body = ["<!doctype html><html><body>"]

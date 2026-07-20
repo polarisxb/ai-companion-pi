@@ -41,6 +41,15 @@ DEFAULT_MAX_IMAGES_PER_REPLY = 3
 DEFAULT_IMAGE_MAX_BYTES = 10 * 1024 * 1024
 VOICE_REPLY_MODES = ("off", "always", "companion_choice")
 
+# Operator control commands (e.g. shutdown) travel a code-direct path: they are
+# matched deterministically, never routed through the model, and gated by an
+# explicit enable flag plus the sender allowlist. The model can neither decide
+# to shut the machine down nor be prompt-injected into doing so.
+DEFAULT_SHUTDOWN_TRIGGERS = ("关机", "shutdown")
+DEFAULT_SHUTDOWN_ACK = "好，我先去休息了。你也早点睡，需要我的时候再叫醒我。"
+SHUTDOWN_FAILURE_ACK = "关机没执行成功，可能得你手动处理一下，我还醒着。"
+DEFAULT_SHUTDOWN_TIMEOUT_SECONDS = 30
+
 OUTBOUND_TERMINAL_STATUSES = ("delivered", "skipped", "abandoned")
 SIGNAL_OUTBOUND_SKIP_REASONS = (
     "expired",
@@ -119,6 +128,10 @@ class SignalChatConfig:
     image_attachments_enabled: bool = False
     max_images_per_reply: int = DEFAULT_MAX_IMAGES_PER_REPLY
     image_max_bytes: int = DEFAULT_IMAGE_MAX_BYTES
+    shutdown_enabled: bool = False
+    shutdown_command: str | None = None
+    shutdown_triggers: tuple[str, ...] = DEFAULT_SHUTDOWN_TRIGGERS
+    shutdown_ack_message: str = DEFAULT_SHUTDOWN_ACK
 
     def resolved_outbound_recipient(self) -> str | None:
         if self.outbound_recipient:
@@ -169,6 +182,28 @@ def _load_chat_config_file(config_path: Path, *, label: str) -> SignalChatConfig
     tts_command = payload.get("tts_command")
     if tts_command is not None:
         tts_command = str(tts_command).strip() or None
+    shutdown_enabled = bool(payload.get("shutdown_enabled", False))
+    shutdown_command = payload.get("shutdown_command")
+    if shutdown_command is not None:
+        shutdown_command = str(shutdown_command).strip() or None
+    raw_triggers = payload.get("shutdown_triggers")
+    if raw_triggers is None:
+        shutdown_triggers = DEFAULT_SHUTDOWN_TRIGGERS
+    elif isinstance(raw_triggers, list):
+        shutdown_triggers = tuple(
+            str(trigger).strip() for trigger in raw_triggers if str(trigger).strip()
+        )
+    else:
+        raise SignalChatConfigError("chat config 'shutdown_triggers' must be a list of strings")
+    shutdown_ack_message = str(payload.get("shutdown_ack_message") or DEFAULT_SHUTDOWN_ACK)
+    if shutdown_enabled and not shutdown_command:
+        raise SignalChatConfigError(
+            "chat config 'shutdown_command' is required when 'shutdown_enabled' is true"
+        )
+    if shutdown_enabled and not shutdown_triggers:
+        raise SignalChatConfigError(
+            "chat config 'shutdown_triggers' must have at least one phrase when shutdown is enabled"
+        )
     return SignalChatConfig(
         account=account,
         allowed_senders=allowed_senders,
@@ -192,6 +227,10 @@ def _load_chat_config_file(config_path: Path, *, label: str) -> SignalChatConfig
         image_attachments_enabled=bool(payload.get("image_attachments_enabled", False)),
         max_images_per_reply=_positive_int(payload, "max_images_per_reply", DEFAULT_MAX_IMAGES_PER_REPLY),
         image_max_bytes=_positive_int(payload, "image_max_bytes", DEFAULT_IMAGE_MAX_BYTES),
+        shutdown_enabled=shutdown_enabled,
+        shutdown_command=shutdown_command,
+        shutdown_triggers=shutdown_triggers,
+        shutdown_ack_message=shutdown_ack_message,
     )
 
 
@@ -371,6 +410,7 @@ class SignalChatBridge:
         mode: str = "live",
         lock_path: Path | None = None,
         tts_backend=None,
+        command_runner=None,
     ):
         from .chat_media import media_prompt_hints
 
@@ -386,6 +426,7 @@ class SignalChatBridge:
         self.channel = getattr(transport, "channel", "signal")
         self.conversation_prefix = getattr(transport, "conversation_prefix", "signal")
         self.tts_backend = tts_backend
+        self.command_runner = command_runner or _default_shutdown_runner
         self._media_hints = media_prompt_hints(config, transport)
 
     def poll_once(self) -> list[dict]:
@@ -403,6 +444,24 @@ class SignalChatBridge:
         for message in messages:
             now = self.now_fn()
             paused = self.paths.signal_chat_pause_flag.exists()
+            control_command = self._match_control_command(message)
+            if control_command is not None:
+                sender_state = state["senders"].get(message.sender) or {}
+                last_timestamp = sender_state.get("last_timestamp")
+                if isinstance(last_timestamp, int) and message.timestamp <= last_timestamp:
+                    attempts.append(self._attempt_record(
+                        message, now, decision="skipped", skip_reason="duplicate_message",
+                    ))
+                    continue
+                record, executed = self._handle_control_command(control_command, message, now)
+                attempts.append(record)
+                state_changed = self._advance_sender_state(state, message) or state_changed
+                if executed:
+                    # Flush all evidence before the machine actually powers off.
+                    save_signal_chat_state(self.paths.signal_chat_state_file, state)
+                    append_signal_chat_attempts(self.paths.signal_chat_attempts_file, attempts)
+                    return attempts
+                continue
             skip_reason = evaluate_signal_message(
                 message,
                 config=self.config,
@@ -638,6 +697,85 @@ class SignalChatBridge:
             }
         return record
 
+    def _match_control_command(self, message: InboundSignalMessage) -> str | None:
+        """Deterministically recognize an operator control command.
+
+        Returns the command name (currently only ``"shutdown"``) when the whole
+        message is an exact, allowlisted trigger phrase; otherwise ``None`` so
+        the message flows to the normal model dialogue path. The model is never
+        consulted for this decision, so it cannot self-initiate a shutdown or be
+        prompt-injected into one.
+        """
+
+        if not self.config.shutdown_enabled:
+            return None
+        if getattr(message, "is_group", False):
+            return None
+        if message.sender not in self.config.allowed_senders:
+            return None
+        body = (message.body or "").strip().casefold()
+        if not body:
+            return None
+        triggers = {trigger.strip().casefold() for trigger in self.config.shutdown_triggers}
+        if body in triggers:
+            return "shutdown"
+        return None
+
+    def _handle_control_command(
+        self,
+        command: str,
+        message: InboundSignalMessage,
+        now: datetime,
+    ) -> tuple[dict, bool]:
+        """Acknowledge, then execute a control command through the code-direct
+        runner. Returns ``(attempt_record, executed)``.
+
+        The acknowledgement is sent first so the human receives confirmation
+        before the machine powers off; ``shutdown -h now`` returns promptly
+        while systemd performs the orderly poweroff asynchronously.
+        """
+
+        ack_sent = False
+        ack_error: Exception | None = None
+        try:
+            self._send_with_retry(message.sender, self.config.shutdown_ack_message)
+            ack_sent = True
+        except Exception as exc:  # noqa: BLE001 - ack failure must not abort the operator's shutdown.
+            ack_error = exc
+
+        executed = False
+        exec_error: Exception | None = None
+        try:
+            self._run_shutdown_command()
+            executed = True
+        except Exception as exc:  # noqa: BLE001 - a failed shutdown must be reported, not swallowed.
+            exec_error = exc
+
+        if not executed:
+            try:
+                self._send_with_retry(message.sender, SHUTDOWN_FAILURE_ACK)
+            except Exception:  # noqa: BLE001 - best-effort failure notice.
+                pass
+
+        record = self._attempt_record(
+            message,
+            now,
+            decision="control_executed" if executed else "control_failed",
+            error=exec_error or ack_error,
+            control={
+                "command": command,
+                "ack_sent": ack_sent,
+                "executed": executed,
+            },
+        )
+        return record, executed
+
+    def _run_shutdown_command(self) -> None:
+        command = self.config.shutdown_command
+        if not command:
+            raise RuntimeError("shutdown_command is not configured")
+        self.command_runner(command)
+
     def _reply_to_message(self, message: InboundSignalMessage, now: datetime) -> dict:
         conversation_id = channel_conversation_id(message.sender, prefix=self.conversation_prefix)
         try:
@@ -735,6 +873,7 @@ class SignalChatBridge:
         retracted_turn_id: str | None = None,
         retraction_id: str | None = None,
         media: dict | None = None,
+        control: dict | None = None,
     ) -> dict:
         record = {
             "id": f"sigchat_{now.strftime('%Y%m%d_%H%M%S_%f')}_{uuid.uuid4().hex[:8]}",
@@ -766,12 +905,32 @@ class SignalChatBridge:
         }
         if media is not None:
             record["media"] = media
+        if control is not None:
+            record["control"] = control
         if error is not None:
             record["error"] = {
                 "type": type(error).__name__,
                 "message": " ".join(str(error).split())[:240],
             }
         return record
+
+
+def _default_shutdown_runner(command: str) -> None:
+    """Execute a control command such as ``sudo shutdown -h now``.
+
+    ``shutdown`` signals init and returns promptly, so a normal completion is
+    expected. A timeout is treated as success because the poweroff is already in
+    progress; any non-zero exit or missing binary raises so the bridge can tell
+    the human the shutdown did not take.
+    """
+
+    import shlex
+    import subprocess
+
+    try:
+        subprocess.run(shlex.split(command), check=True, timeout=DEFAULT_SHUTDOWN_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        return
 
 
 def signal_conversation_id(sender: str) -> str:

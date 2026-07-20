@@ -1,6 +1,6 @@
 # Pi 部署运行手册:从零到飞书聊天
 
-Status: 覆盖 M3-M14 全部已交付能力
+Status: 覆盖 M3-M15 全部已交付能力 + 一句话关机
 Last updated: 2026-07-20
 
 这份手册把树莓派从空白系统带到"她按自己的作息醒来 + 你在飞书上随时找到她"。
@@ -216,6 +216,45 @@ crontab -l | { cat; echo "30 4 * * * cd /home/pi/digital_life && .venv/bin/pytho
   --rollback <plan_id>
 ```
 
+## 8.6 一句话关机(可选,很实用)
+
+想拔电源前不用再 SSH 登进去:直接在飞书发一句"关机",她道个晚安,
+然后 Pi 自己安全关机,你等灯灭了拔电源就行。
+
+安全边界(重要):关机是**操作员命令,走代码直通道,永不经过模型**——
+她自己决定不了关机,也不会被聊天内容"骗"去关机。只有你(白名单里的
+open_id)发的、**整条消息正好等于**触发词才会执行;"帮我看看关机脚本"
+这种普通对话照常交给她回复。
+
+聊天服务是 systemd **用户**服务,默认没有关机权限,给它开一条精确的
+免密 sudo:
+
+```bash
+# 换成你的用户名(树莓派默认 pi);用 visudo 写入
+echo "$USER ALL=(root) NOPASSWD: /usr/sbin/shutdown -h now" | sudo tee /etc/sudoers.d/companion-shutdown
+sudo chmod 440 /etc/sudoers.d/companion-shutdown
+# 验证路径与免密是否生效(会立刻关机,测试时想清楚):
+# which shutdown   # 确认是 /usr/sbin/shutdown
+```
+
+编辑 `life-loop/feishu_chat_config.json`:
+
+```json
+"shutdown_enabled": true,
+"shutdown_command": "sudo shutdown -h now",
+"shutdown_triggers": ["关机", "shutdown", "睡吧"],
+"shutdown_ack_message": "好，我先去休息了。你也早点睡，需要我的时候再叫醒我。"
+```
+
+```bash
+systemctl --user restart companion-feishu-chat.service
+# 然后飞书发"关机";收到晚安后,几秒钟内 Pi 会断电
+```
+
+关机失败(比如 sudo 没配好)时,她会再发一条"关机没执行成功"提醒你,
+机器不会掉——去 `life-loop/signal_chat_attempts.jsonl` 看 `control` 字段。
+不想要这个功能就把 `shutdown_enabled` 改回 `false`。
+
 ## 9. 仪表盘(手机装成 App)
 
 ```bash
@@ -245,6 +284,7 @@ nohup .venv/bin/python window/window.py > window/window.log 2>&1 &
 | 语义检索(M12) | — | 配置 `enabled: false` 或删除 `life-loop/semantic_index.json` |
 | 语音/图片(M14) | — | 配置 `voice_replies: "off"`、`image_attachments_enabled: false` |
 | 睡眠整理(M15) | 配置 `enabled: false` | `run_m15_consolidation.py --rollback <plan_id>`(逐次整体撤销) |
+| 一句话关机 | 配置 `shutdown_enabled: false` | 删除 `/etc/sudoers.d/companion-shutdown` |
 | 全部 Signal/飞书消息 | `touch life-loop/signal_chat_pause.flag`(主开关,两个通道都停) | — |
 
 ## 迁移与备份

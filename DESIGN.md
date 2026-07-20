@@ -141,6 +141,14 @@
 - Whole-plan rollback restores archived members and retires the summaries in one atomic step.
 - Non-goals: deleting memories, consolidating quarantined items, adding new facts in summaries, and consolidation inside wake cycles or chat turns.
 
+## Operator control commands (shutdown)
+
+- The chat bridge recognizes operator control commands (currently a safe Pi shutdown) on a code-direct path: matched deterministically by exact, allowlisted trigger phrase, never routed through the model.
+- The model can neither self-initiate a shutdown nor be prompt-injected into one; only an allowlisted sender whose entire message equals a configured trigger fires it, so ordinary conversation that merely mentions shutting down is unaffected.
+- The companion sends a spoken acknowledgement before the machine powers off, and the actual OS action runs through a configurable command (default `sudo shutdown -h now`) via an injectable runner; a failed shutdown degrades to a spoken failure notice and leaves the machine running.
+- Every control command is recorded in the chat attempt ledger with a `control` payload (`command`, `ack_sent`, `executed`) and an explicit `control_executed`/`control_failed` decision; evidence is flushed before poweroff.
+- Disabled by default (`shutdown_enabled: false`); enabling it requires both config and an explicit, narrowly-scoped passwordless sudo entry documented in the Pi runbook.
+
 ## Personas and jobs
 
 - Primary personas:
