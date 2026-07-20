@@ -14,10 +14,13 @@ dropped; secrets stay in environment variables loaded from
 from __future__ import annotations
 
 import json
+import mimetypes
 import os
 import queue as queue_module
 import threading
 import time
+import uuid
+from pathlib import Path
 from urllib import error, request
 
 from .signal_transport import InboundSignalMessage
@@ -110,12 +113,14 @@ class FeishuApiClient:
         base_url: str = FEISHU_BASE_URL,
         timeout_seconds: int = 30,
         http_post=None,
+        http_post_multipart=None,
     ):
         self.app_id = app_id
         self.app_secret = app_secret
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
         self._http_post = http_post or self._default_http_post
+        self._http_post_multipart = http_post_multipart or self._default_http_post_multipart
         self._token: str | None = None
         self._token_expiry = 0.0
 
@@ -179,6 +184,172 @@ class FeishuApiClient:
         token = self.tenant_access_token()
         return self._http_post(url, payload, {"Authorization": f"Bearer {token}"})
 
+    def upload_image(self, filename: str, data_bytes: bytes) -> str:
+        """Upload one image (validated byte snapshot) and return its image_key."""
+
+        data = self._authorized_multipart(
+            f"{self.base_url}/open-apis/im/v1/images",
+            fields={"image_type": "message"},
+            file_field="image",
+            filename=filename,
+            file_bytes=data_bytes,
+        )
+        if not isinstance(data, dict) or data.get("code") != 0:
+            code = data.get("code") if isinstance(data, dict) else "unknown"
+            raise FeishuApiError(f"feishu image upload failed: code={code}")
+        image_key = (data.get("data") or {}).get("image_key") if isinstance(data.get("data"), dict) else None
+        if not image_key:
+            raise FeishuApiError("feishu image upload returned no image_key")
+        return str(image_key)
+
+    def upload_opus(self, filename: str, data_bytes: bytes, duration_ms: int) -> str:
+        """Upload one opus audio byte snapshot and return its file_key."""
+
+        data = self._authorized_multipart(
+            f"{self.base_url}/open-apis/im/v1/files",
+            fields={
+                "file_type": "opus",
+                "file_name": filename,
+                "duration": str(int(duration_ms)),
+            },
+            file_field="file",
+            filename=filename,
+            file_bytes=data_bytes,
+        )
+        if not isinstance(data, dict) or data.get("code") != 0:
+            code = data.get("code") if isinstance(data, dict) else "unknown"
+            raise FeishuApiError(f"feishu audio upload failed: code={code}")
+        file_key = (data.get("data") or {}).get("file_key") if isinstance(data.get("data"), dict) else None
+        if not file_key:
+            raise FeishuApiError("feishu audio upload returned no file_key")
+        return str(file_key)
+
+    def send_image(self, open_id: str, image_key: str) -> dict:
+        return self._send_message(open_id, "image", {"image_key": image_key})
+
+    def send_audio(self, open_id: str, file_key: str, duration_ms: int) -> dict:
+        return self._send_message(open_id, "audio", {"file_key": file_key, "duration": int(duration_ms)})
+
+    def _send_message(self, open_id: str, msg_type: str, content: dict) -> dict:
+        url = f"{self.base_url}/open-apis/im/v1/messages?receive_id_type=open_id"
+        payload = {
+            "receive_id": open_id,
+            "msg_type": msg_type,
+            "content": json.dumps(content, ensure_ascii=False),
+        }
+        data = self._authorized_post(url, payload)
+        if isinstance(data, dict) and data.get("code") in TOKEN_INVALID_CODES:
+            self.tenant_access_token(force_refresh=True)
+            data = self._authorized_post(url, payload)
+        if not isinstance(data, dict) or data.get("code") != 0:
+            code = data.get("code") if isinstance(data, dict) else "unknown"
+            raise FeishuApiError(f"feishu {msg_type} send failed: code={code}")
+        message_id = (data.get("data") or {}).get("message_id") if isinstance(data.get("data"), dict) else None
+        return {"message_id": message_id}
+
+    def _authorized_multipart(
+        self,
+        url: str,
+        *,
+        fields: dict,
+        file_field: str,
+        filename: str,
+        file_bytes: bytes,
+    ) -> dict:
+        token = self.tenant_access_token()
+        data = self._http_post_multipart(
+            url,
+            fields,
+            file_field,
+            filename,
+            file_bytes,
+            {"Authorization": f"Bearer {token}"},
+        )
+        if isinstance(data, dict) and data.get("code") in TOKEN_INVALID_CODES:
+            token = self.tenant_access_token(force_refresh=True)
+            data = self._http_post_multipart(
+                url,
+                fields,
+                file_field,
+                filename,
+                file_bytes,
+                {"Authorization": f"Bearer {token}"},
+            )
+        return data
+
+    def _default_http_post_multipart(
+        self,
+        url: str,
+        fields: dict,
+        file_field: str,
+        filename: str,
+        file_bytes: bytes,
+        headers: dict,
+    ) -> dict:
+        body, content_type = encode_multipart_form(fields, file_field, filename, file_bytes)
+        http_request = request.Request(
+            url,
+            data=body,
+            headers={"Content-Type": content_type, **headers},
+            method="POST",
+        )
+        try:
+            with request.urlopen(http_request, timeout=max(self.timeout_seconds, 60)) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except error.HTTPError as exc:
+            try:
+                detail = json.loads(exc.read().decode("utf-8"))
+                if isinstance(detail, dict):
+                    return detail
+            except (json.JSONDecodeError, OSError):
+                pass
+            raise FeishuApiError(f"feishu upload http error: status={exc.code}") from exc
+        except error.URLError as exc:
+            raise FeishuApiError(f"feishu api unreachable: {exc.reason}") from exc
+
+
+_HEADER_UNSAFE_RE = None
+
+
+def _sanitize_header_value(value: str) -> str:
+    """Strip CRLF and quotes so form values cannot inject multipart headers."""
+
+    return str(value or "").replace("\r", "").replace("\n", "").replace('"', "").strip() or "file"
+
+
+def encode_multipart_form(
+    fields: dict,
+    file_field: str,
+    filename: str,
+    file_bytes: bytes,
+) -> tuple[bytes, str]:
+    """Encode a multipart/form-data body with one file part (stdlib only)."""
+
+    boundary = f"companion-boundary-{uuid.uuid4().hex}"
+    parts: list[bytes] = []
+    for key, value in fields.items():
+        safe_key = _sanitize_header_value(key)
+        safe_value = str(value or "").replace("\r", "").replace("\n", "")
+        parts.append(
+            (
+                f"--{boundary}\r\n"
+                f'Content-Disposition: form-data; name="{safe_key}"\r\n\r\n'
+                f"{safe_value}\r\n"
+            ).encode("utf-8")
+        )
+    safe_filename = _sanitize_header_value(filename)
+    mime_type = mimetypes.guess_type(safe_filename)[0] or "application/octet-stream"
+    parts.append(
+        (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="{_sanitize_header_value(file_field)}"; filename="{safe_filename}"\r\n'
+            f"Content-Type: {mime_type}\r\n\r\n"
+        ).encode("utf-8")
+    )
+    parts.append(file_bytes)
+    parts.append(f"\r\n--{boundary}--\r\n".encode("utf-8"))
+    return b"".join(parts), f"multipart/form-data; boundary={boundary}"
+
 
 class FeishuTransport:
     """Bridge-facing Feishu transport: queue-backed receive, REST send."""
@@ -186,6 +357,7 @@ class FeishuTransport:
     name = "feishu"
     channel = "feishu"
     conversation_prefix = "feishu"
+    supports_media = True
 
     def __init__(
         self,
@@ -226,6 +398,17 @@ class FeishuTransport:
 
     def send(self, recipient: str, text: str) -> dict:
         return self._api().send_text(recipient, text)
+
+    def send_image(self, recipient: str, filename: str, data_bytes: bytes) -> dict:
+        api = self._api()
+        image_key = api.upload_image(filename, data_bytes)
+        return api.send_image(recipient, image_key)
+
+    def send_voice(self, recipient: str, opus_path: Path, duration_ms: int) -> dict:
+        opus_path = Path(opus_path)
+        api = self._api()
+        file_key = api.upload_opus(opus_path.name, opus_path.read_bytes(), duration_ms)
+        return api.send_audio(recipient, file_key, duration_ms)
 
     def check_available(self) -> str:
         """Verify credentials, token issuance, and (when required) the SDK."""
@@ -302,15 +485,20 @@ class FakeFeishuTransport:
     name = "feishu-fake"
     channel = "feishu"
     conversation_prefix = "feishu"
+    supports_media = True
 
     def __init__(self, inbound_batches: list[list[InboundSignalMessage]] | None = None):
         self.inbound_batches: list[list[InboundSignalMessage]] = [
             list(batch) for batch in (inbound_batches or [])
         ]
         self.sent: list[dict] = []
+        self.sent_images: list[dict] = []
+        self.sent_voices: list[dict] = []
         self.receive_calls = 0
         self.send_calls = 0
         self.fail_next_sends: int = 0
+        self.fail_next_image_sends: int = 0
+        self.fail_next_voice_sends: int = 0
 
     def queue_batch(self, messages: list[InboundSignalMessage]) -> None:
         self.inbound_batches.append(list(messages))
@@ -329,6 +517,22 @@ class FakeFeishuTransport:
         record = {"recipient": recipient, "text": text}
         self.sent.append(record)
         return dict(record)
+
+    def send_image(self, recipient: str, filename: str, data_bytes: bytes) -> dict:
+        if self.fail_next_image_sends > 0:
+            self.fail_next_image_sends -= 1
+            raise FeishuApiError("fake feishu image send failure requested by test")
+        record = {"recipient": recipient, "filename": str(filename), "size": len(data_bytes)}
+        self.sent_images.append(record)
+        return {"message_id": f"om_img_{len(self.sent_images)}"}
+
+    def send_voice(self, recipient: str, opus_path: Path, duration_ms: int) -> dict:
+        if self.fail_next_voice_sends > 0:
+            self.fail_next_voice_sends -= 1
+            raise FeishuApiError("fake feishu voice send failure requested by test")
+        record = {"recipient": recipient, "path": str(opus_path), "duration_ms": int(duration_ms)}
+        self.sent_voices.append(record)
+        return {"message_id": f"om_voice_{len(self.sent_voices)}"}
 
 
 def _import_lark_oapi():

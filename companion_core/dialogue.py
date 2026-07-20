@@ -68,6 +68,7 @@ class DialogueResult:
     stored_memories: list[dict] = field(default_factory=list)
     memory_proposals: list[dict] = field(default_factory=list)
     companion_state: dict | None = None
+    metadata: dict = field(default_factory=dict)
 
     @property
     def accepted_memories(self) -> list[dict]:
@@ -95,6 +96,7 @@ class DialogueRunner:
         provider: str | None = None,
         memory_mode: str = "json",
         auto_memory: bool = True,
+        metadata_hints: str | None = None,
     ) -> DialogueResult:
         cleaned_input = _clean_visible_text(human_text)
         if not cleaned_input:
@@ -116,7 +118,7 @@ class DialogueRunner:
                 memory_store=self.memory_store,
             )
             context.recent_memories = retrieval.memories
-            prompt = self._render_prompt(context, cleaned_input)
+            prompt = self._render_prompt(context, cleaned_input, metadata_hints=metadata_hints)
             now = datetime.now()
             human_turn_id = f"turn_{now.strftime('%Y%m%d_%H%M%S_%f')}_human"
             human_turn = {
@@ -220,6 +222,7 @@ class DialogueRunner:
                 stored_memories=stored_memories,
                 memory_proposals=proposal_records,
                 companion_state=companion_state,
+                metadata=metadata if isinstance(metadata, dict) else {},
             )
         except Exception as exc:
             failed_at = datetime.now()
@@ -277,13 +280,14 @@ class DialogueRunner:
         safe_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", conversation_id).strip("._") or "conversation"
         return self.paths.conversations_dir / f"{safe_id}.jsonl"
 
-    def _render_prompt(self, context: DialogueContext, human_text: str) -> str:
+    def _render_prompt(self, context: DialogueContext, human_text: str, *, metadata_hints: str | None = None) -> str:
         memories = "\n".join(f"- {memory.get('content', '')}" for memory in context.recent_memories)
         turns = "\n".join(
             f"{turn.get('role', 'unknown')}: {turn.get('content', '')}"
             for turn in context.recent_turns[-8:]
             if turn.get("content")
         )
+        extra_guidance = f"\n{metadata_hints.strip()}" if metadata_hints and metadata_hints.strip() else ""
         return f"""You are Companion in a user-initiated text chat.
 
 Boundaries:
@@ -296,7 +300,7 @@ Boundaries:
 - If the human explicitly asks about phase, status, tests, evidence, progress, or system boundaries, answer directly and concretely.
 - Keep casual replies concise, emotionally natural, and free of report-style scaffolding.
 - You may include optional machine metadata after ===DIALOGUE_METADATA=== as a JSON object.
-- Only include companion_state metadata when you explicitly want to change your current mood/status.
+- Only include companion_state metadata when you explicitly want to change your current mood/status.{extra_guidance}
 
 === WHO YOU ARE ===
 {context.who_companion}

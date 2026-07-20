@@ -4,7 +4,7 @@
 
 - Status: Active
 - Last refreshed: 2026-07-20
-- Primary product surfaces: Companion Window home, message board, creations, tasks, requests, `/life`, M7 text chat, M8 memory review/stewardship, M9 controlled scheduler presence (frozen), M10/M11 Signal chat + outbound (alternative transport), M12 semantic memory retrieval, and M13 Feishu chat (production channel).
+- Primary product surfaces: Companion Window home, message board, creations, tasks, requests, `/life`, M7 text chat, M8 memory review/stewardship, M9 controlled scheduler presence (frozen), M10/M11 Signal chat + outbound (alternative transport), M12 semantic memory retrieval, M13 Feishu chat (production channel), and M14 Feishu media (voice bubbles + creation images).
 - Evidence reviewed:
   - `docs/web-dashboard.md`
   - `docs/requests-system-design.md`
@@ -18,6 +18,7 @@
   - `docs/m11-signal-outbound-design.md`
   - `docs/m12-semantic-retrieval-design.md`
   - `docs/m13-feishu-chat-design.md`
+  - `docs/m14-feishu-media-design.md`
   - `window/window.py`
 
 ## Brand
@@ -119,6 +120,16 @@
 - Credentials live only in `.secrets/feishu.env`; never in configs, reports, or the ledger.
 - M13 is text-only. Feishu supports images, opus voice bubbles, and interactive cards; those are separate later milestones (voice bubbles need no voice hardware — TTS on the Pi suffices).
 - Only one channel should have outbound (M11) enabled at a time.
+
+## Confirmed M14 direction
+
+- M14 adds voice bubbles and creation-image attachments to Feishu chat replies, both hardware-free.
+- Media is an enhancement, never a dependency: text is delivered first and every media failure downgrades silently to it, recorded in the ledger.
+- Voice is synthesized locally (command-driven engine, default Piper reusing the legacy voice investment) and converted to opus on the Pi; no cloud TTS.
+- Voice modes: off (default) / always / companion_choice — in the last mode she decides per reply, and the prompt hint exists only when the mode is active.
+- Image attachments come exclusively from her `creations/` directory with strict path, extension, size, and count validation; traversal is impossible.
+- Ledger media payloads carry outcomes only — never audio or image bytes; synthesized audio lives in temp dirs and is deleted after send.
+- Inbound media understanding (your photos, your voice) and outbox media are explicit non-goals for M14.
 
 ## Personas and jobs
 

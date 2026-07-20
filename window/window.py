@@ -1418,6 +1418,54 @@ def _m13_feishu_chat_lines(
     return lines
 
 
+def _m14_feishu_media_lines(
+    dry_run_report,
+    trial_report,
+    observation_report,
+    freeze_report,
+):
+    lines = ["M14 Feishu Media"]
+    if not any((dry_run_report, trial_report, observation_report, freeze_report)):
+        lines.append("No M14 feishu media report captured.")
+        return lines
+
+    for title, report in (
+        ("M14 Media Dry Run", dry_run_report),
+        ("M14 Media Trial", trial_report),
+        ("M14 Media Observation", observation_report),
+        ("M14 Media Freeze", freeze_report),
+    ):
+        if report:
+            lines.extend(_report_lines(title, report))
+
+    dry_run = dry_run_report.get("dry_run") if isinstance(dry_run_report.get("dry_run"), dict) else {}
+    if dry_run:
+        lines.append("media_text_priority=" + escape(str(dry_run.get("replied_despite_media_failures"))))
+        voice = dry_run.get("voice_outcomes") if isinstance(dry_run.get("voice_outcomes"), dict) else {}
+        if voice:
+            lines.append("media_dry_voice_sent=" + escape(str(voice.get("sent"))))
+
+    observation = observation_report.get("observation") if isinstance(observation_report.get("observation"), dict) else {}
+    if observation:
+        lines.append("media_events_observed=" + escape(str(observation.get("media_events"))))
+        lines.append("media_voice_sent=" + escape(str(observation.get("voice_sent"))))
+        lines.append("media_images_sent=" + escape(str(observation.get("images_sent"))))
+        lines.append("media_voice_errors=" + escape(str(observation.get("voice_errors"))))
+
+    final_freeze = freeze_report.get("final_freeze") if isinstance(freeze_report.get("final_freeze"), dict) else {}
+    if final_freeze:
+        lines.append("m14_frozen=" + escape(str(final_freeze.get("frozen"))))
+        lines.append("feishu_media_ready=" + escape(str(final_freeze.get("feishu_media_ready"))))
+
+    for report in (dry_run_report, trial_report, observation_report, freeze_report):
+        if not report:
+            continue
+        for reason in report.get("stop_reasons", []) or []:
+            lines.append("stop_reason=" + escape(str(reason)))
+
+    return lines
+
+
 def _near_status_lines():
     lines = ["Near-status TTL"]
     capsule = _load_json(COMPANION_HOME / "life-loop" / "context_capsule.json", default={}) or {}
@@ -1486,6 +1534,10 @@ def render_life_dashboard():
     m13_feishu_activation = _report("m13_feishu_activation_report.json")
     m13_feishu_observation = _report("m13_feishu_observation_report.json")
     m13_feishu_freeze = _report("m13_feishu_freeze_report.json")
+    m14_media_dry_run = _report("m14_feishu_media_dry_run_report.json")
+    m14_media_trial = _report("m14_feishu_media_trial_report.json")
+    m14_media_observation = _report("m14_feishu_media_observation_report.json")
+    m14_media_freeze = _report("m14_feishu_media_freeze_report.json")
 
     sections = [
         ("Internal Life Loop", _event_life_lines(latest)),
@@ -1553,6 +1605,12 @@ def render_life_dashboard():
             m13_feishu_activation,
             m13_feishu_observation,
             m13_feishu_freeze,
+        )),
+        ("M14 Feishu Media", _m14_feishu_media_lines(
+            m14_media_dry_run,
+            m14_media_trial,
+            m14_media_observation,
+            m14_media_freeze,
         )),
         ("Near-status TTL", _near_status_lines()),
     ]

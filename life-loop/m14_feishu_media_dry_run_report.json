@@ -1,0 +1,102 @@
+{
+  "boundaries": {
+    "attachments_outside_creations": false,
+    "feishu_api_invoked": false,
+    "memory_authority_expanded": false,
+    "provider_generation_requested": false,
+    "raw_media_bytes_in_ledger_or_reports": false,
+    "scheduler_mutated": false,
+    "synthesized_audio_retained": false,
+    "text_reply_never_blocked_by_media": true,
+    "wake_cycle_run": false
+  },
+  "companion_home": "/home/polaris/digital_life",
+  "dry_run": {
+    "attempt_count": 9,
+    "image_outcomes": {
+      "rejections": [
+        "file_not_found",
+        "file_too_large",
+        "hardlinked_file_rejected",
+        "over_max_images_per_reply",
+        "path_outside_creations"
+      ],
+      "send_errors": 1,
+      "sent": 1
+    },
+    "replied_despite_media_failures": true,
+    "signal_transport_media_skipped": true,
+    "voice_outcomes": {
+      "send_errors": 1,
+      "sent": 2,
+      "skipped_too_long": 1,
+      "tts_errors": 1
+    }
+  },
+  "errors": [],
+  "milestone": "M14.1",
+  "next_commands": [
+    ".venv/bin/python scripts/run_m14_feishu_media_trial.py --companion-home /home/polaris/digital_life --confirm-real-feishu-send"
+  ],
+  "ok": true,
+  "profile": {
+    "channel": "feishu",
+    "provider": "fake",
+    "provider_calls": 0,
+    "transport": "feishu-fake",
+    "tts_backend": "fake",
+    "write_runtime": true
+  },
+  "provider_calls": 0,
+  "recommendation": "m14_feishu_media_dry_run_ready",
+  "saved_at": "2026-07-20T18:28:23.573249",
+  "schema_version": 1,
+  "stages": [
+    {
+      "message": "engine -> ffmpeg -> ffprobe pipeline verified with stub runners",
+      "name": "tts_pipeline",
+      "status": "pass"
+    },
+    {
+      "message": "image/audio uploads and sends verified against a stubbed HTTP layer",
+      "name": "multipart_upload",
+      "status": "pass"
+    },
+    {
+      "message": "voice modes, length cap, and both failure branches behave as designed",
+      "name": "voice_coverage",
+      "status": "pass"
+    },
+    {
+      "message": "image validation rejects traversal/missing/oversize/hardlink/over-count and survives send failures",
+      "name": "image_coverage",
+      "status": "pass"
+    },
+    {
+      "message": "every media failure left the delivered text reply intact; non-media transports skip media entirely",
+      "name": "text_reply_priority",
+      "status": "pass"
+    },
+    {
+      "message": "metadata hints appear only when the matching capability is enabled",
+      "name": "hint_injection",
+      "status": "pass"
+    },
+    {
+      "message": "9 media dry-run attempts appended; payloads are byte-free and creations-scoped",
+      "name": "media_ledger_hygiene",
+      "status": "pass"
+    },
+    {
+      "message": "feishu config template carries media keys with safe defaults",
+      "name": "media_config_template",
+      "status": "pass"
+    },
+    {
+      "message": "media modules stay scheduler-free and never retain synthesized audio",
+      "name": "static_guard",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}

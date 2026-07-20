@@ -36,6 +36,11 @@ DEFAULT_OUTBOUND_MAX_LENGTH = 900
 DEFAULT_OUTBOUND_MAX_AGE_MINUTES = 360
 DEFAULT_OUTBOUND_MAX_SEND_ATTEMPTS = 3
 
+DEFAULT_VOICE_MAX_CHARS = 220
+DEFAULT_MAX_IMAGES_PER_REPLY = 3
+DEFAULT_IMAGE_MAX_BYTES = 10 * 1024 * 1024
+VOICE_REPLY_MODES = ("off", "always", "companion_choice")
+
 OUTBOUND_TERMINAL_STATUSES = ("delivered", "skipped", "abandoned")
 SIGNAL_OUTBOUND_SKIP_REASONS = (
     "expired",
@@ -108,6 +113,12 @@ class SignalChatConfig:
     outbound_max_length: int = DEFAULT_OUTBOUND_MAX_LENGTH
     outbound_max_age_minutes: int = DEFAULT_OUTBOUND_MAX_AGE_MINUTES
     outbound_max_send_attempts: int = DEFAULT_OUTBOUND_MAX_SEND_ATTEMPTS
+    voice_replies: str = "off"
+    voice_max_chars: int = DEFAULT_VOICE_MAX_CHARS
+    tts_command: str | None = None
+    image_attachments_enabled: bool = False
+    max_images_per_reply: int = DEFAULT_MAX_IMAGES_PER_REPLY
+    image_max_bytes: int = DEFAULT_IMAGE_MAX_BYTES
 
     def resolved_outbound_recipient(self) -> str | None:
         if self.outbound_recipient:
@@ -152,6 +163,12 @@ def _load_chat_config_file(config_path: Path, *, label: str) -> SignalChatConfig
     outbound_recipient = payload.get("outbound_recipient")
     if outbound_recipient is not None:
         outbound_recipient = str(outbound_recipient).strip() or None
+    voice_replies = str(payload.get("voice_replies") or "off")
+    if voice_replies not in VOICE_REPLY_MODES:
+        raise SignalChatConfigError(f"chat config 'voice_replies' must be one of {VOICE_REPLY_MODES}")
+    tts_command = payload.get("tts_command")
+    if tts_command is not None:
+        tts_command = str(tts_command).strip() or None
     return SignalChatConfig(
         account=account,
         allowed_senders=allowed_senders,
@@ -169,6 +186,12 @@ def _load_chat_config_file(config_path: Path, *, label: str) -> SignalChatConfig
         outbound_max_length=_positive_int(payload, "outbound_max_length", DEFAULT_OUTBOUND_MAX_LENGTH),
         outbound_max_age_minutes=_positive_int(payload, "outbound_max_age_minutes", DEFAULT_OUTBOUND_MAX_AGE_MINUTES),
         outbound_max_send_attempts=_positive_int(payload, "outbound_max_send_attempts", DEFAULT_OUTBOUND_MAX_SEND_ATTEMPTS),
+        voice_replies=voice_replies,
+        voice_max_chars=_positive_int(payload, "voice_max_chars", DEFAULT_VOICE_MAX_CHARS),
+        tts_command=tts_command,
+        image_attachments_enabled=bool(payload.get("image_attachments_enabled", False)),
+        max_images_per_reply=_positive_int(payload, "max_images_per_reply", DEFAULT_MAX_IMAGES_PER_REPLY),
+        image_max_bytes=_positive_int(payload, "image_max_bytes", DEFAULT_IMAGE_MAX_BYTES),
     )
 
 
@@ -347,7 +370,10 @@ class SignalChatBridge:
         now_fn=None,
         mode: str = "live",
         lock_path: Path | None = None,
+        tts_backend=None,
     ):
+        from .chat_media import media_prompt_hints
+
         self.paths = paths
         self.config = config
         self.transport = transport
@@ -359,6 +385,8 @@ class SignalChatBridge:
         self.lock_path = lock_path or paths.signal_chat_lock_file
         self.channel = getattr(transport, "channel", "signal")
         self.conversation_prefix = getattr(transport, "conversation_prefix", "signal")
+        self.tts_backend = tts_backend
+        self._media_hints = media_prompt_hints(config, transport)
 
     def poll_once(self) -> list[dict]:
         """Run one receive/decide/reply pass and return the attempt records."""
@@ -619,6 +647,7 @@ class SignalChatBridge:
                 provider=self.provider,
                 memory_mode=self.memory_mode,
                 auto_memory=False,
+                metadata_hints=self._media_hints,
             )
         except Exception as exc:  # noqa: BLE001 - every failure must land in the ledger.
             return self._attempt_record(message, now, decision="failed", error=exc)
@@ -653,6 +682,23 @@ class SignalChatBridge:
                 retracted_turn_id=result.assistant_turn["id"],
                 retraction_id=retraction["id"],
             )
+        media_payload = None
+        try:
+            from .chat_media import deliver_reply_media
+
+            media_payload = deliver_reply_media(
+                self.paths,
+                self.config,
+                self.transport,
+                message.sender,
+                result.reply,
+                result.metadata,
+                tts_backend=self.tts_backend,
+            )
+        except Exception as exc:  # noqa: BLE001 - media must never break an already-sent reply.
+            media_payload = {
+                "error": {"type": type(exc).__name__, "message": " ".join(str(exc).split())[:200]},
+            }
         return self._attempt_record(
             message,
             now,
@@ -662,6 +708,7 @@ class SignalChatBridge:
             reply=result.reply,
             memory_proposal_count=len(result.memory_proposals),
             send_attempts=send_attempts,
+            media=media_payload,
         )
 
     def _advance_sender_state(self, state: dict, message: InboundSignalMessage) -> bool:
@@ -687,6 +734,7 @@ class SignalChatBridge:
         send_attempts: int = 0,
         retracted_turn_id: str | None = None,
         retraction_id: str | None = None,
+        media: dict | None = None,
     ) -> dict:
         record = {
             "id": f"sigchat_{now.strftime('%Y%m%d_%H%M%S_%f')}_{uuid.uuid4().hex[:8]}",
@@ -716,6 +764,8 @@ class SignalChatBridge:
             "boundaries": dict(SIGNAL_CHAT_BOUNDARIES),
             "error": None,
         }
+        if media is not None:
+            record["media"] = media
         if error is not None:
             record["error"] = {
                 "type": type(error).__name__,

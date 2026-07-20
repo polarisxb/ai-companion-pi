@@ -514,6 +514,32 @@ scope to the signal channel; the Signal transport remains in the repo as an
 alternative. M13 is text-only: images, voice bubbles, and cards are later
 milestones.
 
+M14 is the Feishu media milestone after M13. Its design starts in
+`docs/m14-feishu-media-design.md`. M14 gives chat replies two richer
+expressions with zero extra hardware: voice bubbles (reply text synthesized
+locally through a configurable command engine — default the legacy Piper
+install — converted to opus 16k mono by ffmpeg, measured by ffprobe, and
+uploaded as a Feishu audio message) and creation-image attachments (the model
+may attach files under `creations/` via `===DIALOGUE_METADATA===`
+attachments; validation enforces creations scoping, image extensions, size,
+and count caps). Media is an enhancement layered after the delivered text
+reply: every TTS, upload, or send failure is recorded in the attempt ledger
+`media` payload and silently downgrades to the already-sent text. Voice modes
+are `off` (default), `always`, and `companion_choice` (she opts in per reply
+via `{"voice": true}`; the prompt hint is injected only when the mode is
+active, keeping M7/M8 behavior otherwise byte-identical). Only transports
+declaring `supports_media` participate; multipart uploads reuse the cached
+tenant token with stale-token retry via stdlib urllib. Gates: M14.1 dry run
+(`scripts/run_m14_feishu_media_dry_run.py`,
+`recommendation=m14_feishu_media_dry_run_ready`), M14.2 supervised media
+trial (`scripts/run_m14_feishu_media_trial.py`, one real voice bubble and
+optionally one creations image behind `--confirm-real-feishu-send`), M14.3
+read-only observation (`scripts/run_m14_feishu_media_observation.py`), and
+the M14.4 final freeze (`scripts/run_m14_feishu_media_freeze.py`,
+`recommendation=m14_feishu_media_frozen`, requiring the M13.5 chat freeze).
+M14 must not understand inbound media, deliver outbox media, retain
+synthesized audio, or let attachments escape the creations directory.
+
 For the full real-provider trial path, see `docs/m3-real-trial.md`.
 
 ## Expansion Plan

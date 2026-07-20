@@ -13,5 +13,11 @@
   "outbound_quiet_hours": ["00:00", "08:00"],
   "outbound_max_length": 900,
   "outbound_max_age_minutes": 360,
-  "outbound_max_send_attempts": 3
+  "outbound_max_send_attempts": 3,
+  "voice_replies": "off",
+  "voice_max_chars": 220,
+  "tts_command": "piper --model /home/pi/piper-voices/zh_CN-huayan-medium.onnx --output_file {output}",
+  "image_attachments_enabled": false,
+  "max_images_per_reply": 3,
+  "image_max_bytes": 10485760
 }

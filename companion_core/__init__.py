@@ -273,6 +273,39 @@ from .m13_feishu_freeze import (
     run_m13_feishu_freeze,
     write_m13_feishu_freeze_report,
 )
+from .tts import (
+    CommandTTSBackend,
+    FakeTTSBackend,
+    SynthesizedVoice,
+    TTSError,
+    create_tts_backend,
+)
+from .chat_media import (
+    deliver_reply_media,
+    media_prompt_hints,
+    validate_image_attachments,
+    voice_decision,
+)
+from .m14_feishu_media_dry_run import (
+    M14FeishuMediaDryRunResult,
+    run_m14_feishu_media_dry_run,
+    write_m14_feishu_media_dry_run_report,
+)
+from .m14_feishu_media_trial import (
+    M14FeishuMediaTrialResult,
+    run_m14_feishu_media_trial,
+    write_m14_feishu_media_trial_report,
+)
+from .m14_feishu_media_observation import (
+    M14FeishuMediaObservationResult,
+    run_m14_feishu_media_observation,
+    write_m14_feishu_media_observation_report,
+)
+from .m14_feishu_media_freeze import (
+    M14FeishuMediaFreezeResult,
+    run_m14_feishu_media_freeze,
+    write_m14_feishu_media_freeze_report,
+)
 from .dialogue_replay import DialogueReplayCheckResult, check_dialogue_transcript
 from .memory import JsonMemoryStore, SemanticFirstMemoryStore
 from .llm import (
@@ -436,6 +469,27 @@ __all__ = [
     "M13FeishuActivationResult",
     "M13FeishuObservationResult",
     "M13FeishuFreezeResult",
+    "M14FeishuMediaDryRunResult",
+    "M14FeishuMediaTrialResult",
+    "M14FeishuMediaObservationResult",
+    "M14FeishuMediaFreezeResult",
+    "CommandTTSBackend",
+    "FakeTTSBackend",
+    "SynthesizedVoice",
+    "TTSError",
+    "create_tts_backend",
+    "deliver_reply_media",
+    "media_prompt_hints",
+    "validate_image_attachments",
+    "voice_decision",
+    "run_m14_feishu_media_dry_run",
+    "run_m14_feishu_media_trial",
+    "run_m14_feishu_media_observation",
+    "run_m14_feishu_media_freeze",
+    "write_m14_feishu_media_dry_run_report",
+    "write_m14_feishu_media_trial_report",
+    "write_m14_feishu_media_observation_report",
+    "write_m14_feishu_media_freeze_report",
     "run_m13_feishu_dry_run",
     "run_m13_feishu_trial",
     "run_m13_feishu_activation",

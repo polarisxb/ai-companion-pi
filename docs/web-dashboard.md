@@ -63,10 +63,11 @@ attempt-ledger path), M11 Signal outbound reports (delivery decision
 coverage, disabled no-op confirmation, observed deliveries, pause drill, and
 freeze state), M12 semantic retrieval reports (backend/model, index
 coverage and staleness, backfill counts, live probe status, and freeze
-state), and M13 Feishu chat reports (dry-run decision coverage, channel
-wiring, service unit, observed attempts, and freeze state). This page is
-GET-only; it does not mutate scheduler state, memory authority, wake cycles,
-or provider output.
+state), M13 Feishu chat reports (dry-run decision coverage, channel
+wiring, service unit, observed attempts, and freeze state), and M14 Feishu
+media reports (text-priority proof, observed voice/image outcomes, and
+freeze state). This page is GET-only; it does not mutate scheduler state,
+memory authority, wake cycles, or provider output.
 
 ### Chat
 
