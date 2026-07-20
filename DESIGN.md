@@ -4,7 +4,7 @@
 
 - Status: Active
 - Last refreshed: 2026-07-20
-- Primary product surfaces: Companion Window home, message board, creations, tasks, requests, `/life`, M7 text chat, M8 memory review/stewardship, M9 controlled scheduler presence (frozen), M10/M11 Signal chat + outbound (alternative transport), M12 semantic memory retrieval, M13 Feishu chat (production channel), and M14 Feishu media (voice bubbles + creation images).
+- Primary product surfaces: Companion Window home, message board, creations, tasks, requests, `/life`, M7 text chat, M8 memory review/stewardship, M9 controlled scheduler presence (frozen), M10/M11 Signal chat + outbound (alternative transport), M12 semantic memory retrieval, M13 Feishu chat (production channel), M14 Feishu media (voice bubbles + creation images), and M15 sleep consolidation (crash-safe memory review).
 - Evidence reviewed:
   - `docs/web-dashboard.md`
   - `docs/requests-system-design.md`
@@ -19,6 +19,7 @@
   - `docs/m12-semantic-retrieval-design.md`
   - `docs/m13-feishu-chat-design.md`
   - `docs/m14-feishu-media-design.md`
+  - `docs/m15-sleep-consolidation-design.md`
   - `window/window.py`
 
 ## Brand
@@ -130,6 +131,15 @@
 - Image attachments come exclusively from her `creations/` directory with strict path, extension, size, and count validation; traversal is impossible.
 - Ledger media payloads carry outcomes only — never audio or image bytes; synthesized audio lives in temp dirs and is deleted after send.
 - Inbound media understanding (your photos, your voice) and outbox media are explicit non-goals for M14.
+
+## Confirmed M15 direction
+
+- M15 gives the companion sleep consolidation: she periodically reviews her own memories and proposes merges (derived summaries), archival of trivia, and significance re-ratings; code-level policy gates hold final authority.
+- Blackout safety is a first-class requirement, not an edge case: planning writes no memory state, application is one atomic store replace, archives are reversible (never deletes), and plans are idempotent so any crash window resolves safely on retry.
+- Scheduling is anacron-style debt (interval elapsed + enough new memories, checked from persisted state) so a Pi that is off for weeks pays the debt on the next boot — consolidation can be late, never lost.
+- Summaries carry `authority=derived_summary` with evidence refs to every member and are prompt-eligible only when all members were; quarantined content can never be smuggled into prompts through consolidation.
+- Whole-plan rollback restores archived members and retires the summaries in one atomic step.
+- Non-goals: deleting memories, consolidating quarantined items, adding new facts in summaries, and consolidation inside wake cycles or chat turns.
 
 ## Personas and jobs
 

@@ -1466,6 +1466,45 @@ def _m14_feishu_media_lines(
     return lines
 
 
+def _m15_consolidation_lines(dry_run_report):
+    lines = ["M15 Sleep Consolidation"]
+    state = _load_json(COMPANION_HOME / "life-loop" / "consolidation_state.json", default={}) or {}
+    ledger_path = COMPANION_HOME / "life-loop" / "consolidation_ledger.jsonl"
+    ledger_tail = []
+    try:
+        raw_lines = [line for line in ledger_path.read_text().splitlines() if line.strip()]
+        for raw in raw_lines[-3:]:
+            try:
+                ledger_tail.append(json.loads(raw))
+            except json.JSONDecodeError:
+                continue
+    except FileNotFoundError:
+        pass
+
+    if not dry_run_report and not state and not ledger_tail:
+        lines.append("No M15 consolidation activity captured.")
+        return lines
+
+    if dry_run_report:
+        lines.extend(_report_lines("M15 Consolidation Dry Run", dry_run_report))
+        for reason in dry_run_report.get("stop_reasons", []) or []:
+            lines.append("stop_reason=" + escape(str(reason)))
+
+    if state:
+        lines.append("last_consolidated_at=" + escape(str(state.get("last_completed_at"))))
+        lines.append("consolidation_runs=" + escape(str(state.get("runs_completed"))))
+        if state.get("last_plan_id"):
+            lines.append("last_plan=" + escape(str(state.get("last_plan_id"))))
+    for record in ledger_tail:
+        lines.append(
+            "ledger="
+            + escape(str(record.get("action")))
+            + " at "
+            + escape(str(record.get("at")))
+        )
+    return lines
+
+
 def _near_status_lines():
     lines = ["Near-status TTL"]
     capsule = _load_json(COMPANION_HOME / "life-loop" / "context_capsule.json", default={}) or {}
@@ -1538,6 +1577,7 @@ def render_life_dashboard():
     m14_media_trial = _report("m14_feishu_media_trial_report.json")
     m14_media_observation = _report("m14_feishu_media_observation_report.json")
     m14_media_freeze = _report("m14_feishu_media_freeze_report.json")
+    m15_consolidation_dry_run = _report("m15_consolidation_dry_run_report.json")
 
     sections = [
         ("Internal Life Loop", _event_life_lines(latest)),
@@ -1611,6 +1651,9 @@ def render_life_dashboard():
             m14_media_trial,
             m14_media_observation,
             m14_media_freeze,
+        )),
+        ("M15 Sleep Consolidation", _m15_consolidation_lines(
+            m15_consolidation_dry_run,
         )),
         ("Near-status TTL", _near_status_lines()),
     ]

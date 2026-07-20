@@ -131,6 +131,22 @@ class CompanionPaths:
         return self.life_loop_dir / "feishu_chat.lock"
 
     @property
+    def consolidation_config_file(self) -> Path:
+        return self.life_loop_dir / "consolidation_config.json"
+
+    @property
+    def consolidation_state_file(self) -> Path:
+        return self.life_loop_dir / "consolidation_state.json"
+
+    @property
+    def consolidation_plans_dir(self) -> Path:
+        return self.life_loop_dir / "consolidation_plans"
+
+    @property
+    def consolidation_ledger_file(self) -> Path:
+        return self.life_loop_dir / "consolidation_ledger.jsonl"
+
+    @property
     def model_outputs_dir(self) -> Path:
         return self.life_loop_dir / "model_outputs"
 

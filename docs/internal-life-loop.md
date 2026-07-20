@@ -540,6 +540,27 @@ the M14.4 final freeze (`scripts/run_m14_feishu_media_freeze.py`,
 M14 must not understand inbound media, deliver outbox media, retain
 synthesized audio, or let attachments escape the creations directory.
 
+M15 is sleep consolidation: the biomimetic milestone where the companion
+periodically reviews her own accepted memories — like a brain organizing
+during sleep — and proposes merges into derived summaries, archival of
+trivia, and significance re-ratings. Its design lives in
+`docs/m15-sleep-consolidation-design.md`, and the engine in
+`companion_core/consolidation.py` with `scripts/run_m15_consolidation.py`
+(`--check` / `--plan-only` / `--apply-plan` / `--rollback`, full runs behind
+`--confirm-consolidation`). The LLM only proposes; code-level policy gates
+hold final authority (summaries must cite >=2 existing consolidatable
+members, quarantined content never qualifies, archives require
+summarized-this-run or decay-eligible status, per-run caps apply). Blackout
+safety is the milestone's first-class requirement: planning persists a plan
+file without touching the store, application computes the complete
+post-consolidation state and writes it in a single atomic tmp+rename
+replace, plans are idempotent (stamped plan ids make retries no-ops even in
+the crash window between store write and bookkeeping), memories are archived
+never deleted, and `rollback` reverses a whole plan atomically. Scheduling
+is anacron-style debt (interval elapsed + enough new memories, computed from
+persisted state), so a Pi that stays off for weeks pays its consolidation
+debt on the next boot check — late, never lost.
+
 For the full real-provider trial path, see `docs/m3-real-trial.md`.
 
 ## Expansion Plan

@@ -67,6 +67,11 @@ life-loop/signal_outbox.jsonl
 life-loop/semantic_retrieval_config.json
 life-loop/semantic_index.json
 life-loop/feishu_chat_config.json
+life-loop/consolidation_config.json
+life-loop/consolidation_state.json
+life-loop/consolidation_ledger.jsonl
+life-loop/consolidation_plans/
+life-loop/consolidation_cron.log
 life-loop/*.flag
 
 # Dialogue runtime state (personal/local)

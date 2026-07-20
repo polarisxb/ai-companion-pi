@@ -1,0 +1,8 @@
+{
+  "enabled": false,
+  "interval_days": 7,
+  "min_new_memories": 20,
+  "max_summaries_per_run": 5,
+  "max_archive_per_run": 20,
+  "memory_batch_limit": 120
+}
