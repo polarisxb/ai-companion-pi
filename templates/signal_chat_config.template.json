@@ -1,0 +1,18 @@
+{
+  "account": "+10000000000",
+  "allowed_senders": ["+10000000001"],
+  "poll_interval_seconds": 10,
+  "receive_timeout_seconds": 5,
+  "daily_reply_budget": 50,
+  "max_replies_per_poll": 3,
+  "max_inbound_length": 4000,
+  "respect_quiet_hours": false,
+  "quiet_hours": ["00:00", "08:00"],
+  "outbound_enabled": false,
+  "outbound_recipient": "+10000000001",
+  "daily_outbound_budget": 2,
+  "outbound_quiet_hours": ["00:00", "08:00"],
+  "outbound_max_length": 900,
+  "outbound_max_age_minutes": 360,
+  "outbound_max_send_attempts": 3
+}

@@ -1,0 +1,86 @@
+{
+  "backend_probe": {
+    "backend": "hashing",
+    "dims": 256,
+    "model": "hashing-v1",
+    "ok": true
+  },
+  "boundaries": {
+    "index_written": false,
+    "json_store_remains_authoritative": true,
+    "provider_generation_requested": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "store_mutated": false,
+    "wake_cycle_run": false
+  },
+  "census": {
+    "memories_total": 49,
+    "prompt_eligible": 0,
+    "quarantined_or_proposal": 49
+  },
+  "companion_home": "/home/polaris/digital_life",
+  "errors": [],
+  "milestone": "M12.1",
+  "ok": true,
+  "profile": {
+    "name": "M12 semantic retrieval readiness audit",
+    "readonly": true,
+    "require_index": false
+  },
+  "provider_calls": 0,
+  "recommendation": "m12_semantic_readiness_ready",
+  "saved_at": "2026-07-20T16:29:38.647311",
+  "schema_version": 1,
+  "semantic_index": {
+    "coverage_ratio": 0.0,
+    "covered": 0,
+    "eligible_memories": 0,
+    "entries": 0,
+    "exists": false,
+    "matches_config": false,
+    "message": "index exists=False matches_config=False covered=0/0 stale=0 missing=0",
+    "missing": 0,
+    "ok": false,
+    "stale": 0
+  },
+  "semantic_shadow": {
+    "events_scanned": 50,
+    "events_with_shadow": 6,
+    "failed": 0,
+    "succeeded": 0
+  },
+  "stages": [
+    {
+      "message": "config loaded (enabled=False, backend=hashing, model=hashing-v1)",
+      "name": "config_valid",
+      "status": "pass"
+    },
+    {
+      "message": "49 memories loaded; 0 prompt-eligible",
+      "name": "store_integrity",
+      "status": "pass"
+    },
+    {
+      "message": "backend 'hashing' embedded a probe (256 dims)",
+      "name": "backend_probe",
+      "status": "pass"
+    },
+    {
+      "message": "informational before backfill: index exists=False matches_config=False covered=0/0 stale=0 missing=0",
+      "name": "index_coverage_visibility",
+      "status": "pass"
+    },
+    {
+      "message": "informational: semantic shadow stays isolated telemetry (events=6, failed=0)",
+      "name": "shadow_telemetry_visibility",
+      "status": "pass"
+    },
+    {
+      "message": "readiness audit is read-only: no index writes, no store writes, no provider calls",
+      "name": "readiness_runtime_boundary",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}

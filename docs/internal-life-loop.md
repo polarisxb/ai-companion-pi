@@ -392,17 +392,141 @@ review only for edge cases. M8 must not make the human the routine memory
 administrator, and it must not reopen wake, scheduler, `/life`, raw payload, or
 semantic-shadow authority boundaries.
 
+M9 is the controlled scheduled presence milestone after the M8.7 memory freeze.
+Its design starts in `docs/m9-controlled-presence-design.md`. M9.1-M9.5 added
+read-only scheduler revalidation, a supervised dry run, explicit cron
+activation behind a Scheduler Presence Controller, a presence observation
+window, and the final controlled-presence freeze
+(`recommendation=m9_controlled_presence_frozen`), all while reusing the frozen
+wake execution path with randomized presence windows, quiet hours, a daily
+live-wake budget, and pause/rollback drills.
+
+M10 is the Signal text chat milestone after the M9.5 presence freeze. Its
+design starts in `docs/m10-signal-chat-design.md`. M10 is chat-first: inbound
+Signal messages from allowlisted senders run through the frozen M7
+`DialogueRunner` with `auto_memory=False`, and the reply returns to the sender
+over signal-cli. M10.1 adds `companion_core/signal_transport.py` (envelope
+parsing, fake transport, signal-cli transport), `companion_core/signal_chat.py`
+(config, policy, dedupe state, append-only hashed attempt ledger, bridge loop
+with pause flag and single-instance lock), and the dry-run gate
+`scripts/run_m10_signal_dry_run.py`, which writes
+`life-loop/m10_signal_dry_run_report.json`
+(`recommendation=m10_signal_dry_run_ready`) after exercising every policy
+branch with fake transport and a fake dialogue model. Real signal-cli traffic
+requires `scripts/run_m10_signal_chat.py` with passing M7/M8/M9 freeze
+evidence, a valid `life-loop/signal_chat_config.json`, and the explicit
+`--confirm-real-signal-send` flag. M10.2 adds the supervised real send trial
+in `companion_core/m10_signal_trial.py` and
+`scripts/run_m10_signal_trial.py`; it requires M10.1 evidence plus the
+confirmation flag and writes `life-loop/m10_signal_trial_report.json`
+(`m10_signal_trial_ready`) only when at least one allowlisted message was
+answered without failures. M10.3 adds explicit listener activation in
+`companion_core/m10_signal_activation.py` and
+`scripts/run_m10_signal_activation.py`; `--enable` installs exactly one
+managed systemd user service (`companion-signal-chat.service`) and
+`--disable` is the recorded rollback, writing
+`life-loop/m10_signal_activation_report.json`. M10.4 adds the read-only
+observation gate in `companion_core/m10_signal_observation.py`
+(`life-loop/m10_signal_observation_report.json`), checking decision health,
+allowlist discipline, dedupe, budget, hashed-only storage, and a reversible
+pause drill. M10.5 adds the read-only final freeze in
+`companion_core/m10_signal_freeze.py`
+(`life-loop/m10_signal_freeze_report.json`,
+`recommendation=m10_signal_chat_frozen`). M10 must not send proactive or
+scheduled Signal messages, store raw envelopes or raw provider payloads,
+expand memory authority, or mutate scheduler state.
+
+M11 is the Signal outbound milestone after M10. Its design starts in
+`docs/m11-signal-outbound-design.md`. M11 lets accepted wake cycles reach the
+human: the wake `===SIGNAL===` section (previously hard-coded `NOSEND`) is
+captured by `companion_core/signal_outbox.py` into the durable, redacted
+outbox `life-loop/signal_outbox.jsonl`, with hash-only `signal_outbox`
+metadata on the wake event; rejected wakes suppress capture like every other
+write. Delivery is owned by the M10 bridge service through
+`deliver_outbox_once`, is disabled unless `outbound_enabled=true` in
+`life-loop/signal_chat_config.json`, and enforces one allowlisted recipient,
+outbound quiet hours, a small daily outbound budget, entry expiry, length
+caps, per-wake dedupe, one bounded send retry, and abandonment after
+`outbound_max_send_attempts`; retryable holds (pause flags, quiet hours,
+budget) defer silently while terminal outcomes land in the attempt ledger
+with `direction=outbound`. Gates mirror M10: M11.3 dry run
+(`scripts/run_m11_outbound_dry_run.py`,
+`recommendation=m11_signal_outbound_dry_run_ready`), M11.4 supervised trial
+(`scripts/run_m11_outbound_trial.py`, requires M10.2/M10.3 evidence and
+`--confirm-real-signal-send`), M11.5 read-only observation
+(`scripts/run_m11_outbound_observation.py`), and M11.6 final freeze
+(`scripts/run_m11_outbound_freeze.py`,
+`recommendation=m11_signal_outbound_frozen`, which also requires the M10.5
+chat freeze). The wake path itself never sends; M11 must not deliver
+request/journal content, message unknown numbers, or change M9 scheduler and
+M8 memory contracts.
+
+M12 is the semantic retrieval milestone after the Signal channel work. Its
+design starts in `docs/m12-semantic-retrieval-design.md`. M12 resolves the
+long-standing JSON-vs-semantic decision: `memory_store.json` stays the
+authoritative record and M8 policy filters keep final authority, while a
+derived, rebuildable vector index (`life-loop/semantic_index.json`) lets the
+M8 retrieval assembler rank already-approved memories by meaning.
+`companion_core/semantic_retrieval.py` provides the config
+(`life-loop/semantic_retrieval_config.json`, ships disabled), a deterministic
+dependency-free hashing backend, a sentence-transformers backend for the Pi
+(default `paraphrase-multilingual-MiniLM-L12-v2`), and the ranking layer;
+every failure mode (disabled config, missing index, unavailable backend,
+stale entries) degrades to the existing lexical scoring without raising.
+Retrieval never writes the index; only the idempotent M12.3 sync
+(`scripts/run_m12_semantic_backfill.py`) mutates it, and deleting the index
+file is a complete rollback. Gates: M12.1 read-only readiness audit
+(`scripts/run_m12_semantic_readiness.py`), M12.2 behavior gate proving
+semantic gain, policy immunity at similarity 1.0, deterministic fallback, and
+read-only retrieval (`scripts/run_m12_semantic_retrieval_check.py`), M12.3
+backfill report, M12.4 read-only observation with a live retrieval probe and
+fallback drill (`scripts/run_m12_semantic_observation.py`), and the M12.5
+final freeze (`scripts/run_m12_semantic_freeze.py`,
+`recommendation=m12_semantic_retrieval_frozen`), which also requires intact
+M7.6/M8.7 freezes. M12 must not change memory acceptance policy, promote the
+M3.23 semantic shadow store, or add prompt authority to proposals and
+quarantined memories.
+
+M13 is the Feishu chat channel milestone after M12. Its design starts in
+`docs/m13-feishu-chat-design.md`. Signal is blocked in mainland China, so the
+human confirmed Feishu (飞书) self-built-app bots as the production chat
+channel; the M10/M11 chat stack was transport-pluggable by design, and M13
+reuses its policy, budgets, dedupe, pause flags, ledger, outbox delivery, and
+the M7 dialogue engine unchanged. `companion_core/feishu_transport.py` parses
+`im.message.receive_v1` events, sends text through the REST API with a cached
+tenant token and one stale-token retry (stdlib urllib), and adapts the
+official `lark-oapi` long-connection WebSocket (lazily imported; the Pi needs
+no public IP) to the poll-based bridge through a thread-safe queue. Ledger
+records carry an explicit `channel` field (`signal` by default for older
+records, `feishu` for M13); conversation ids use the `feishu_` prefix; the
+config schema is shared (`life-loop/feishu_chat_config.json`, account =
+app_id, allowlisted open_ids) and credentials live only in
+`.secrets/feishu.env`. Gates mirror M10: M13.1 dry run
+(`scripts/run_m13_feishu_dry_run.py`,
+`recommendation=m13_feishu_dry_run_ready`, including a stubbed-HTTP
+token/send/retry stage and secret-hygiene checks), M13.2 supervised trial
+(`scripts/run_m13_feishu_trial.py`, requires `--confirm-real-feishu-send`),
+M13.3 activation of exactly one managed systemd user unit
+(`companion-feishu-chat.service` via `scripts/run_m13_feishu_activation.py`),
+M13.4 read-only observation scoped to feishu-channel records, and the M13.5
+final freeze (`recommendation=m13_feishu_chat_frozen`). M10/M11 gates now
+scope to the signal channel; the Signal transport remains in the repo as an
+alternative. M13 is text-only: images, voice bubbles, and cards are later
+milestones.
+
 For the full real-provider trial path, see `docs/m3-real-trial.md`.
 
 ## Expansion Plan
 
 1. Keep M7 text dialogue frozen without reopening M3-M6 contracts.
-2. Execute M8 memory steward and dialogue-humanity hardening.
+2. Execute M8 memory steward and dialogue-humanity hardening. (Done: M8.7
+   memory/dialogue freeze.)
 3. Revisit scheduler handoff after accepted/retrieved memory improves ordinary
    dialogue continuity; do not replace cron or install timers as part of M8.
+   (Done: M9.5 controlled presence freeze.)
 4. Add optional Signal delivery as an output/input adapter only after text
    dialogue and memory stewardship are frozen and scheduler handoff is
-   explicitly approved.
+   explicitly approved. (In progress: M10 Signal text chat, inbound-reply only.)
 5. Add voice, hardware/body adapters, and broader product surfaces only after
    the internal companion loop is stable, observable, recoverable, frozen on the
    Pi, reachable through text dialogue, and backed by safe memory stewardship.

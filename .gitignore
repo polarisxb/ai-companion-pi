@@ -60,6 +60,14 @@ life-loop/context_capsule.json
 life-loop/scheduler_attempts.jsonl
 life-loop/scheduler_presence_state.json
 life-loop/model_outputs/
+life-loop/signal_chat_config.json
+life-loop/signal_chat_state.json
+life-loop/signal_chat_attempts.jsonl
+life-loop/signal_outbox.jsonl
+life-loop/semantic_retrieval_config.json
+life-loop/semantic_index.json
+life-loop/feishu_chat_config.json
+life-loop/*.flag
 
 # Dialogue runtime state (personal/local)
 conversations/

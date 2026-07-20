@@ -1,0 +1,118 @@
+{
+  "boundaries": {
+    "cron_replacement": false,
+    "memory_authority_expanded": false,
+    "proactive_outbound_sent": false,
+    "provider_generation_requested": false,
+    "raw_provider_payload_stored": false,
+    "raw_signal_envelope_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "service_mutated": false,
+    "signal_cli_invoked": false,
+    "timer_installation": false,
+    "voice_output": false,
+    "wake_cycle_run": false,
+    "wake_path_sends": false
+  },
+  "companion_home": "/home/polaris/digital_life",
+  "dry_run": {
+    "decision_counts": {
+      "delivered": 1,
+      "failed": 1,
+      "skipped": 5
+    },
+    "defer_reasons_covered": [
+      "chat_paused",
+      "daily_budget_exhausted",
+      "outbound_paused",
+      "quiet_hours"
+    ],
+    "defer_reasons_missing": [],
+    "disabled_noop_confirmed": true,
+    "record_count": 7,
+    "skip_reasons_covered": [
+      "abandoned_after_max_attempts",
+      "content_too_long",
+      "duplicate_delivery",
+      "expired",
+      "recipient_missing"
+    ],
+    "skip_reasons_missing": []
+  },
+  "errors": [],
+  "milestone": "M11.3",
+  "next_commands": [
+    ".venv/bin/python scripts/run_m11_outbound_trial.py --companion-home /home/polaris/digital_life --confirm-real-signal-send"
+  ],
+  "ok": true,
+  "profile": {
+    "provider_calls": 0,
+    "transport": "fake",
+    "write_runtime": true
+  },
+  "provider_calls": 0,
+  "recommendation": "m11_signal_outbound_dry_run_ready",
+  "saved_at": "2026-07-20T16:00:58.518814",
+  "schema_version": 1,
+  "signal_outbound": {
+    "attempts_file": "life-loop/signal_chat_attempts.jsonl",
+    "chat_pause_flag_path": "life-loop/signal_chat_pause.flag",
+    "outbound_pause_flag_path": "life-loop/signal_outbound_pause.flag",
+    "outbox_file": "life-loop/signal_outbox.jsonl"
+  },
+  "stages": [
+    {
+      "message": "5 normalization fixtures behave as expected",
+      "name": "signal_normalization",
+      "status": "pass"
+    },
+    {
+      "message": "7 records cover all terminal decisions and skip reasons",
+      "name": "outbound_scenario_coverage",
+      "status": "pass"
+    },
+    {
+      "message": "all retryable hold reasons probe correctly and defer silently",
+      "name": "outbound_defer_coverage",
+      "status": "pass"
+    },
+    {
+      "message": "outbound_enabled=false is a strict no-op",
+      "name": "outbound_disabled_noop",
+      "status": "pass"
+    },
+    {
+      "message": "fake transport only; 1 deliveries, all to the configured recipient",
+      "name": "outbound_transport_boundary",
+      "status": "pass"
+    },
+    {
+      "message": "outbound records are hashed, labeled, and boundary-clean",
+      "name": "outbound_ledger_hygiene",
+      "status": "pass"
+    },
+    {
+      "message": "7 hashed dry-run records appended to signal_chat_attempts.jsonl",
+      "name": "outbound_ledger_writes",
+      "status": "pass"
+    },
+    {
+      "message": "wake capture stays network-free; only the bridge delivers",
+      "name": "capture_boundary",
+      "status": "pass"
+    },
+    {
+      "message": "config template carries outbound keys with safe defaults",
+      "name": "outbound_config_template",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": [],
+  "transport": {
+    "fake_transport_only": true,
+    "outbound_sends": 1,
+    "recipients_match_configured": true,
+    "signal_cli_invoked": false
+  }
+}

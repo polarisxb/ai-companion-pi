@@ -1,0 +1,137 @@
+{
+  "boundaries": {
+    "json_store_remains_authoritative": true,
+    "policy_filters_before_ranking": true,
+    "proposal_or_quarantine_prompt_authority": false,
+    "provider_generation_requested": false,
+    "retrieval_writes_index": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "wake_cycle_run": false
+  },
+  "companion_home": "/home/polaris/digital_life",
+  "errors": [],
+  "milestone": "M12.2",
+  "ok": true,
+  "profile": {
+    "backend": "hashing",
+    "name": "M12 semantic retrieval behavior gate",
+    "provider_calls": 0,
+    "smoke_home_isolated": true
+  },
+  "provider_calls": 0,
+  "recommendation": "m12_semantic_retrieval_ready",
+  "saved_at": "2026-07-20T16:29:38.756313",
+  "scenarios": {
+    "baseline": {
+      "filtered": [
+        {
+          "id": "mem_quarantine",
+          "reason": "not_prompt_eligible_accepted_memory"
+        }
+      ],
+      "memories": [
+        {
+          "authority": "user_asserted",
+          "content": "今天整理了房间，把书架擦干净了。",
+          "id": "mem_decoy",
+          "memory_type": "semantic",
+          "reasons": [
+            "prompt_eligible_accepted_memory"
+          ],
+          "score": 1
+        },
+        {
+          "authority": "user_asserted",
+          "content": "海边散步让人放松，那天的浪声一直记得。",
+          "id": "mem_target",
+          "memory_type": "semantic",
+          "reasons": [
+            "prompt_eligible_accepted_memory"
+          ],
+          "score": 1
+        }
+      ],
+      "query": "想去海边玩",
+      "semantic": {
+        "backend": "lexical",
+        "missing_from_index": 0,
+        "model": null,
+        "scored": 0,
+        "skipped_below_threshold": 0,
+        "stale_in_index": 0,
+        "status": "disabled"
+      }
+    },
+    "semantic": {
+      "filtered": [
+        {
+          "id": "mem_quarantine",
+          "reason": "not_prompt_eligible_accepted_memory"
+        }
+      ],
+      "memories": [
+        {
+          "authority": "user_asserted",
+          "content": "海边散步让人放松，那天的浪声一直记得。",
+          "id": "mem_target",
+          "memory_type": "semantic",
+          "reasons": [
+            "prompt_eligible_accepted_memory",
+            "semantic_similarity:0.20"
+          ],
+          "score": 3
+        },
+        {
+          "authority": "user_asserted",
+          "content": "今天整理了房间，把书架擦干净了。",
+          "id": "mem_decoy",
+          "memory_type": "semantic",
+          "reasons": [
+            "prompt_eligible_accepted_memory"
+          ],
+          "score": 1
+        }
+      ],
+      "query": "想去海边玩",
+      "semantic": {
+        "backend": "semantic+lexical",
+        "missing_from_index": 0,
+        "model": "hashing-v1",
+        "scored": 1,
+        "skipped_below_threshold": 1,
+        "stale_in_index": 0,
+        "status": "applied"
+      }
+    }
+  },
+  "schema_version": 1,
+  "stages": [
+    {
+      "message": "hashing index built in the smoke home",
+      "name": "smoke_backfill",
+      "status": "pass"
+    },
+    {
+      "message": "semantic ranking surfaced a meaning-adjacent memory that lexical scoring missed",
+      "name": "semantic_gain",
+      "status": "pass"
+    },
+    {
+      "message": "identical-content quarantined memory stays excluded at similarity 1.0",
+      "name": "policy_immunity",
+      "status": "pass"
+    },
+    {
+      "message": "disabled config, missing index, and failing backend all degrade to lexical retrieval",
+      "name": "deterministic_fallback",
+      "status": "pass"
+    },
+    {
+      "message": "retrieval left the store and index byte-identical",
+      "name": "retrieval_readonly",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": []
+}

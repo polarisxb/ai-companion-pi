@@ -1,4 +1,5 @@
 flask
+lark-oapi
 markdown
 mcp
 numpy

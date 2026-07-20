@@ -1138,6 +1138,286 @@ def _m9_controlled_presence_lines(
     return lines
 
 
+def _m10_signal_chat_lines(
+    dry_run_report,
+    trial_report,
+    activation_report,
+    observation_report,
+    freeze_report,
+):
+    lines = ["M10 Signal Chat"]
+    if not any((dry_run_report, trial_report, activation_report, observation_report, freeze_report)):
+        lines.append("No M10 signal chat report captured.")
+        return lines
+
+    for title, report in (
+        ("M10 Dry Run", dry_run_report),
+        ("M10 Send Trial", trial_report),
+        ("M10 Activation", activation_report),
+        ("M10 Observation", observation_report),
+        ("M10 Final Freeze", freeze_report),
+    ):
+        if report:
+            lines.extend(_report_lines(title, report))
+
+    dry_run = dry_run_report.get("dry_run") if isinstance(dry_run_report.get("dry_run"), dict) else {}
+    if dry_run:
+        lines.append("dry_run_attempts=" + escape(str(dry_run.get("attempt_count"))))
+        decisions = dry_run.get("decision_counts") if isinstance(dry_run.get("decision_counts"), dict) else {}
+        for decision in ("replied", "skipped", "failed"):
+            lines.append(f"decision_{decision}={escape(str(decisions.get(decision, 0)))}")
+        missing = dry_run.get("skip_reasons_missing")
+        lines.append("skip_reasons_missing=" + escape(str(missing if missing else "none")))
+
+    transport = dry_run_report.get("transport") if isinstance(dry_run_report.get("transport"), dict) else {}
+    if transport:
+        lines.append("fake_transport_only=" + escape(str(transport.get("fake_transport_only"))))
+        lines.append("signal_cli_invoked=" + escape(str(transport.get("signal_cli_invoked"))))
+        lines.append("proactive_outbound_sent=" + escape(str(transport.get("proactive_outbound_sent"))))
+
+    signal_chat = dry_run_report.get("signal_chat") if isinstance(dry_run_report.get("signal_chat"), dict) else {}
+    if signal_chat:
+        if signal_chat.get("attempts_file"):
+            lines.append("signal_attempts_file=" + escape(str(signal_chat["attempts_file"])))
+        if signal_chat.get("pause_flag_path"):
+            lines.append("signal_pause_flag_path=" + escape(str(signal_chat["pause_flag_path"])))
+        lines.append("signal_config_present=" + escape(str(signal_chat.get("config_present"))))
+
+    service = {}
+    for report in (freeze_report, activation_report):
+        candidate = report.get("service") if isinstance(report.get("service"), dict) else {}
+        if candidate:
+            service = candidate
+            break
+    if service:
+        lines.append("signal_service_mechanism=" + escape(str(service.get("mechanism"))))
+        lines.append("signal_service_enabled=" + escape(str(service.get("enabled"))))
+        lines.append("signal_service_artifact_count=" + escape(str(service.get("artifact_count"))))
+        if service.get("unit_name"):
+            lines.append("signal_service_unit=" + escape(str(service["unit_name"])))
+        if service.get("rollback_command"):
+            lines.append("signal_rollback_command=" + escape(str(service["rollback_command"])))
+
+    observation = observation_report.get("observation") if isinstance(observation_report.get("observation"), dict) else {}
+    if observation:
+        lines.append("signal_observed_attempts=" + escape(str(observation.get("observed_attempts"))))
+        observed_decisions = observation.get("decision_counts") if isinstance(observation.get("decision_counts"), dict) else {}
+        for decision in ("replied", "skipped", "failed"):
+            lines.append(f"signal_observed_{decision}={escape(str(observed_decisions.get(decision, 0)))}")
+
+    evidence = freeze_report.get("evidence") if isinstance(freeze_report.get("evidence"), dict) else {}
+    if evidence:
+        lines.append("signal_live_attempts_observed=" + escape(str(evidence.get("live_attempts_observed"))))
+        lines.append("signal_pause_drill_ready=" + escape(str(evidence.get("pause_drill_ready"))))
+        lines.append("signal_rollback_documented=" + escape(str(evidence.get("rollback_documented"))))
+
+    final_freeze = freeze_report.get("final_freeze") if isinstance(freeze_report.get("final_freeze"), dict) else {}
+    if final_freeze:
+        lines.append("m10_frozen=" + escape(str(final_freeze.get("frozen"))))
+        lines.append("signal_chat_ready=" + escape(str(final_freeze.get("signal_chat_ready"))))
+        lines.append("signal_service_reversible=" + escape(str(final_freeze.get("service_reversible"))))
+
+    for report in (dry_run_report, trial_report, activation_report, observation_report, freeze_report):
+        if not report:
+            continue
+        for reason in report.get("stop_reasons", []) or []:
+            lines.append("stop_reason=" + escape(str(reason)))
+
+    return lines
+
+
+def _m11_signal_outbound_lines(
+    dry_run_report,
+    trial_report,
+    observation_report,
+    freeze_report,
+):
+    lines = ["M11 Signal Outbound"]
+    if not any((dry_run_report, trial_report, observation_report, freeze_report)):
+        lines.append("No M11 signal outbound report captured.")
+        return lines
+
+    for title, report in (
+        ("M11 Outbound Dry Run", dry_run_report),
+        ("M11 Outbound Trial", trial_report),
+        ("M11 Outbound Observation", observation_report),
+        ("M11 Outbound Freeze", freeze_report),
+    ):
+        if report:
+            lines.extend(_report_lines(title, report))
+
+    dry_run = dry_run_report.get("dry_run") if isinstance(dry_run_report.get("dry_run"), dict) else {}
+    if dry_run:
+        decisions = dry_run.get("decision_counts") if isinstance(dry_run.get("decision_counts"), dict) else {}
+        for decision in ("delivered", "skipped", "failed"):
+            lines.append(f"outbound_dry_{decision}={escape(str(decisions.get(decision, 0)))}")
+        missing = dry_run.get("skip_reasons_missing")
+        lines.append("outbound_skip_reasons_missing=" + escape(str(missing if missing else "none")))
+        lines.append("outbound_disabled_noop=" + escape(str(dry_run.get("disabled_noop_confirmed"))))
+
+    observation = observation_report.get("observation") if isinstance(observation_report.get("observation"), dict) else {}
+    if observation:
+        lines.append("outbound_observed_records=" + escape(str(observation.get("observed_records"))))
+        observed_decisions = observation.get("decision_counts") if isinstance(observation.get("decision_counts"), dict) else {}
+        for decision in ("delivered", "skipped", "failed"):
+            lines.append(f"outbound_observed_{decision}={escape(str(observed_decisions.get(decision, 0)))}")
+
+    evidence = freeze_report.get("evidence") if isinstance(freeze_report.get("evidence"), dict) else {}
+    if evidence:
+        lines.append("outbound_records_observed=" + escape(str(evidence.get("outbound_records_observed"))))
+        lines.append("outbound_delivered_observed=" + escape(str(evidence.get("delivered_observed"))))
+        lines.append("outbound_pause_drill_ready=" + escape(str(evidence.get("pause_drill_ready"))))
+
+    final_freeze = freeze_report.get("final_freeze") if isinstance(freeze_report.get("final_freeze"), dict) else {}
+    if final_freeze:
+        lines.append("m11_frozen=" + escape(str(final_freeze.get("frozen"))))
+        lines.append("outbound_ready=" + escape(str(final_freeze.get("outbound_ready"))))
+        lines.append("outbound_reversible=" + escape(str(final_freeze.get("outbound_reversible"))))
+
+    for report in (dry_run_report, trial_report, observation_report, freeze_report):
+        if not report:
+            continue
+        for reason in report.get("stop_reasons", []) or []:
+            lines.append("stop_reason=" + escape(str(reason)))
+
+    return lines
+
+
+def _m12_semantic_retrieval_lines(
+    readiness_report,
+    retrieval_report,
+    backfill_report,
+    observation_report,
+    freeze_report,
+):
+    lines = ["M12 Semantic Retrieval"]
+    if not any((readiness_report, retrieval_report, backfill_report, observation_report, freeze_report)):
+        lines.append("No M12 semantic retrieval report captured.")
+        return lines
+
+    for title, report in (
+        ("M12 Readiness", readiness_report),
+        ("M12 Retrieval Check", retrieval_report),
+        ("M12 Backfill", backfill_report),
+        ("M12 Observation", observation_report),
+        ("M12 Final Freeze", freeze_report),
+    ):
+        if report:
+            lines.extend(_report_lines(title, report))
+
+    backend_probe = {}
+    for report in (observation_report, readiness_report):
+        candidate = report.get("backend_probe") if isinstance(report.get("backend_probe"), dict) else {}
+        if candidate:
+            backend_probe = candidate
+            break
+    if backend_probe:
+        lines.append("semantic_backend=" + escape(str(backend_probe.get("backend"))))
+        lines.append("semantic_model=" + escape(str(backend_probe.get("model"))))
+
+    coverage = {}
+    for report in (observation_report, readiness_report):
+        candidate = report.get("index_coverage") if isinstance(report.get("index_coverage"), dict) else {}
+        if not candidate and isinstance(report.get("semantic_index"), dict):
+            candidate = report["semantic_index"]
+        if candidate and "coverage_ratio" in candidate:
+            coverage = candidate
+            break
+    if coverage:
+        lines.append("semantic_index_entries=" + escape(str(coverage.get("entries"))))
+        lines.append("semantic_coverage_ratio=" + escape(str(coverage.get("coverage_ratio"))))
+        lines.append("semantic_index_stale=" + escape(str(coverage.get("stale"))))
+
+    counts = backfill_report.get("counts") if isinstance(backfill_report.get("counts"), dict) else {}
+    if counts:
+        lines.append("semantic_backfill_new=" + escape(str(counts.get("embedded_new"))))
+        lines.append("semantic_backfill_refreshed=" + escape(str(counts.get("refreshed_stale"))))
+        lines.append("semantic_backfill_pruned=" + escape(str(counts.get("pruned"))))
+
+    live_probe = observation_report.get("live_probe") if isinstance(observation_report.get("live_probe"), dict) else {}
+    if isinstance(live_probe.get("semantic"), dict):
+        lines.append("semantic_live_status=" + escape(str(live_probe["semantic"].get("status"))))
+
+    final_freeze = freeze_report.get("final_freeze") if isinstance(freeze_report.get("final_freeze"), dict) else {}
+    if final_freeze:
+        lines.append("m12_frozen=" + escape(str(final_freeze.get("frozen"))))
+        lines.append("json_store_authoritative=" + escape(str(final_freeze.get("json_store_authoritative"))))
+        lines.append("semantic_index_reversible=" + escape(str(final_freeze.get("index_reversible"))))
+
+    for report in (readiness_report, retrieval_report, backfill_report, observation_report, freeze_report):
+        if not report:
+            continue
+        for reason in report.get("stop_reasons", []) or []:
+            lines.append("stop_reason=" + escape(str(reason)))
+
+    return lines
+
+
+def _m13_feishu_chat_lines(
+    dry_run_report,
+    trial_report,
+    activation_report,
+    observation_report,
+    freeze_report,
+):
+    lines = ["M13 Feishu Chat"]
+    if not any((dry_run_report, trial_report, activation_report, observation_report, freeze_report)):
+        lines.append("No M13 feishu chat report captured.")
+        return lines
+
+    for title, report in (
+        ("M13 Dry Run", dry_run_report),
+        ("M13 Reply Trial", trial_report),
+        ("M13 Activation", activation_report),
+        ("M13 Observation", observation_report),
+        ("M13 Final Freeze", freeze_report),
+    ):
+        if report:
+            lines.extend(_report_lines(title, report))
+
+    dry_run = dry_run_report.get("dry_run") if isinstance(dry_run_report.get("dry_run"), dict) else {}
+    if dry_run:
+        decisions = dry_run.get("decision_counts") if isinstance(dry_run.get("decision_counts"), dict) else {}
+        for decision in ("replied", "skipped", "failed"):
+            lines.append(f"feishu_dry_{decision}={escape(str(decisions.get(decision, 0)))}")
+        lines.append("feishu_conversation_prefix=" + escape(str(dry_run.get("conversation_prefix_confirmed"))))
+
+    transport = dry_run_report.get("transport") if isinstance(dry_run_report.get("transport"), dict) else {}
+    if transport:
+        lines.append("feishu_api_invoked=" + escape(str(transport.get("feishu_api_invoked"))))
+        lines.append("feishu_fake_transport_only=" + escape(str(transport.get("fake_transport_only"))))
+
+    service = {}
+    for report in (freeze_report, activation_report):
+        candidate = report.get("service") if isinstance(report.get("service"), dict) else {}
+        if candidate:
+            service = candidate
+            break
+    if service:
+        lines.append("feishu_service_enabled=" + escape(str(service.get("enabled"))))
+        if service.get("unit_name"):
+            lines.append("feishu_service_unit=" + escape(str(service["unit_name"])))
+        if service.get("rollback_command"):
+            lines.append("feishu_rollback_command=" + escape(str(service["rollback_command"])))
+
+    observation = observation_report.get("observation") if isinstance(observation_report.get("observation"), dict) else {}
+    if observation:
+        lines.append("feishu_observed_attempts=" + escape(str(observation.get("observed_attempts"))))
+
+    final_freeze = freeze_report.get("final_freeze") if isinstance(freeze_report.get("final_freeze"), dict) else {}
+    if final_freeze:
+        lines.append("m13_frozen=" + escape(str(final_freeze.get("frozen"))))
+        lines.append("feishu_chat_ready=" + escape(str(final_freeze.get("feishu_chat_ready"))))
+
+    for report in (dry_run_report, trial_report, activation_report, observation_report, freeze_report):
+        if not report:
+            continue
+        for reason in report.get("stop_reasons", []) or []:
+            lines.append("stop_reason=" + escape(str(reason)))
+
+    return lines
+
+
 def _near_status_lines():
     lines = ["Near-status TTL"]
     capsule = _load_json(COMPANION_HOME / "life-loop" / "context_capsule.json", default={}) or {}
@@ -1187,6 +1467,25 @@ def render_life_dashboard():
     m9_scheduler_activation = _report("m9_scheduler_activation_report.json")
     m9_presence_observation = _report("m9_presence_observation_report.json")
     m9_presence_freeze = _report("m9_presence_freeze_report.json")
+    m10_signal_dry_run = _report("m10_signal_dry_run_report.json")
+    m10_signal_trial = _report("m10_signal_trial_report.json")
+    m10_signal_activation = _report("m10_signal_activation_report.json")
+    m10_signal_observation = _report("m10_signal_observation_report.json")
+    m10_signal_freeze = _report("m10_signal_freeze_report.json")
+    m11_outbound_dry_run = _report("m11_signal_outbound_dry_run_report.json")
+    m11_outbound_trial = _report("m11_signal_outbound_trial_report.json")
+    m11_outbound_observation = _report("m11_signal_outbound_observation_report.json")
+    m11_outbound_freeze = _report("m11_signal_outbound_freeze_report.json")
+    m12_semantic_readiness = _report("m12_semantic_readiness_report.json")
+    m12_semantic_retrieval = _report("m12_semantic_retrieval_report.json")
+    m12_semantic_backfill = _report("m12_semantic_backfill_report.json")
+    m12_semantic_observation = _report("m12_semantic_observation_report.json")
+    m12_semantic_freeze = _report("m12_semantic_freeze_report.json")
+    m13_feishu_dry_run = _report("m13_feishu_dry_run_report.json")
+    m13_feishu_trial = _report("m13_feishu_trial_report.json")
+    m13_feishu_activation = _report("m13_feishu_activation_report.json")
+    m13_feishu_observation = _report("m13_feishu_observation_report.json")
+    m13_feishu_freeze = _report("m13_feishu_freeze_report.json")
 
     sections = [
         ("Internal Life Loop", _event_life_lines(latest)),
@@ -1227,6 +1526,33 @@ def render_life_dashboard():
             m9_scheduler_activation,
             m9_presence_observation,
             m9_presence_freeze,
+        )),
+        ("M10 Signal Chat", _m10_signal_chat_lines(
+            m10_signal_dry_run,
+            m10_signal_trial,
+            m10_signal_activation,
+            m10_signal_observation,
+            m10_signal_freeze,
+        )),
+        ("M11 Signal Outbound", _m11_signal_outbound_lines(
+            m11_outbound_dry_run,
+            m11_outbound_trial,
+            m11_outbound_observation,
+            m11_outbound_freeze,
+        )),
+        ("M12 Semantic Retrieval", _m12_semantic_retrieval_lines(
+            m12_semantic_readiness,
+            m12_semantic_retrieval,
+            m12_semantic_backfill,
+            m12_semantic_observation,
+            m12_semantic_freeze,
+        )),
+        ("M13 Feishu Chat", _m13_feishu_chat_lines(
+            m13_feishu_dry_run,
+            m13_feishu_trial,
+            m13_feishu_activation,
+            m13_feishu_observation,
+            m13_feishu_freeze,
         )),
         ("Near-status TTL", _near_status_lines()),
     ]
@@ -1808,6 +2134,69 @@ TEMPLATE = """
         .chat-form textarea:focus { outline: none; border-color: var(--accent-blue); }
         .chat-form .chat-options { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
         .chat-form input, .chat-form select { background: var(--bg-deep); border: 1px solid var(--border); border-radius: 6px; color: var(--text-secondary); padding: 8px 10px; }
+        .chatx-topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+        .chatx-topbar .card-title { margin-bottom: 0; }
+        .chatx-new-btn { font-size: 0.78em; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 999px;
+            padding: 6px 14px; text-decoration: none; transition: all 0.2s; }
+        .chatx-new-btn:hover { color: var(--text-primary); border-color: var(--accent-blue); }
+        .chatx-meta-inline { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.7em; color: var(--text-dim); margin-bottom: 10px; }
+        .chatx-shell { display: flex; flex-direction: column; height: calc(100vh - 330px); min-height: 460px;
+            background: var(--bg-deep); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+        .chatx-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 20px 18px 14px;
+            scroll-behavior: smooth; }
+        .chatx-messages::-webkit-scrollbar { width: 5px; }
+        .chatx-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        .chatx-day { align-self: center; font-size: 0.68em; color: var(--text-dim); background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: 999px; padding: 3px 12px; margin: 4px 0; }
+        .chatx-row { display: flex; gap: 9px; max-width: 80%; animation: chatxin 0.22s ease-out; }
+        @keyframes chatxin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        .chatx-row.human { align-self: flex-end; flex-direction: row-reverse; }
+        .chatx-row.assistant { align-self: flex-start; }
+        .chatx-avatar { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center;
+            justify-content: center; font-size: 0.82em; color: #f2f3f8; letter-spacing: 0; margin-top: 2px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.35); }
+        .chatx-row.assistant .chatx-avatar { background: linear-gradient(135deg, var(--accent-purple), var(--heart)); }
+        .chatx-row.human .chatx-avatar { background: linear-gradient(135deg, var(--accent-blue), #3a8a8a); }
+        .chatx-body { display: flex; flex-direction: column; min-width: 0; }
+        .chatx-row.human .chatx-body { align-items: flex-end; }
+        .chatx-row.assistant .chatx-body { align-items: flex-start; }
+        .chatx-bubble { padding: 11px 16px; border-radius: 18px; line-height: 1.65; white-space: pre-wrap;
+            overflow-wrap: anywhere; font-size: 0.95em; box-shadow: 0 2px 10px rgba(0,0,0,0.22); }
+        .chatx-row.human .chatx-bubble { background: linear-gradient(135deg, var(--accent-blue), #56548f);
+            color: #f0f2f8; border-top-right-radius: 6px; }
+        .chatx-row.assistant .chatx-bubble { background: var(--bg-card); border: 1px solid var(--border);
+            color: var(--text-primary); border-top-left-radius: 6px; }
+        .chatx-row.failed .chatx-bubble { box-shadow: inset 0 0 0 1px var(--accent-red); opacity: 0.8; }
+        .chatx-time { font-size: 0.66em; color: var(--text-dim); margin: 4px 6px 0; }
+        .chatx-time .chatx-fail { color: var(--accent-red); }
+        .chatx-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 14px; color: var(--text-secondary); text-align: center; line-height: 1.9; padding: 30px 20px; }
+        .chatx-empty .chatx-empty-avatar { width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-size: 1.35em; color: #f2f3f8;
+            background: linear-gradient(135deg, var(--accent-purple), var(--heart)); box-shadow: 0 4px 18px rgba(122,90,160,0.4); }
+        .chatx-empty .chatx-empty-hint { font-size: 0.8em; color: var(--text-dim); }
+        .chatx-typing-row { display: none; gap: 9px; align-self: flex-start; max-width: 80%; }
+        .chatx-typing-row.on { display: flex; }
+        .chatx-typing-bubble { padding: 14px 18px; border-radius: 18px; border-top-left-radius: 6px;
+            background: var(--bg-card); border: 1px solid var(--border); display: flex; gap: 5px; align-items: center; }
+        .chatx-typing-bubble .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-secondary);
+            animation: chatxblink 1.2s infinite; }
+        .chatx-typing-bubble .dot:nth-child(2) { animation-delay: 0.2s; }
+        .chatx-typing-bubble .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes chatxblink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+        .chatx-composer { display: flex; gap: 10px; align-items: flex-end; padding: 12px 14px;
+            background: var(--bg-card); border-top: 1px solid var(--border); }
+        .chatx-composer textarea { flex: 1; resize: none; min-height: 44px; max-height: 150px; padding: 12px 18px;
+            border-radius: 22px; background: var(--bg-deep); border: 1px solid var(--border); color: var(--text-primary);
+            font-family: inherit; font-size: 0.95em; line-height: 1.5; transition: border-color 0.2s; }
+        .chatx-composer textarea:focus { outline: none; border-color: var(--accent-blue); }
+        .chatx-send-btn { height: 44px; padding: 0 22px; border: none; border-radius: 22px; cursor: pointer;
+            background: linear-gradient(135deg, var(--accent-blue), #56548f); color: #f0f2f8; font-family: inherit;
+            font-size: 0.9em; letter-spacing: 0.05em; transition: filter 0.2s, transform 0.1s; }
+        .chatx-send-btn:hover { filter: brightness(1.15); }
+        .chatx-send-btn:active { transform: scale(0.97); }
+        .chatx-send-btn:disabled { opacity: 0.45; cursor: default; filter: none; }
+        .chatx-transcript-path { font-size: 0.66em; color: var(--text-dim); margin-top: 10px; overflow-wrap: anywhere; }
 
         /* ── Footer ── */
         .footer { text-align: center; padding: 40px 0 20px; margin-top: 40px;
@@ -1836,6 +2225,11 @@ TEMPLATE = """
             .reply-form { flex-direction: column; }
             .chat-row { max-width: 100%; }
             .chat-form .chat-options { flex-direction: column; align-items: stretch; }
+            .chatx-row { max-width: 94%; }
+            .chatx-avatar { width: 30px; height: 30px; font-size: 0.75em; }
+            .chatx-shell { height: calc(100vh - 300px); min-height: 380px; border-radius: 12px; }
+            .chatx-messages { padding: 14px 10px 10px; gap: 12px; }
+            .chatx-send-btn { padding: 0 16px; }
             .keepsake-row { grid-template-columns: repeat(3, 1fr); }
             .gallery-grid { columns: 2; }
         }
@@ -1987,40 +2381,186 @@ TEMPLATE = """
             {% endif %}
 
         {% elif page == 'chat' %}
+            {% set companion_name = status.name | default('Companion') %}
+            {% set companion_initial = companion_name[:1] %}
             <div class="card">
-                <div class="card-title">Companion Chat</div>
-                <div class="chat-meta">
-                    <span class="chat-pill">provider: {{ chat.provider }}</span>
-                    <span class="chat-pill">memory: {{ chat.memory_mode }}</span>
-                    <span class="chat-pill">conversation: {{ chat.conversation_id or 'new' }}</span>
-                    <span class="chat-pill">proposals: {{ chat.memory_proposal_count }}</span>
+                <div class="chatx-topbar">
+                    <div class="card-title">{{ companion_name }}</div>
+                    <a class="chatx-new-btn" href="/chat?conversation_id=new">+ 新对话</a>
+                </div>
+                <div class="chatx-meta-inline">
+                    <span>provider: {{ chat.provider }}</span>
+                    <span>memory: {{ chat.memory_mode }}</span>
+                    <span>conversation: {{ chat.conversation_id or 'new' }}</span>
+                    <span id="chatx-proposals">proposals: {{ chat.memory_proposal_count }}</span>
                 </div>
                 {% if chat.error %}
-                <div class="chat-error">{{ chat.error }}</div>
-                {% endif %}
-                <form class="message-form" action="/chat/send" method="POST">
-                    <input type="hidden" name="conversation_id" value="{{ chat.conversation_id }}">
-                    <textarea name="message" placeholder="type to Companion...">{{ chat.preserved_input }}</textarea>
-                    <button type="submit" class="btn">Send</button>
-                </form>
-            </div>
-
-            <div class="card">
-                <div class="card-title">Transcript{% if chat.transcript_path %} · {{ chat.transcript_path }}{% endif %}</div>
-                {% if chat.transcript %}
-                <div class="chat-transcript">
-                    {% for row in chat.transcript %}
-                    <div class="chat-row {{ row.role }} {{ row.status }}">
-                        <div class="chat-role">{{ row.role }}{% if row.status == 'failed' %} · failed{% endif %}</div>
-                        <div class="chat-content">{{ row.content }}</div>
-                        <div class="chat-time">{{ row.created_at }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
+                <div class="chat-error" id="chatx-error">{{ chat.error }}</div>
                 {% else %}
-                <div class="board-empty">no chat turns yet.</div>
+                <div class="chat-error" id="chatx-error" style="display:none"></div>
+                {% endif %}
+                <div class="chatx-shell">
+                    <div class="chatx-messages" id="chatx-messages">
+                        {% if chat.transcript %}
+                        {% set day_state = namespace(current='') %}
+                        {% for row in chat.transcript %}
+                        {% set row_day = (row.created_at or '')[:10] %}
+                        {% if row_day and row_day != day_state.current %}
+                        {% set day_state.current = row_day %}
+                        <div class="chatx-day">{{ row_day }}</div>
+                        {% endif %}
+                        <div class="chatx-row {{ row.role }} {{ row.status }}">
+                            <div class="chatx-avatar">{{ companion_initial if row.role == 'assistant' else '你' }}</div>
+                            <div class="chatx-body">
+                                <div class="chatx-bubble">{{ row.content }}</div>
+                                <div class="chatx-time">{{ (row.created_at or '')[11:16] }}{% if row.status == 'failed' %} · <span class="chatx-fail">未送达</span>{% endif %}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="chatx-empty" id="chatx-empty">
+                            <div class="chatx-empty-avatar">{{ companion_initial }}</div>
+                            <div>这里是和 {{ companion_name }} 的实时对话,<br>她现在就会回你。</div>
+                            <div class="chatx-empty-hint">留言板上的话,她要到下次醒来才会看到;这里不一样。</div>
+                        </div>
+                        {% endif %}
+                        <div class="chatx-typing-row" id="chatx-typing">
+                            <div class="chatx-avatar">{{ companion_initial }}</div>
+                            <div class="chatx-typing-bubble">
+                                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <form class="chatx-composer" id="chatx-form" action="/chat/send" method="POST">
+                        <input type="hidden" name="conversation_id" id="chatx-conversation" value="{{ chat.conversation_id }}">
+                        <textarea name="message" id="chatx-input" placeholder="说点什么..." rows="1"
+                            autocomplete="off">{{ chat.preserved_input }}</textarea>
+                        <button type="submit" class="chatx-send-btn" id="chatx-send">发送</button>
+                    </form>
+                </div>
+                {% if chat.transcript_path %}
+                <div class="chatx-transcript-path">transcript · {{ chat.transcript_path }}</div>
                 {% endif %}
             </div>
+            <script>
+            (function () {
+                var form = document.getElementById('chatx-form');
+                var input = document.getElementById('chatx-input');
+                var sendBtn = document.getElementById('chatx-send');
+                var messages = document.getElementById('chatx-messages');
+                var typing = document.getElementById('chatx-typing');
+                var errorBox = document.getElementById('chatx-error');
+                var conversationField = document.getElementById('chatx-conversation');
+                var companionInitial = {{ (status.name | default('Companion'))[:1] | tojson }};
+                if (!form || !input) return;
+
+                function scrollToBottom() { messages.scrollTop = messages.scrollHeight; }
+                function autogrow() {
+                    input.style.height = 'auto';
+                    input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+                }
+                function pad(n) { return (n < 10 ? '0' : '') + n; }
+                function ensureDayChip() {
+                    var d = new Date();
+                    var today = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+                    var chips = messages.querySelectorAll('.chatx-day');
+                    var last = chips.length ? chips[chips.length - 1].textContent : '';
+                    if (last !== today) {
+                        var chip = document.createElement('div');
+                        chip.className = 'chatx-day';
+                        chip.textContent = today;
+                        messages.insertBefore(chip, typing);
+                    }
+                }
+                function appendBubble(role, text) {
+                    var empty = document.getElementById('chatx-empty');
+                    if (empty) empty.remove();
+                    ensureDayChip();
+                    var d = new Date();
+                    var row = document.createElement('div');
+                    row.className = 'chatx-row ' + role + ' completed';
+                    var avatar = document.createElement('div');
+                    avatar.className = 'chatx-avatar';
+                    avatar.textContent = role === 'assistant' ? companionInitial : '你';
+                    var body = document.createElement('div');
+                    body.className = 'chatx-body';
+                    var bubble = document.createElement('div');
+                    bubble.className = 'chatx-bubble';
+                    bubble.textContent = text;
+                    var time = document.createElement('div');
+                    time.className = 'chatx-time';
+                    time.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
+                    body.appendChild(bubble); body.appendChild(time);
+                    row.appendChild(avatar); row.appendChild(body);
+                    messages.insertBefore(row, typing);
+                    scrollToBottom();
+                }
+                function setBusy(busy) {
+                    sendBtn.disabled = busy;
+                    typing.classList.toggle('on', busy);
+                    if (busy) scrollToBottom();
+                }
+                function showError(text) {
+                    errorBox.textContent = text;
+                    errorBox.style.display = text ? '' : 'none';
+                }
+
+                input.addEventListener('input', autogrow);
+                input.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        form.dispatchEvent(new Event('submit', { cancelable: true }));
+                    }
+                });
+
+                form.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    var text = input.value.trim();
+                    if (!text || sendBtn.disabled) return;
+                    showError('');
+                    appendBubble('human', text);
+                    input.value = '';
+                    autogrow();
+                    setBusy(true);
+                    var payload = { message: text };
+                    if (conversationField.value && conversationField.value !== 'new') {
+                        payload.conversation_id = conversationField.value;
+                    }
+                    fetch('/chat/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify(payload)
+                    }).then(function (response) {
+                        return response.json().then(function (data) { return { ok: response.ok, data: data }; });
+                    }).then(function (result) {
+                        setBusy(false);
+                        if (result.ok && result.data.ok) {
+                            appendBubble('assistant', result.data.reply);
+                            if (result.data.conversation_id) {
+                                conversationField.value = result.data.conversation_id;
+                                var url = new URL(window.location.href);
+                                url.searchParams.set('conversation_id', result.data.conversation_id);
+                                window.history.replaceState({}, '', url);
+                            }
+                        } else {
+                            input.value = (result.data && result.data.input) || text;
+                            autogrow();
+                            showError((result.data && result.data.error) || 'send failed; your text is preserved above.');
+                        }
+                    }).catch(function () {
+                        setBusy(false);
+                        input.value = text;
+                        autogrow();
+                        showError('network error; your text is preserved in the composer.');
+                    });
+                    input.focus();
+                });
+
+                autogrow();
+                scrollToBottom();
+                input.focus();
+            })();
+            </script>
 
         {% elif page == 'memory_review' %}
             <div class="card">
@@ -2922,6 +3462,10 @@ def chat_send():
     data = request.get_json(silent=True) if request.is_json else {}
     human_text = (data.get("message") if isinstance(data, dict) else None) or request.form.get("message", "")
     conversation_id = (data.get("conversation_id") if isinstance(data, dict) else None) or request.form.get("conversation_id") or None
+    if conversation_id == "new":
+        # "new" is the fresh-conversation marker from the chat page; the
+        # dialogue runner generates a real id when none is supplied.
+        conversation_id = None
     preserved_input = human_text
     if not str(human_text or "").strip():
         error = "message must not be empty"

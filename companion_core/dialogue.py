@@ -477,7 +477,15 @@ def load_transcript_turns(
     *,
     limit: int | None = None,
     include_failed: bool = False,
+    include_retracted: bool = False,
 ) -> list[dict]:
+    """Load transcript turns for prompt context.
+
+    Retracted turns (for example channel replies that were generated but never
+    delivered) stay in the transcript file for audit, but are excluded from the
+    returned turns unless ``include_retracted`` is set.
+    """
+
     if transcript_path is None:
         return []
     try:
@@ -487,7 +495,67 @@ def load_transcript_turns(
     turns = [json.loads(line) for line in lines if line.strip()]
     if not include_failed:
         turns = [turn for turn in turns if turn.get("status", "completed") == "completed"]
+    if not include_retracted:
+        retracted = load_turn_retractions(transcript_path)
+        if retracted:
+            turns = [turn for turn in turns if turn.get("id") not in retracted]
     return turns[-limit:] if limit else turns
+
+
+def transcript_retraction_path(transcript_path: Path) -> Path:
+    """Sidecar retraction ledger for a transcript.
+
+    Uses a non-``.jsonl`` extension on purpose so transcript scanners such as
+    the M7 replay/freeze glob never validate it as a conversation transcript.
+    """
+
+    return transcript_path.with_name(transcript_path.stem + ".retractions")
+
+
+def append_turn_retraction(
+    transcript_path: Path,
+    *,
+    turn_id: str,
+    reason: str,
+    channel: str,
+    error: Exception | None = None,
+) -> dict:
+    """Record that a persisted turn must leave future prompt context."""
+
+    now = datetime.now()
+    record = {
+        "id": f"retraction_{now.strftime('%Y%m%d_%H%M%S_%f')}_{uuid.uuid4().hex[:6]}",
+        "created_at": now.isoformat(),
+        "turn_id": turn_id,
+        "reason": reason,
+        "channel": channel,
+        "error": None,
+    }
+    if error is not None:
+        record["error"] = {
+            "type": type(error).__name__,
+            "message": _clean_visible_text(str(error))[:240],
+        }
+    append_jsonl(transcript_retraction_path(transcript_path), [record])
+    return record
+
+
+def load_turn_retractions(transcript_path: Path) -> set[str]:
+    try:
+        lines = transcript_retraction_path(transcript_path).read_text().splitlines()
+    except FileNotFoundError:
+        return set()
+    retracted: set[str] = set()
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(record, dict) and record.get("turn_id"):
+            retracted.add(str(record["turn_id"]))
+    return retracted
 
 
 def append_jsonl(path: Path, records: list[dict]) -> None:

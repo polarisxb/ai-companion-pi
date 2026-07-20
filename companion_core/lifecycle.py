@@ -30,6 +30,12 @@ from .quality import build_quality_report
 from .repair import GroundedOutputRepairer, summarize_repair_result
 from .requests import create_request
 from .semantic_shadow import SemanticShadowWriter
+from .signal_outbox import (
+    append_signal_outbox_entry,
+    build_signal_outbox_entry,
+    normalize_signal_section,
+    outbox_event_metadata,
+)
 from .state import update_companion_state
 
 
@@ -44,6 +50,7 @@ class WakeResult:
     quality_gate: dict | None = None
     event: dict | None = None
     context: WakeContext | None = None
+    signal_outbox_entry: dict | None = None
 
 
 class LifeLoopRunner:
@@ -120,6 +127,8 @@ class LifeLoopRunner:
             stored_requests = []
             request_errors = []
             context_capsule_updated = False
+            signal_outbox_entry = None
+            signal_text = normalize_signal_section(parsed.signal)
             if is_context_eligible(quality_gate):
                 companion_state = update_companion_state(self.paths.companion_state_file, parsed.companion_state)
                 if hasattr(self.memory_store, "reset_write_results"):
@@ -156,6 +165,17 @@ class LifeLoopRunner:
                         stored_requests.append(create_request(self.paths.requests_file, proposal))
                     except ValueError as exc:
                         request_errors.append(str(exc))
+                if signal_text:
+                    # Durable capture only; delivery is the Signal bridge's
+                    # policy-gated job (M11). The wake never sends anything.
+                    signal_outbox_entry = append_signal_outbox_entry(
+                        self.paths.signal_outbox_file,
+                        build_signal_outbox_entry(
+                            content=signal_text,
+                            source_event_id=event_id,
+                            trigger=trigger,
+                        ),
+                    )
                 _context_capsule, context_capsule_updated = update_context_capsule(
                     self.paths.context_capsule_file,
                     parsed.context_delta,
@@ -203,10 +223,12 @@ class LifeLoopRunner:
                 repair=summarize_repair_result(repair_result),
                 output_audit=output_audit,
                 semantic_shadow=semantic_shadow,
+                signal_outbox=outbox_event_metadata(signal_outbox_entry),
                 suppressed={
                     "memory_count": len(parsed.memories) - len(stored_memories),
                     "request_count": len(parsed.requests) - len(stored_requests),
                     "state_update": bool(parsed.companion_state) and not is_context_eligible(quality_gate),
+                    "signal_capture": bool(signal_text) and signal_outbox_entry is None,
                 },
             )
             append_wake_event(self.paths.wake_events_file, event)
@@ -221,6 +243,7 @@ class LifeLoopRunner:
                 quality_gate=quality_gate,
                 event=event,
                 context=context,
+                signal_outbox_entry=signal_outbox_entry,
             )
         except Exception as exc:
             event = self._build_event(
@@ -302,7 +325,9 @@ Return these sections:
 Your self-narrative for this waking, written in Simplified Chinese.
 
 ===SIGNAL===
-NOSEND for the first milestone.
+Optional short Signal message to your human in Simplified Chinese, or NOSEND.
+Reach out only when this wake genuinely has something worth sharing right now; ordinary wakes should return NOSEND.
+Delivery is separately policy-gated (quiet hours, daily budget, pause), so never assume or claim the message was already sent.
 
 ===COMPANION_STATE===
 Single JSON object with mood, status, relationship_notes, preference_notes, and self_notes.
@@ -374,6 +399,7 @@ Optional request blocks with English field keys type/title/body/priority and Sim
         repair: dict | None = None,
         output_audit: dict | None = None,
         semantic_shadow: dict | None = None,
+        signal_outbox: dict | None = None,
         suppressed: dict | None = None,
         error: Exception | None = None,
     ) -> dict:
@@ -409,6 +435,8 @@ Optional request blocks with English field keys type/title/body/priority and Sim
             event["output_audit"] = output_audit
         if semantic_shadow:
             event["semantic_shadow"] = semantic_shadow
+        if signal_outbox:
+            event["signal_outbox"] = signal_outbox
         if quality:
             event["quality"] = quality
         if quality_gate:

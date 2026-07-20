@@ -87,6 +87,50 @@ class CompanionPaths:
         return self.life_loop_dir / "scheduler_wake.lock"
 
     @property
+    def signal_chat_config_file(self) -> Path:
+        return self.life_loop_dir / "signal_chat_config.json"
+
+    @property
+    def signal_chat_state_file(self) -> Path:
+        return self.life_loop_dir / "signal_chat_state.json"
+
+    @property
+    def signal_chat_attempts_file(self) -> Path:
+        return self.life_loop_dir / "signal_chat_attempts.jsonl"
+
+    @property
+    def signal_chat_pause_flag(self) -> Path:
+        return self.life_loop_dir / "signal_chat_pause.flag"
+
+    @property
+    def signal_chat_lock_file(self) -> Path:
+        return self.life_loop_dir / "signal_chat.lock"
+
+    @property
+    def signal_outbox_file(self) -> Path:
+        return self.life_loop_dir / "signal_outbox.jsonl"
+
+    @property
+    def signal_outbound_pause_flag(self) -> Path:
+        return self.life_loop_dir / "signal_outbound_pause.flag"
+
+    @property
+    def semantic_retrieval_config_file(self) -> Path:
+        return self.life_loop_dir / "semantic_retrieval_config.json"
+
+    @property
+    def semantic_index_file(self) -> Path:
+        return self.life_loop_dir / "semantic_index.json"
+
+    @property
+    def feishu_chat_config_file(self) -> Path:
+        return self.life_loop_dir / "feishu_chat_config.json"
+
+    @property
+    def feishu_chat_lock_file(self) -> Path:
+        return self.life_loop_dir / "feishu_chat.lock"
+
+    @property
     def model_outputs_dir(self) -> Path:
         return self.life_loop_dir / "model_outputs"
 

@@ -1,0 +1,143 @@
+{
+  "boundaries": {
+    "cron_replacement": false,
+    "feishu_api_invoked": false,
+    "memory_authority_expanded": false,
+    "proactive_outbound_sent": false,
+    "provider_generation_requested": false,
+    "raw_provider_payload_stored": false,
+    "raw_signal_envelope_stored": false,
+    "scheduler_mutated": false,
+    "secrets_in_reports_or_ledger": false,
+    "semantic_shadow_authority_promoted": false,
+    "service_mutated": false,
+    "timer_installation": false,
+    "voice_output": false,
+    "wake_cycle_run": false
+  },
+  "companion_home": "/home/polaris/digital_life",
+  "dry_run": {
+    "attempt_count": 7,
+    "conversation_prefix_confirmed": true,
+    "decision_counts": {
+      "failed": 2,
+      "replied": 1,
+      "skipped": 4
+    },
+    "failed_branches_covered": {
+      "dialogue_failure": true,
+      "send_failure": true
+    },
+    "skip_reasons_covered": [
+      "attachment_only_unsupported",
+      "duplicate_message",
+      "group_message_unsupported",
+      "sender_not_allowed"
+    ]
+  },
+  "errors": [],
+  "feishu_chat": {
+    "attempts_file": "life-loop/signal_chat_attempts.jsonl",
+    "config_file": "life-loop/feishu_chat_config.json",
+    "config_present": false,
+    "lock_file": "life-loop/feishu_chat.lock",
+    "pause_flag_path": "life-loop/signal_chat_pause.flag"
+  },
+  "freeze_evidence": {
+    "ok": true,
+    "reports": {
+      "m7_dialogue_freeze_report.json": {
+        "exists": true,
+        "expected_recommendation": "m7_text_dialogue_frozen",
+        "ok": true,
+        "path": "life-loop/m7_dialogue_freeze_report.json",
+        "recommendation": "m7_text_dialogue_frozen"
+      },
+      "m8_memory_freeze_report.json": {
+        "exists": true,
+        "expected_recommendation": "m8_memory_dialogue_frozen",
+        "ok": true,
+        "path": "life-loop/m8_memory_freeze_report.json",
+        "recommendation": "m8_memory_dialogue_frozen"
+      },
+      "m9_presence_freeze_report.json": {
+        "exists": true,
+        "expected_recommendation": "m9_controlled_presence_frozen",
+        "ok": true,
+        "path": "life-loop/m9_presence_freeze_report.json",
+        "recommendation": "m9_controlled_presence_frozen"
+      }
+    }
+  },
+  "milestone": "M13.1",
+  "next_commands": [
+    ".venv/bin/python scripts/run_m13_feishu_chat.py --companion-home /home/polaris/digital_life --check",
+    ".venv/bin/python scripts/run_m13_feishu_trial.py --companion-home /home/polaris/digital_life --confirm-real-feishu-send"
+  ],
+  "ok": true,
+  "profile": {
+    "channel": "feishu",
+    "provider": "fake",
+    "provider_calls": 0,
+    "transport": "feishu-fake",
+    "write_runtime": true
+  },
+  "provider_calls": 0,
+  "recommendation": "m13_feishu_dry_run_ready",
+  "saved_at": "2026-07-20T17:36:11.976526",
+  "schema_version": 1,
+  "stages": [
+    {
+      "message": "9 event fixtures parsed as expected",
+      "name": "feishu_event_parsing",
+      "status": "pass"
+    },
+    {
+      "message": "token cache, stale-token retry, send payload, and error hygiene verified against a stubbed HTTP layer",
+      "name": "feishu_api_client",
+      "status": "pass"
+    },
+    {
+      "message": "informational for fake dry-run; required before real feishu traffic m7_dialogue_freeze_report.json=ok, m8_memory_freeze_report.json=ok, m9_presence_freeze_report.json=ok",
+      "name": "freeze_evidence_visibility",
+      "status": "pass"
+    },
+    {
+      "message": "7 attempts cover reply, key skips, and both failure branches",
+      "name": "feishu_scenario_coverage",
+      "status": "pass"
+    },
+    {
+      "message": "records carry channel=feishu and transcripts use the feishu_ conversation prefix",
+      "name": "feishu_channel_wiring",
+      "status": "pass"
+    },
+    {
+      "message": "7 hashed dry-run attempts appended to the shared ledger",
+      "name": "feishu_ledger_writes",
+      "status": "pass"
+    },
+    {
+      "message": "secrets stay in .secrets/feishu.env, never in configs or the ledger",
+      "name": "feishu_secret_hygiene",
+      "status": "pass"
+    },
+    {
+      "message": "feishu config template present with safe defaults",
+      "name": "feishu_config_template",
+      "status": "pass"
+    },
+    {
+      "message": "real feishu traffic requires explicit confirmation and transport code never touches scheduler state",
+      "name": "real_mode_guard",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": [],
+  "transport": {
+    "fake_transport_only": true,
+    "feishu_api_invoked": false,
+    "outbound_sends": 1,
+    "recipients_match_senders": true
+  }
+}

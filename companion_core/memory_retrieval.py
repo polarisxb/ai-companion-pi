@@ -51,12 +51,14 @@ class MemoryRetrievalResult:
     retrieved: list[RetrievedMemory]
     filtered: list[dict]
     query: str
+    semantic: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
             "query": self.query,
             "memories": [item.to_dict() for item in self.retrieved],
             "filtered": list(self.filtered),
+            "semantic": dict(self.semantic),
         }
 
 
@@ -66,8 +68,18 @@ def assemble_dialogue_memory_context(
     *,
     memory_store: JsonMemoryStore | None = None,
     limit: int = 5,
+    semantic_config=None,
+    semantic_backend=None,
 ) -> MemoryRetrievalResult:
-    """Return small prompt-safe accepted memory context plus audit reasons."""
+    """Return small prompt-safe accepted memory context plus audit reasons.
+
+    Policy filtering and lexical scoring are unchanged M8 behavior. When M12
+    semantic retrieval is enabled and its derived index is ready, candidate
+    scores additionally receive a similarity boost; every semantic failure
+    mode falls back to lexical-only scoring without raising.
+    """
+
+    from .semantic_retrieval import apply_semantic_ranking
 
     memory_store = memory_store or JsonMemoryStore(paths.memory_store)
     memories = memory_store.load()
@@ -92,6 +104,14 @@ def assemble_dialogue_memory_context(
         score, reasons = _score_memory(memory, query, status_requested=status_requested)
         candidates.append(RetrievedMemory(memory=memory, score=score, reasons=reasons))
 
+    semantic_outcome = apply_semantic_ranking(
+        paths,
+        query,
+        candidates,
+        config=semantic_config,
+        backend=semantic_backend,
+    )
+
     candidates.sort(
         key=lambda item: (
             item.score,
@@ -105,6 +125,7 @@ def assemble_dialogue_memory_context(
         retrieved=selected,
         filtered=filtered,
         query=query,
+        semantic=semantic_outcome.to_dict(),
     )
 
 

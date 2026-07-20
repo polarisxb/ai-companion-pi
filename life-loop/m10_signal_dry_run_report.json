@@ -1,0 +1,143 @@
+{
+  "boundaries": {
+    "cron_replacement": false,
+    "memory_authority_expanded": false,
+    "proactive_outbound_sent": false,
+    "provider_generation_requested": false,
+    "raw_provider_payload_stored": false,
+    "raw_signal_envelope_stored": false,
+    "scheduler_mutated": false,
+    "semantic_shadow_authority_promoted": false,
+    "signal_cli_invoked": false,
+    "timer_installation": false,
+    "voice_output": false,
+    "wake_cycle_run": false
+  },
+  "companion_home": "/home/polaris/digital_life",
+  "dry_run": {
+    "attempt_count": 14,
+    "decision_counts": {
+      "failed": 2,
+      "replied": 2,
+      "skipped": 10
+    },
+    "failed_branches_covered": {
+      "dialogue_failure": true,
+      "send_failure": true
+    },
+    "skip_reasons_covered": [
+      "attachment_only_unsupported",
+      "body_too_long",
+      "daily_budget_exhausted",
+      "duplicate_message",
+      "empty_body",
+      "group_message_unsupported",
+      "paused",
+      "poll_batch_limit",
+      "quiet_hours",
+      "sender_not_allowed"
+    ],
+    "skip_reasons_missing": [],
+    "smoke_home_cleaned": true
+  },
+  "errors": [],
+  "freeze_evidence": {
+    "ok": true,
+    "reports": {
+      "m7_dialogue_freeze_report.json": {
+        "exists": true,
+        "expected_recommendation": "m7_text_dialogue_frozen",
+        "ok": true,
+        "path": "life-loop/m7_dialogue_freeze_report.json",
+        "recommendation": "m7_text_dialogue_frozen"
+      },
+      "m8_memory_freeze_report.json": {
+        "exists": true,
+        "expected_recommendation": "m8_memory_dialogue_frozen",
+        "ok": true,
+        "path": "life-loop/m8_memory_freeze_report.json",
+        "recommendation": "m8_memory_dialogue_frozen"
+      },
+      "m9_presence_freeze_report.json": {
+        "exists": true,
+        "expected_recommendation": "m9_controlled_presence_frozen",
+        "ok": true,
+        "path": "life-loop/m9_presence_freeze_report.json",
+        "recommendation": "m9_controlled_presence_frozen"
+      }
+    }
+  },
+  "milestone": "M10.1",
+  "next_commands": [
+    ".venv/bin/python scripts/run_m10_signal_chat.py --companion-home /home/polaris/digital_life --check",
+    ".venv/bin/python scripts/run_m10_signal_chat.py --companion-home /home/polaris/digital_life --once --confirm-real-signal-send"
+  ],
+  "ok": true,
+  "profile": {
+    "memory_mode": "json",
+    "provider": "fake",
+    "transport": "fake",
+    "write_runtime": true
+  },
+  "provider_calls": 0,
+  "recommendation": "m10_signal_dry_run_ready",
+  "saved_at": "2026-07-20T16:03:25.361420",
+  "schema_version": 1,
+  "signal_chat": {
+    "attempts_file": "life-loop/signal_chat_attempts.jsonl",
+    "config_file": "life-loop/signal_chat_config.json",
+    "config_present": false,
+    "pause_flag_path": "life-loop/signal_chat_pause.flag",
+    "state_file": "life-loop/signal_chat_state.json"
+  },
+  "stages": [
+    {
+      "message": "9 envelope fixtures parsed as expected",
+      "name": "envelope_parsing",
+      "status": "pass"
+    },
+    {
+      "message": "informational for fake dry-run; required before real traffic (m7_dialogue_freeze_report.json=ok, m8_memory_freeze_report.json=ok, m9_presence_freeze_report.json=ok)",
+      "name": "freeze_evidence_visibility",
+      "status": "pass"
+    },
+    {
+      "message": "14 attempts cover all skip reasons and decisions",
+      "name": "policy_scenario_coverage",
+      "status": "pass"
+    },
+    {
+      "message": "fake transport only; 2 replies, each to its inbound sender",
+      "name": "transport_boundary",
+      "status": "pass"
+    },
+    {
+      "message": "all 14 attempts used fake provider and fake transport",
+      "name": "provider_boundary",
+      "status": "pass"
+    },
+    {
+      "message": "14 hashed dry-run attempts appended to signal_chat_attempts.jsonl",
+      "name": "attempt_ledger_writes",
+      "status": "pass"
+    },
+    {
+      "message": "signal chat config template present and valid",
+      "name": "config_template",
+      "status": "pass"
+    },
+    {
+      "message": "real sends require explicit confirmation and M10 code never touches scheduler state",
+      "name": "real_mode_guard",
+      "status": "pass"
+    }
+  ],
+  "stop_reasons": [],
+  "transport": {
+    "fake_transport_only": true,
+    "outbound_recipients_match_senders": true,
+    "outbound_sends": 2,
+    "proactive_outbound_sent": false,
+    "signal_cli_invoked": false
+  }
+}

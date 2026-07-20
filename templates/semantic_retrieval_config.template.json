@@ -1,0 +1,7 @@
+{
+  "enabled": false,
+  "backend": "sentence-transformers",
+  "model": "paraphrase-multilingual-MiniLM-L12-v2",
+  "min_similarity": 0.15,
+  "semantic_scale": 10
+}

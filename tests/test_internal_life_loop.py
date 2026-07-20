@@ -2414,6 +2414,7 @@ NOREQUESTS
         "memory_count": 1,
         "request_count": 0,
         "state_update": True,
+        "signal_capture": False,
     }
 
 
@@ -2943,6 +2944,7 @@ priority: normal
         "memory_count": 1,
         "request_count": 1,
         "state_update": False,
+        "signal_capture": False,
     }
 
 
@@ -7128,7 +7130,7 @@ def test_dashboard_chat_page_and_send_use_dialogue_runner(tmp_path, monkeypatch)
 
     page = client.get("/chat")
     assert page.status_code == 200
-    assert b"Companion Chat" in page.data
+    assert b"chatx-composer" in page.data
     assert b"provider:" in page.data
 
     response = client.post("/chat/send", json={"message": "hello dashboard", "conversation_id": "dash-chat"})
@@ -7145,6 +7147,60 @@ def test_dashboard_chat_page_and_send_use_dialogue_runner(tmp_path, monkeypatch)
     assert transcript_page.status_code == 200
     assert b"hello dashboard" in transcript_page.data
     assert "我在这里。".encode() in transcript_page.data
+
+
+def test_dashboard_chat_new_conversation_marker_generates_fresh_id(tmp_path, monkeypatch):
+    write_minimal_context(tmp_path)
+    (tmp_path / "life-loop").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "life-loop" / "m6_final_freeze_report.json").write_text(json.dumps({
+        "ok": True,
+        "recommendation": "m6_frozen_ready_for_scheduler_handoff",
+    }))
+    monkeypatch.setenv("COMPANION_CHAT_FAKE_RESPONSE", "新的开始。")
+    window = load_window_module(tmp_path, monkeypatch)
+    client = window.app.test_client()
+
+    # Seed an old conversation, then ask for a fresh one.
+    seeded = client.post("/chat/send", json={"message": "old thread", "conversation_id": "old-chat"})
+    assert seeded.status_code == 200
+
+    fresh_page = client.get("/chat?conversation_id=new")
+    assert fresh_page.status_code == 200
+    assert b"old thread" not in fresh_page.data
+
+    response = client.post("/chat/send", json={"message": "fresh thread", "conversation_id": "new"})
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["ok"] is True
+    assert payload["conversation_id"]
+    assert payload["conversation_id"] != "new"
+    assert payload["conversation_id"] != "old-chat"
+    assert not (tmp_path / "conversations" / "new.jsonl").exists()
+
+
+def test_dashboard_chat_page_renders_bubble_layout(tmp_path, monkeypatch):
+    write_minimal_context(tmp_path)
+    (tmp_path / "life-loop").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "life-loop" / "m6_final_freeze_report.json").write_text(json.dumps({
+        "ok": True,
+        "recommendation": "m6_frozen_ready_for_scheduler_handoff",
+    }))
+    monkeypatch.setenv("COMPANION_CHAT_FAKE_RESPONSE", "我在这里。")
+    window = load_window_module(tmp_path, monkeypatch)
+    client = window.app.test_client()
+    client.post("/chat/send", json={"message": "泡泡布局测试", "conversation_id": "bubble-chat"})
+
+    page = client.get("/chat?conversation_id=bubble-chat")
+
+    assert page.status_code == 200
+    html = page.data.decode()
+    assert "chatx-messages" in html
+    assert "chatx-bubble" in html
+    assert "泡泡布局测试" in html
+    assert "我在这里。" in html
+    assert "chatx-composer" in html
+    assert "新对话" in html
+    assert "/chat/send" in html  # no-JS form fallback preserved
 
 
 def test_dashboard_chat_send_error_preserves_input(tmp_path, monkeypatch):

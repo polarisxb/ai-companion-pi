@@ -55,11 +55,18 @@ See [requests-system-design.md](requests-system-design.md) for the full request 
 ### Life
 
 The read-only operational evidence page for the internal life loop. It renders
-the latest wake event, companion state, and milestone reports through M9,
+the latest wake event, companion state, and milestone reports through M12,
 including M9 controlled presence reports, scheduler artifact count, pause and
-rollback readiness, observed live attempts, and final freeze boundaries. This
-page is GET-only; it does not mutate scheduler state, memory authority, wake
-cycles, or provider output.
+rollback readiness, observed live attempts, and final freeze boundaries, plus
+M10 Signal chat reports (dry-run decision coverage, transport boundaries,
+attempt-ledger path), M11 Signal outbound reports (delivery decision
+coverage, disabled no-op confirmation, observed deliveries, pause drill, and
+freeze state), M12 semantic retrieval reports (backend/model, index
+coverage and staleness, backfill counts, live probe status, and freeze
+state), and M13 Feishu chat reports (dry-run decision coverage, channel
+wiring, service unit, observed attempts, and freeze state). This page is
+GET-only; it does not mutate scheduler state, memory authority, wake cycles,
+or provider output.
 
 ### Chat
 

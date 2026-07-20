@@ -8,40 +8,47 @@ from pathlib import Path
 from .paths import CompanionPaths
 
 DEFAULT_SECRET_RELATIVE_PATH = Path(".secrets") / "deepseek.env"
+EXTRA_SECRET_RELATIVE_PATHS = (Path(".secrets") / "feishu.env",)
 SECRET_FILE_ENV = "COMPANION_SECRETS_FILE"
 ALLOWED_SECRET_KEYS = {
     "DEEPSEEK_API_KEY",
     "COMPANION_LLM_API_KEY",
+    "FEISHU_APP_ID",
+    "FEISHU_APP_SECRET",
 }
 
 
 def load_local_secrets(paths: CompanionPaths) -> dict:
-    """Load supported provider secrets from a local ignored env file.
+    """Load supported provider secrets from local ignored env files.
 
     Existing environment variables win over file values. The returned mapping is
     only metadata about what was loaded, never the secret values themselves.
     """
 
-    secret_file = _secret_file_path(paths)
-    loaded = []
-    if not secret_file.exists():
-        return {
-            "path": str(secret_file),
-            "loaded": loaded,
-            "exists": False,
-        }
-
-    for line in secret_file.read_text().splitlines():
-        key, value = _parse_env_line(line)
-        if not key or key not in ALLOWED_SECRET_KEYS:
+    primary_file = _secret_file_path(paths)
+    loaded: list[str] = []
+    checked_files = [primary_file]
+    checked_files.extend(paths.home / relative for relative in EXTRA_SECRET_RELATIVE_PATHS)
+    seen: set[Path] = set()
+    any_exists = False
+    for secret_file in checked_files:
+        if secret_file in seen:
             continue
-        if key not in os.environ and value:
-            os.environ[key] = value
-            loaded.append(key)
+        seen.add(secret_file)
+        if not secret_file.exists():
+            continue
+        any_exists = True
+        for line in secret_file.read_text().splitlines():
+            key, value = _parse_env_line(line)
+            if not key or key not in ALLOWED_SECRET_KEYS:
+                continue
+            if key not in os.environ and value:
+                os.environ[key] = value
+                loaded.append(key)
     return {
-        "path": str(secret_file),
+        "path": str(primary_file),
         "loaded": loaded,
-        "exists": True,
+        "exists": any_exists,
     }
 
 

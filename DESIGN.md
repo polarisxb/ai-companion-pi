@@ -3,8 +3,8 @@
 ## Source of truth
 
 - Status: Active
-- Last refreshed: 2026-06-21
-- Primary product surfaces: Companion Window home, message board, creations, tasks, requests, `/life`, M7 text chat, M8 memory review/stewardship, and planned M9 controlled scheduler presence.
+- Last refreshed: 2026-07-20
+- Primary product surfaces: Companion Window home, message board, creations, tasks, requests, `/life`, M7 text chat, M8 memory review/stewardship, M9 controlled scheduler presence (frozen), M10/M11 Signal chat + outbound (alternative transport), M12 semantic memory retrieval, and M13 Feishu chat (production channel).
 - Evidence reviewed:
   - `docs/web-dashboard.md`
   - `docs/requests-system-design.md`
@@ -14,6 +14,10 @@
   - `docs/m7-text-dialogue-design.md`
   - `docs/m8-memory-steward-design.md`
   - `docs/m9-controlled-presence-design.md`
+  - `docs/m10-signal-chat-design.md`
+  - `docs/m11-signal-outbound-design.md`
+  - `docs/m12-semantic-retrieval-design.md`
+  - `docs/m13-feishu-chat-design.md`
   - `window/window.py`
 
 ## Brand
@@ -75,6 +79,46 @@
 - Scheduled presence uses non-fixed randomized presence windows, with default quiet hours `00:00-08:00`, `daily_live_wake_budget=2`, and internal-only output.
 - Live activation requires read-only revalidation, supervised dry-run evidence, pause/rollback design, and an observation window.
 - Voice, Signal, camera, sensors, and hardware body work remain out of scope until scheduled presence is frozen.
+
+## Confirmed M10 direction
+
+- M9.5 controlled presence is frozen, which unlocks Signal as the first external channel.
+- M10 is chat-first: the human texts the companion over Signal and the same M7 dialogue identity replies. It is online text chat, not a broadcast or notification channel.
+- Proactive or scheduled companion-initiated Signal messages are out of scope for M10 and need a separate milestone.
+- The development machine uses fake transport only; real signal-cli traffic runs on the Raspberry Pi behind explicit confirmation flags and freeze evidence.
+- Replies are allowlist-only, budgeted, deduped, pause-able, and recorded in an append-only attempt ledger without raw envelope storage.
+- Signal chat memory stays proposal-only through the frozen M8 steward pipeline; no new memory authority.
+- Voice and hardware remain out of scope; the human has no voice hardware yet.
+
+## Confirmed M11 direction
+
+- M11 is the companion's outbound voice on the existing Signal channel: accepted wake cycles may produce a short `===SIGNAL===` message that reaches the human.
+- Capture and delivery are separated: the wake writes a durable redacted outbox entry and never touches the network; the M10 bridge service delivers under policy.
+- Delivery ships disabled (`outbound_enabled=false`) and only ever targets one configured allowlisted recipient; no first contact, groups, or broadcast.
+- Outbound respects its own quiet hours and small daily budget (aligned with the M9 cadence), an outbound-only pause flag plus the master chat pause flag, entry expiry so stale presence never arrives late, and per-wake dedupe.
+- Ledger evidence is hash-only with `direction=outbound`; the outbox keeps the message text like journals do.
+- Delivered outbound messages are not mirrored into chat transcripts in M11 (open question for later).
+- Voice, camera, sensors, and hardware body work remain out of scope.
+
+## Confirmed M12 direction
+
+- M12 upgrades memory recall from lexical matching to meaning-based ranking while changing nothing about what may be remembered.
+- The JSON memory store remains the authoritative record; the semantic index is derived, rebuildable, and deletable as a complete rollback.
+- M8 policy filters run before ranking; a quarantined or proposal memory retrieves nothing at any similarity.
+- Enablement is config-gated and ships off; disabled config, missing index, or an unavailable embedding backend all degrade deterministically to today's lexical retrieval.
+- Two backends: a dependency-free deterministic hashing backend (tests, degraded mode) and sentence-transformers on the Pi with a multilingual model suited to Simplified Chinese memories.
+- Retrieval is read-only; only the explicit idempotent backfill command writes the index.
+- The M3.23 semantic shadow store stays isolated telemetry and is not promoted.
+
+## Confirmed M13 direction
+
+- Signal is blocked in mainland China; Feishu self-built-app bots are the confirmed production chat channel. Signal stays in the repo as an alternative transport.
+- Inbound uses the official lark-oapi long-connection mode: the Pi dials out over WebSocket, no public IP, domain, tunnel, or exposed port.
+- The entire M10/M11 chat stack (policy, budgets, dedupe, pause, ledger, outbox, M7 dialogue identity) is reused unchanged behind the pluggable transport.
+- Ledger records carry an explicit channel field; per-channel configs and loop locks, shared state/ledger/outbox so cross-channel dedupe and outbox delivery stay safe.
+- Credentials live only in `.secrets/feishu.env`; never in configs, reports, or the ledger.
+- M13 is text-only. Feishu supports images, opus voice bubbles, and interactive cards; those are separate later milestones (voice bubbles need no voice hardware — TTS on the Pi suffices).
+- Only one channel should have outbound (M11) enabled at a time.
 
 ## Personas and jobs
 
